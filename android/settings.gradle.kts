@@ -20,5 +20,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "CallGuard"
+rootProject.name = "CallShield"
 include(":app")

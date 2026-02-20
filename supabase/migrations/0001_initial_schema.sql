@@ -1,4 +1,4 @@
--- CallGuard Phase 1 Schema
+-- CallShield Phase 1 Schema
 -- All number identifiers are HMAC-SHA256 hashes — no raw phone numbers stored.
 
 -- ─────────────────────────────────────────────────────────────────────────────

@@ -8,11 +8,11 @@ plugins {
 }
 
 android {
-    namespace = "com.fenn.callguard"
+    namespace = "com.fenn.callshield"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.fenn.callguard"
+        applicationId = "com.fenn.callshield"
         minSdk = 29
         targetSdk = 35
         versionCode = 1
@@ -25,7 +25,7 @@ android {
         buildConfigField("String", "SUPABASE_ANON_KEY", "\"${project.findProperty("SUPABASE_ANON_KEY") ?: ""}\"")
 
         // HMAC static salt — bundled in binary, not a secret
-        buildConfigField("String", "HMAC_SALT", "\"${project.findProperty("HMAC_SALT") ?: "callguard-v1-salt-2024"}\"")
+        buildConfigField("String", "HMAC_SALT", "\"${project.findProperty("HMAC_SALT") ?: "callshield-v1-salt-2024"}\"")
     }
 
     buildTypes {

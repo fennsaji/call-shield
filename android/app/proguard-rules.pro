@@ -16,8 +16,8 @@
 -keep class javax.inject.** { *; }
 
 # Room — keep entity + DAO classes
--keep class com.fenn.callguard.data.local.entity.** { *; }
--keep class com.fenn.callguard.data.local.dao.** { *; }
+-keep class com.fenn.callshield.data.local.entity.** { *; }
+-keep class com.fenn.callshield.data.local.dao.** { *; }
 
 # Kotlin coroutines
 -keepnames class kotlinx.coroutines.internal.MainDispatcherFactory {}
