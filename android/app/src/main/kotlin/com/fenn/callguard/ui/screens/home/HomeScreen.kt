@@ -13,20 +13,22 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.outlined.Block
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.FilterList
-import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -34,6 +36,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -44,7 +47,10 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.fenn.callguard.R
+import com.fenn.callguard.domain.repository.CallStats
 import com.fenn.callguard.ui.components.ScamDigestCard
+import com.fenn.callguard.ui.theme.LocalDangerColor
+import com.fenn.callguard.ui.theme.LocalSuccessColor
 
 @Composable
 fun HomeScreen(
@@ -59,36 +65,70 @@ fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val successColor = LocalSuccessColor.current
 
     LazyColumn(
         modifier = modifier,
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 20.dp),
+        verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
+
+        // ── Header ────────────────────────────────────────────────────────────
         item {
-            Text(
-                text = stringResource(R.string.app_name),
-                style = MaterialTheme.typography.headlineMedium,
-                modifier = Modifier.padding(bottom = 4.dp),
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(
+                        text = stringResource(R.string.app_name),
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(5.dp),
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(7.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    if (state.isScreeningActive) successColor
+                                    else MaterialTheme.colorScheme.error
+                                )
+                        )
+                        Text(
+                            text = if (state.isScreeningActive) "Active protection"
+                            else "Protection inactive",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (state.isScreeningActive) successColor
+                            else MaterialTheme.colorScheme.error,
+                        )
+                    }
+                }
+            }
         }
 
+        // ── Hero status card ──────────────────────────────────────────────────
         item {
-            StatusCard(isActive = state.isScreeningActive)
+            StatusHeroCard(isActive = state.isScreeningActive, stats = state.stats)
         }
 
+        // ── Quick access ──────────────────────────────────────────────────────
         item {
-            StatsRow(screened = state.stats.totalScreened, blocked = state.stats.totalBlocked)
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                SectionLabel("Quick Access")
+                QuickAccessRow(
+                    onBlocklist = onNavigateToBlocklist,
+                    onWhitelist = onNavigateToWhitelist,
+                    onPrefixRules = onNavigateToPrefixRules,
+                )
+            }
         }
 
-        item {
-            QuickAccessRow(
-                onBlocklist = onNavigateToBlocklist,
-                onWhitelist = onNavigateToWhitelist,
-                onPrefixRules = onNavigateToPrefixRules,
-            )
-        }
-
+        // ── Scam digest ───────────────────────────────────────────────────────
         state.scamDigest?.let { digest ->
             item {
                 ScamDigestCard(
@@ -101,70 +141,136 @@ fun HomeScreen(
 }
 
 @Composable
-private fun StatusCard(isActive: Boolean) {
-    val primaryColor = MaterialTheme.colorScheme.primary
-    val primaryContainerColor = MaterialTheme.colorScheme.primaryContainer
-    val errorColor = MaterialTheme.colorScheme.error
-    val errorContainerColor = MaterialTheme.colorScheme.errorContainer
+private fun StatusHeroCard(isActive: Boolean, stats: CallStats) {
+    val primary = MaterialTheme.colorScheme.primary
+    val primaryContainer = MaterialTheme.colorScheme.primaryContainer
+    val error = MaterialTheme.colorScheme.error
+    val errorContainer = MaterialTheme.colorScheme.errorContainer
+    val activeColor = if (isActive) primary else error
 
-    val infiniteTransition = rememberInfiniteTransition(label = "shield_pulse")
-    val pulseScale by infiniteTransition.animateFloat(
-        initialValue = 1.0f,
-        targetValue = if (isActive) 1.08f else 1.0f,
+    val transition = rememberInfiniteTransition(label = "pulse")
+    val outerScale by transition.animateFloat(
+        initialValue = 1f,
+        targetValue = if (isActive) 1.20f else 1f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 1800, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse,
+            tween(2400, easing = FastOutSlowInEasing),
+            RepeatMode.Reverse,
         ),
-        label = "pulse_scale",
+        label = "outer",
+    )
+    val innerScale by transition.animateFloat(
+        initialValue = 1f,
+        targetValue = if (isActive) 1.10f else 1f,
+        animationSpec = infiniteRepeatable(
+            tween(1700, easing = FastOutSlowInEasing),
+            RepeatMode.Reverse,
+        ),
+        label = "inner",
     )
 
-    ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+    ElevatedCard(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 6.dp),
+    ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(
-                    brush = if (isActive)
-                        Brush.verticalGradient(listOf(primaryContainerColor, primaryColor.copy(alpha = 0.4f)))
-                    else
-                        Brush.verticalGradient(listOf(errorContainerColor, errorColor.copy(alpha = 0.3f)))
-                )
-                .padding(24.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                // Pulsing ring behind the shield
-                Box(contentAlignment = Alignment.Center) {
-                    if (isActive) {
-                        Box(
-                            modifier = Modifier
-                                .size(88.dp)
-                                .scale(pulseScale)
-                                .background(
-                                    color = primaryColor.copy(alpha = 0.15f),
-                                    shape = CircleShape,
-                                )
+                    Brush.verticalGradient(
+                        listOf(
+                            if (isActive) primaryContainer else errorContainer,
+                            if (isActive) primary.copy(alpha = 0.2f)
+                            else error.copy(alpha = 0.12f),
+                            MaterialTheme.colorScheme.surface,
                         )
-                    }
+                    )
+                )
+        ) {
+            Column {
+
+                // Shield zone
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 36.dp, bottom = 28.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    // Outer glow ring
+                    Box(
+                        modifier = Modifier
+                            .size(116.dp)
+                            .scale(outerScale)
+                            .clip(CircleShape)
+                            .background(activeColor.copy(alpha = 0.07f))
+                    )
+                    // Inner ring
+                    Box(
+                        modifier = Modifier
+                            .size(90.dp)
+                            .scale(innerScale)
+                            .clip(CircleShape)
+                            .background(activeColor.copy(alpha = 0.13f))
+                    )
+                    // Shield
                     Icon(
                         Icons.Filled.Shield,
                         contentDescription = null,
-                        modifier = Modifier.size(72.dp),
-                        tint = if (isActive) MaterialTheme.colorScheme.onPrimaryContainer
-                        else MaterialTheme.colorScheme.onErrorContainer,
+                        modifier = Modifier.size(76.dp),
+                        tint = activeColor,
                     )
                 }
 
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                // Status label
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 28.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(5.dp),
+                ) {
                     Text(
                         text = if (isActive) stringResource(R.string.home_status_active)
                         else stringResource(R.string.home_status_inactive),
-                        style = MaterialTheme.typography.titleLarge,
+                        style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold,
                         color = if (isActive) MaterialTheme.colorScheme.onPrimaryContainer
                         else MaterialTheme.colorScheme.onErrorContainer,
+                    )
+                    Text(
+                        text = if (isActive) "Monitoring all incoming calls"
+                        else "Open Settings → App Permissions to activate",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
+                    )
+                }
+
+                // Inline stats
+                HorizontalDivider(
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
+                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 18.dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    InlineStat(
+                        value = stats.totalScreened.toString(),
+                        label = stringResource(R.string.home_calls_screened),
+                        color = primary,
+                    )
+                    Box(
+                        modifier = Modifier
+                            .width(1.dp)
+                            .height(36.dp)
+                            .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                    )
+                    InlineStat(
+                        value = stats.totalBlocked.toString(),
+                        label = stringResource(R.string.home_calls_blocked),
+                        color = error,
                     )
                 }
             }
@@ -173,59 +279,32 @@ private fun StatusCard(isActive: Boolean) {
 }
 
 @Composable
-private fun StatsRow(screened: Int, blocked: Int) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+private fun InlineStat(value: String, label: String, color: Color) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(3.dp),
     ) {
-        StatCard(
-            label = stringResource(R.string.home_calls_screened),
-            value = screened.toString(),
-            accentColor = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.weight(1f),
+        Text(
+            text = value,
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+            color = color,
         )
-        StatCard(
-            label = stringResource(R.string.home_calls_blocked),
-            value = blocked.toString(),
-            accentColor = MaterialTheme.colorScheme.error,
-            modifier = Modifier.weight(1f),
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
         )
     }
 }
 
 @Composable
-private fun StatCard(
-    label: String,
-    value: String,
-    accentColor: Color,
-    modifier: Modifier = Modifier,
-) {
-    ElevatedCard(modifier = modifier) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            // Top accent line
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(3.dp)
-                    .background(
-                        brush = Brush.horizontalGradient(listOf(accentColor, accentColor.copy(alpha = 0.3f))),
-                        shape = MaterialTheme.shapes.small,
-                    )
-            )
-            Spacer(Modifier.height(10.dp))
-            Text(
-                value,
-                style = MaterialTheme.typography.headlineLarge,
-                fontWeight = FontWeight.Bold,
-                color = accentColor,
-            )
-            Text(
-                label,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-            )
-        }
-    }
+private fun SectionLabel(text: String) {
+    Text(
+        text = text.uppercase(),
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+    )
 }
 
 @Composable
@@ -234,25 +313,32 @@ private fun QuickAccessRow(
     onWhitelist: () -> Unit,
     onPrefixRules: () -> Unit,
 ) {
+    val successColor = LocalSuccessColor.current
+    val dangerColor = LocalDangerColor.current
+    val primary = MaterialTheme.colorScheme.primary
+
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         QuickAccessCard(
             icon = Icons.Outlined.Block,
             label = "Blocklist",
+            iconTint = dangerColor,
             onClick = onBlocklist,
             modifier = Modifier.weight(1f),
         )
         QuickAccessCard(
             icon = Icons.Outlined.CheckCircle,
             label = "Whitelist",
+            iconTint = successColor,
             onClick = onWhitelist,
             modifier = Modifier.weight(1f),
         )
         QuickAccessCard(
             icon = Icons.Outlined.FilterList,
             label = "Prefixes",
+            iconTint = primary,
             onClick = onPrefixRules,
             modifier = Modifier.weight(1f),
         )
@@ -263,28 +349,38 @@ private fun QuickAccessRow(
 private fun QuickAccessCard(
     icon: ImageVector,
     label: String,
+    iconTint: Color,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     ElevatedCard(
         onClick = onClick,
-        modifier = modifier.widthIn(min = 100.dp),
+        modifier = modifier,
+        shape = RoundedCornerShape(16.dp),
     ) {
         Column(
             modifier = Modifier
-                .padding(12.dp)
-                .fillMaxWidth(),
+                .fillMaxWidth()
+                .padding(vertical = 16.dp, horizontal = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(6.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Icon(
-                icon,
-                contentDescription = label,
-                modifier = Modifier.size(28.dp),
-                tint = MaterialTheme.colorScheme.primary,
-            )
+            Box(
+                modifier = Modifier
+                    .size(46.dp)
+                    .clip(CircleShape)
+                    .background(iconTint.copy(alpha = 0.12f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    icon,
+                    contentDescription = label,
+                    modifier = Modifier.size(22.dp),
+                    tint = iconTint,
+                )
+            }
             Text(
-                label,
+                text = label,
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurface,
             )

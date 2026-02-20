@@ -9,6 +9,10 @@ import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.runtime.DisposableEffect
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.scaleIn
@@ -51,19 +55,32 @@ import com.fenn.callguard.R
 @Composable
 fun PermissionsScreen(
     onAllGranted: () -> Unit,
+    showSkip: Boolean = true,
     viewModel: PermissionsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    // Refresh permission state whenever the screen resumes (user returns from Settings)
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) viewModel.refresh()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     // Compute progress
     val hasNotification = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
     val totalCount = if (hasNotification) 3 else 2
-    val grantedCount = listOf(
+    val grantedList = listOf(
         state.screeningRoleGranted,
         if (hasNotification) state.notificationsGranted else true,
         state.batteryOptimisationDisabled,
-    ).count { it }.toFloat()
+    )
+    val grantedCount = grantedList.count { it }.toFloat()
+    val allGranted = grantedList.all { it }
 
     // Call Screening role request
     val screeningRoleLauncher = rememberLauncherForActivityResult(
@@ -73,6 +90,11 @@ fun PermissionsScreen(
     // Notification permission (Android 13+)
     val notifPermLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
+    ) { viewModel.refresh() }
+
+    // Battery optimisation — StartActivityForResult so we get a callback on return
+    val batteryLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
     ) { viewModel.refresh() }
 
     Scaffold { padding ->
@@ -151,27 +173,29 @@ fun PermissionsScreen(
                     val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
                         data = Uri.parse("package:${context.packageName}")
                     }
-                    context.startActivity(intent)
+                    batteryLauncher.launch(intent)
                 },
             )
 
             Spacer(Modifier.weight(1f))
 
             Button(
-                onClick = { if (state.screeningRoleGranted) onAllGranted() },
+                onClick = onAllGranted,
                 modifier = Modifier.fillMaxWidth(),
-                enabled = state.screeningRoleGranted,
+                enabled = allGranted,
             ) {
                 Text("Continue")
             }
 
-            OutlinedButton(
-                onClick = onAllGranted,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 24.dp),
-            ) {
-                Text(stringResource(R.string.permission_skip))
+            if (showSkip) {
+                OutlinedButton(
+                    onClick = onAllGranted,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 24.dp),
+                ) {
+                    Text(stringResource(R.string.permission_skip))
+                }
             }
         }
     }

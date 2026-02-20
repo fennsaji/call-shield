@@ -33,6 +33,7 @@ fun MainScreen(
     onNavigateToPrefixRules: () -> Unit,
     onNavigateToPrivacy: () -> Unit,
     onNavigateToPaywall: () -> Unit,
+    onNavigateToPermissions: () -> Unit,
     onNavigateToReport: (hash: String, label: String) -> Unit,
 ) {
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
@@ -98,11 +99,9 @@ fun MainScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding),
-                onNavigateToBlocklist = onNavigateToBlocklist,
-                onNavigateToWhitelist = onNavigateToWhitelist,
-                onNavigateToPrefixRules = onNavigateToPrefixRules,
                 onNavigateToPrivacy = onNavigateToPrivacy,
                 onNavigateToPaywall = onNavigateToPaywall,
+                onNavigateToPermissions = onNavigateToPermissions,
             )
         }
     }

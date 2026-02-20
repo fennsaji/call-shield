@@ -15,6 +15,7 @@ interface CallHistoryRepository {
         decisionSource: String,
     )
     suspend fun stats(): CallStats
+    fun observeStats(): Flow<CallStats>
 }
 
 data class CallStats(

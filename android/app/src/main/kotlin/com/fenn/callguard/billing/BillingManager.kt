@@ -46,21 +46,24 @@ class BillingManager @Inject constructor(
     /**
      * Connect to Play Billing and refresh subscription status.
      * Call from application onCreate or a ViewModel init block.
+     *
+     * Returns true immediately if already connected — calling startConnection()
+     * while isReady is true may never fire the callback, causing an infinite hang.
      */
-    suspend fun connect(): Boolean = suspendCancellableCoroutine { cont ->
-        billingClient.startConnection(object : BillingClientStateListener {
-            override fun onBillingSetupFinished(result: BillingResult) {
-                if (result.responseCode == BillingClient.BillingResponseCode.OK) {
-                    cont.resume(true)
-                } else {
-                    cont.resume(false)
+    suspend fun connect(): Boolean {
+        if (billingClient.isReady) return true
+        return suspendCancellableCoroutine { cont ->
+            billingClient.startConnection(object : BillingClientStateListener {
+                override fun onBillingSetupFinished(result: BillingResult) {
+                    cont.resume(result.responseCode == BillingClient.BillingResponseCode.OK)
                 }
-            }
 
-            override fun onBillingServiceDisconnected() {
-                // Will retry on next purchase attempt
-            }
-        })
+                override fun onBillingServiceDisconnected() {
+                    // Will retry on next purchase attempt
+                    if (cont.isActive) cont.resume(false)
+                }
+            })
+        }
     }
 
     suspend fun queryProducts(): List<ProductDetails> {
@@ -131,6 +134,11 @@ class BillingManager @Inject constructor(
             }
             if (hasActiveSub) _isPro.value = true
         }
+    }
+
+    /** Debug-only: bypass Play Billing and mark as Pro immediately. */
+    fun debugSimulatePurchase() {
+        _isPro.value = true
     }
 
     private fun acknowledgePurchase(purchase: Purchase) {

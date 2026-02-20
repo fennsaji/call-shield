@@ -1,11 +1,16 @@
 package com.fenn.callguard.notification
 
+import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
+import android.util.Log
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import com.fenn.callguard.MainActivity
 import com.fenn.callguard.R
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -30,12 +35,23 @@ class CallNotificationManager @Inject constructor(
         createChannels()
     }
 
+    private fun hasNotificationPermission(): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return true
+        val granted = ContextCompat.checkSelfPermission(
+            context, Manifest.permission.POST_NOTIFICATIONS
+        ) == PackageManager.PERMISSION_GRANTED
+        if (!granted) Log.w(TAG, "POST_NOTIFICATIONS not granted — notification suppressed")
+        return granted
+    }
+
     /**
      * PRD §3.13: notification must show "Undo / Mark as Not Spam" action.
      * @param numberHash HMAC hash of the number — passed to MarkNotSpamUseCase on action tap.
      */
     fun showBlockedCallNotification(displayLabel: String, numberHash: String) {
+        if (!hasNotificationPermission()) return
         val notifId = notifIdCounter.getAndIncrement()
+        Log.d(TAG, "Posting blocked notification id=$notifId for $displayLabel")
 
         val openIntent = PendingIntent.getActivity(
             context, notifId, mainActivityIntent(),
@@ -78,8 +94,10 @@ class CallNotificationManager @Inject constructor(
         confidenceScore: Double,
         category: String?,
     ) {
+        if (!hasNotificationPermission()) return
         val percent = (confidenceScore * 100).roundToInt()
         val categoryLabel = category?.replace('_', ' ')?.replaceFirstChar { it.uppercase() } ?: "Spam"
+        Log.d(TAG, "Posting flagged notification for $displayLabel score=$percent%")
         val openIntent = PendingIntent.getActivity(
             context, 0, mainActivityIntent(),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
@@ -121,4 +139,8 @@ class CallNotificationManager @Inject constructor(
         Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
+
+    companion object {
+        private const val TAG = "CallGuard.Notification"
+    }
 }

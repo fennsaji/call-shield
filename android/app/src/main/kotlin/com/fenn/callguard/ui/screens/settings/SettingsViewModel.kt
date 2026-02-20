@@ -2,6 +2,7 @@ package com.fenn.callguard.ui.screens.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.fenn.callguard.billing.BillingManager
 import com.fenn.callguard.data.preferences.ScreeningPreferences
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,7 +21,10 @@ data class SettingsState(
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val prefs: ScreeningPreferences,
+    private val billingManager: BillingManager,
 ) : ViewModel() {
+
+    val isPro: StateFlow<Boolean> = billingManager.isPro
 
     private val _state = MutableStateFlow(SettingsState())
     val state: StateFlow<SettingsState> = _state.asStateFlow()

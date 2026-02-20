@@ -31,6 +31,7 @@ import com.fenn.callguard.ui.screens.whitelist.WhitelistScreen
 object Destinations {
     const val ONBOARDING = "onboarding"
     const val PERMISSIONS = "permissions"
+    const val PERMISSIONS_SETTINGS = "permissions_settings"
     const val HOME = "home"
     const val REPORT_SPAM = "report_spam/{numberHash}/{displayLabel}"
     const val BLOCKLIST = "blocklist"
@@ -107,6 +108,7 @@ fun CallGuardNavHost(
                 onNavigateToPrefixRules = { navController.navigate(Destinations.PREFIX_RULES) },
                 onNavigateToPrivacy = { navController.navigate(Destinations.PRIVACY_DASHBOARD) },
                 onNavigateToPaywall = { navController.navigate(Destinations.PAYWALL) },
+                onNavigateToPermissions = { navController.navigate(Destinations.PERMISSIONS_SETTINGS) },
                 onNavigateToReport = { hash, label ->
                     navController.navigate(Destinations.reportSpam(hash, label))
                 },
@@ -128,6 +130,13 @@ fun CallGuardNavHost(
                 numberHash = backStackEntry.arguments?.getString("numberHash") ?: "",
                 displayLabel = backStackEntry.arguments?.getString("displayLabel") ?: "",
                 onDismiss = { navController.popBackStack() },
+            )
+        }
+
+        composable(Destinations.PERMISSIONS_SETTINGS) {
+            PermissionsScreen(
+                onAllGranted = { navController.popBackStack() },
+                showSkip = false,
             )
         }
 

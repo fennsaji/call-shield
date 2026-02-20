@@ -6,6 +6,7 @@ import com.fenn.callguard.domain.model.CallDecision
 import com.fenn.callguard.domain.repository.CallHistoryRepository
 import com.fenn.callguard.domain.repository.CallStats
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import javax.inject.Inject
 
 class CallHistoryRepositoryImpl @Inject constructor(
@@ -45,4 +46,9 @@ class CallHistoryRepositoryImpl @Inject constructor(
         totalScreened = dao.totalCount(),
         totalBlocked = dao.blockedCount(),
     )
+
+    override fun observeStats(): Flow<CallStats> =
+        dao.observeTotalCount().combine(dao.observeBlockedCount()) { total, blocked ->
+            CallStats(totalScreened = total, totalBlocked = blocked)
+        }
 }

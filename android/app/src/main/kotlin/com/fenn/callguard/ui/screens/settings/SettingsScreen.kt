@@ -14,11 +14,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
-import androidx.compose.material.icons.outlined.Block
-import androidx.compose.material.icons.outlined.CheckCircle
-import androidx.compose.material.icons.outlined.FilterList
+import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.PrivacyTip
+import androidx.compose.material.icons.outlined.Security
 import androidx.compose.material.icons.outlined.Shield
 import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material.icons.outlined.VisibilityOff
@@ -35,6 +34,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -46,14 +46,13 @@ import kotlinx.coroutines.launch
 fun SettingsScreen(
     modifier: Modifier = Modifier,
     onBack: () -> Unit = {},
-    onNavigateToBlocklist: () -> Unit = {},
-    onNavigateToWhitelist: () -> Unit = {},
-    onNavigateToPrefixRules: () -> Unit = {},
     onNavigateToPrivacy: () -> Unit = {},
     onNavigateToPaywall: () -> Unit = {},
+    onNavigateToPermissions: () -> Unit = {},
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val isPro by viewModel.isPro.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
 
     Column(
@@ -72,22 +71,32 @@ fun SettingsScreen(
         SettingRow(
             icon = Icons.Outlined.Shield,
             title = stringResource(R.string.settings_auto_block),
+            onClick = if (!isPro) onNavigateToPaywall else null,
             trailing = {
-                Switch(
-                    checked = state.autoBlock,
-                    onCheckedChange = { scope.launch { viewModel.setAutoBlock(it) } },
-                )
+                if (isPro) {
+                    Switch(
+                        checked = state.autoBlock,
+                        onCheckedChange = { scope.launch { viewModel.setAutoBlock(it) } },
+                    )
+                } else {
+                    ProLockBadge()
+                }
             },
         )
         HorizontalDivider(modifier = Modifier.padding(start = 56.dp))
         SettingRow(
             icon = Icons.Outlined.VisibilityOff,
             title = "Block hidden numbers",
+            onClick = if (!isPro) onNavigateToPaywall else null,
             trailing = {
-                Switch(
-                    checked = state.blockHidden,
-                    onCheckedChange = { scope.launch { viewModel.setBlockHidden(it) } },
-                )
+                if (isPro) {
+                    Switch(
+                        checked = state.blockHidden,
+                        onCheckedChange = { scope.launch { viewModel.setBlockHidden(it) } },
+                    )
+                } else {
+                    ProLockBadge()
+                }
             },
         )
 
@@ -119,26 +128,12 @@ fun SettingsScreen(
 
         Spacer(Modifier.height(16.dp))
 
-        // ── Lists ─────────────────────────────────────────────────────────────
-        SectionHeader("Lists")
+        // ── Setup ─────────────────────────────────────────────────────────────
+        SectionHeader("Setup")
         SettingRow(
-            icon = Icons.Outlined.Block,
-            title = stringResource(R.string.blocklist_title),
-            onClick = onNavigateToBlocklist,
-            trailing = { ChevronIcon() },
-        )
-        HorizontalDivider(modifier = Modifier.padding(start = 56.dp))
-        SettingRow(
-            icon = Icons.Outlined.CheckCircle,
-            title = stringResource(R.string.whitelist_title),
-            onClick = onNavigateToWhitelist,
-            trailing = { ChevronIcon() },
-        )
-        HorizontalDivider(modifier = Modifier.padding(start = 56.dp))
-        SettingRow(
-            icon = Icons.Outlined.FilterList,
-            title = stringResource(R.string.prefix_rules_title),
-            onClick = onNavigateToPrefixRules,
+            icon = Icons.Outlined.Security,
+            title = "App Permissions",
+            onClick = onNavigateToPermissions,
             trailing = { ChevronIcon() },
         )
 
@@ -231,4 +226,25 @@ private fun ChevronIcon() {
         modifier = Modifier.size(16.dp),
         tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f),
     )
+}
+
+@Composable
+private fun ProLockBadge() {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Icon(
+            Icons.Outlined.Lock,
+            contentDescription = null,
+            modifier = Modifier.size(14.dp),
+            tint = MaterialTheme.colorScheme.primary,
+        )
+        Text(
+            "Pro",
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.primary,
+        )
+    }
 }

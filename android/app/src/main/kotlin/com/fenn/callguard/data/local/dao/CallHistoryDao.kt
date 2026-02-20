@@ -24,6 +24,12 @@ interface CallHistoryDao {
     @Query("SELECT COUNT(*) FROM call_history WHERE outcome IN ('rejected', 'silenced')")
     suspend fun blockedCount(): Int
 
+    @Query("SELECT COUNT(*) FROM call_history")
+    fun observeTotalCount(): Flow<Int>
+
+    @Query("SELECT COUNT(*) FROM call_history WHERE outcome IN ('rejected', 'silenced')")
+    fun observeBlockedCount(): Flow<Int>
+
     /** Prune old entries — keep last 1000 records. */
     @Query(
         """

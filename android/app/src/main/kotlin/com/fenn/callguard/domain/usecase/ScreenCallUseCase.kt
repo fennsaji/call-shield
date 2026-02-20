@@ -39,7 +39,7 @@ class ScreenCallUseCase @Inject constructor(
 
         // ── 1. Hidden number ─────────────────────────────────────────────────
         if (rawNumber.isNullOrBlank()) {
-            return if (settings.blockHiddenNumbers) {
+            return if (isPro && settings.blockHiddenNumbers) {
                 CallDecision.Reject(DecisionSource.HIDDEN)
             } else {
                 CallDecision.Silence(0.5, null, DecisionSource.HIDDEN)

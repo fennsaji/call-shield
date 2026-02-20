@@ -52,6 +52,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.fenn.callguard.BuildConfig
 import com.fenn.callguard.R
 import com.fenn.callguard.ui.theme.LocalSuccessColor
 
@@ -271,6 +272,15 @@ fun PaywallScreen(
 
                 state.error?.let {
                     Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                }
+
+                if (BuildConfig.DEBUG) {
+                    OutlinedButton(
+                        onClick = { viewModel.debugSimulatePurchase() },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text("[DEBUG] Simulate Purchase")
+                    }
                 }
 
                 HorizontalDivider()

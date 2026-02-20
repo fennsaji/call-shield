@@ -2,17 +2,21 @@ package com.fenn.callguard.screening
 
 import android.telecom.Call
 import android.telecom.CallScreeningService
+import android.util.Log
 import com.fenn.callguard.domain.model.CallDecision
 import com.fenn.callguard.domain.repository.CallHistoryRepository
+import com.fenn.callguard.domain.usecase.GetScreeningSettingsUseCase
 import com.fenn.callguard.domain.usecase.ScreenCallUseCase
 import com.fenn.callguard.notification.CallNotificationManager
 import com.fenn.callguard.util.PhoneNumberHasher
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import javax.inject.Inject
 
@@ -30,26 +34,34 @@ class CallGuardScreeningService : CallScreeningService() {
     @Inject lateinit var notificationManager: CallNotificationManager
     @Inject lateinit var hasher: PhoneNumberHasher
     @Inject lateinit var paywallTrigger: PaywallTriggerManager
+    @Inject lateinit var getScreeningSettings: GetScreeningSettingsUseCase
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override fun onScreenCall(callDetails: Call.Details) {
         val rawNumber = callDetails.handle?.schemeSpecificPart
+        Log.d(TAG, "onScreenCall: number=$rawNumber direction=${callDetails.callDirection}")
 
         serviceScope.launch {
+            var responded = false
             try {
                 // Stay within 1500ms budget with a 1400ms safety margin
                 val decision = withTimeout(1400L) {
                     screenCallUseCase.execute(rawNumber)
                 }
 
-                val response = buildResponse(decision)
-                respondToCall(callDetails, response)
+                Log.d(TAG, "Decision: $decision for $rawNumber")
+                respondToCall(callDetails, buildResponse(decision))
+                responded = true
 
-                // Record history and post notifications (best-effort, outside response path)
-                recordAndNotify(rawNumber, decision)
+                // Record history and post notifications — NonCancellable ensures this
+                // completes even if the service is destroyed (onDestroy cancels serviceScope)
+                withContext(NonCancellable) {
+                    recordAndNotify(rawNumber, decision)
+                }
             } catch (e: Exception) {
-                // On timeout or error: always allow (fail open)
+                if (responded) return@launch  // already responded — do not override with allow
+                Log.e(TAG, "Screening failed for $rawNumber — allowing (fail open)", e)
                 respondToCall(
                     callDetails,
                     CallResponse.Builder()
@@ -100,16 +112,24 @@ class CallGuardScreeningService : CallScreeningService() {
 
         callHistoryRepo.record(hash, label, decision, score, category, source.name)
 
+        val settings = getScreeningSettings.get()
+        Log.d(TAG, "recordAndNotify: notifyOnBlock=${settings.notifyOnBlock} notifyOnFlag=${settings.notifyOnFlag}")
+
         when (decision) {
             is CallDecision.Reject -> {
-                notificationManager.showBlockedCallNotification(label, hash)
+                if (settings.notifyOnBlock) notificationManager.showBlockedCallNotification(label, hash)
+                else Log.d(TAG, "Blocked notification suppressed — notifyOnBlock=false")
                 paywallTrigger.onSpamCallDetected()
             }
             is CallDecision.Silence -> {
-                notificationManager.showBlockedCallNotification(label, hash)
+                if (settings.notifyOnBlock) notificationManager.showBlockedCallNotification(label, hash)
+                else Log.d(TAG, "Silenced notification suppressed — notifyOnBlock=false")
                 paywallTrigger.onSpamCallDetected()
             }
-            is CallDecision.Flag -> notificationManager.showFlaggedCallNotification(label, decision.confidenceScore, decision.category)
+            is CallDecision.Flag -> {
+                if (settings.notifyOnFlag) notificationManager.showFlaggedCallNotification(label, decision.confidenceScore, decision.category)
+                else Log.d(TAG, "Flagged notification suppressed — notifyOnFlag=false")
+            }
             is CallDecision.Allow -> Unit
         }
     }
@@ -117,5 +137,9 @@ class CallGuardScreeningService : CallScreeningService() {
     override fun onDestroy() {
         super.onDestroy()
         serviceScope.cancel()
+    }
+
+    companion object {
+        private const val TAG = "CallGuard.Screening"
     }
 }

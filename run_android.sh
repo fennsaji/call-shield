@@ -1,4 +1,6 @@
 #!/bin/bash
+# Re-exec with bash if invoked via `sh run_android.sh`
+[ -z "$BASH_VERSION" ] && exec bash "$0" "$@"
 
 # CallGuard Android Local Development Script
 # Builds the debug APK with env-injected BuildConfig fields, installs it on a
@@ -37,12 +39,12 @@ else
     ENV_FILE="$SCRIPT_DIR/$ENV_FILE_ARG"
 fi
 
-echo -e "${BLUE}🛡️  CallGuard Android — Local Development Build${NC}"
-echo -e "${BLUE}📄 Env file: ${ENV_FILE}${NC}"
+printf "${BLUE}🛡️  CallGuard Android — Local Development Build${NC}\n"
+printf "${BLUE}📄 Env file: ${ENV_FILE}${NC}\n"
 
 # ── Validate env file ──────────────────────────────────────────────────────────
 if [ ! -f "$ENV_FILE" ]; then
-    echo -e "${RED}❌ Environment file not found: $ENV_FILE${NC}"
+    printf "${RED}❌ Environment file not found: $ENV_FILE${NC}\n"
     echo ""
     echo "Copy the example and fill in your values:"
     echo "  cp android/local.properties.example android/local.properties"
@@ -66,19 +68,19 @@ MISSING_VARS=""
 [ -z "$SUPABASE_ANON_KEY" ] && MISSING_VARS="${MISSING_VARS}  - SUPABASE_ANON_KEY\n"
 
 if [ -n "$MISSING_VARS" ]; then
-    echo -e "${RED}❌ Missing required properties in ${ENV_FILE}:${NC}"
-    echo -e "$MISSING_VARS"
+    printf "${RED}❌ Missing required properties in ${ENV_FILE}:${NC}\n"
+    printf '%b\n' "$MISSING_VARS"
     echo "Required: SUPABASE_URL, SUPABASE_ANON_KEY"
     exit 1
 fi
 
-echo -e "${GREEN}✅ Properties loaded${NC}"
-echo -e "  SUPABASE_URL:      ${SUPABASE_URL}"
-echo -e "  SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY:0:20}..."
+printf "${GREEN}✅ Properties loaded${NC}\n"
+printf "  SUPABASE_URL:      ${SUPABASE_URL}\n"
+printf "  SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY:0:20}...\n"
 if [ -n "$HMAC_SALT" ]; then
-    echo -e "  HMAC_SALT:         ${HMAC_SALT}"
+    printf "  HMAC_SALT:         ${HMAC_SALT}\n"
 else
-    echo -e "  HMAC_SALT:         ${YELLOW}(using default: callguard-v1-salt-2024)${NC}"
+    printf "  HMAC_SALT:         ${YELLOW}(using default: callguard-v1-salt-2024)${NC}\n"
 fi
 
 # ── Detect Android SDK ─────────────────────────────────────────────────────────
@@ -87,13 +89,13 @@ SDK_DIR=$(load_prop "sdk.dir")
 if [ -z "$ANDROID_HOME" ]; then
     if [ -n "$SDK_DIR" ] && [ -d "$SDK_DIR" ]; then
         export ANDROID_HOME="$SDK_DIR"
-        echo -e "\n${GREEN}✅ Android SDK from local.properties: ${ANDROID_HOME}${NC}"
+        printf "\n${GREEN}✅ Android SDK from local.properties: ${ANDROID_HOME}${NC}\n"
     elif [ -d "$HOME/Library/Android/sdk" ]; then
         export ANDROID_HOME="$HOME/Library/Android/sdk"
-        echo -e "\n${YELLOW}⚙️  Auto-detected Android SDK: ${ANDROID_HOME}${NC}"
+        printf "\n${YELLOW}⚙️  Auto-detected Android SDK: ${ANDROID_HOME}${NC}\n"
     elif [ -d "$HOME/Android/Sdk" ]; then
         export ANDROID_HOME="$HOME/Android/Sdk"
-        echo -e "\n${YELLOW}⚙️  Auto-detected Android SDK: ${ANDROID_HOME}${NC}"
+        printf "\n${YELLOW}⚙️  Auto-detected Android SDK: ${ANDROID_HOME}${NC}\n"
     fi
 fi
 
@@ -118,16 +120,16 @@ elif [ -z "$JAVA_HOME" ]; then
 fi
 if [ -n "$JAVA_HOME" ]; then
     export PATH="$JAVA_HOME/bin:$PATH"
-    echo -e "${GREEN}✅ JAVA_HOME: ${JAVA_HOME}${NC}"
+    printf "${GREEN}✅ JAVA_HOME: ${JAVA_HOME}${NC}\n"
 fi
 
 if ! command -v adb &>/dev/null; then
-    echo -e "${RED}❌ adb not found. Ensure Android SDK platform-tools are installed.${NC}"
+    printf "${RED}❌ adb not found. Ensure Android SDK platform-tools are installed.${NC}\n"
     echo "  Set ANDROID_HOME or add sdk.dir to ${ENV_FILE}"
     exit 1
 fi
 
-echo -e "${GREEN}✅ Android SDK: ${ANDROID_HOME}${NC}"
+printf "${GREEN}✅ Android SDK: ${ANDROID_HOME}${NC}\n"
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
 is_emulator() { [[ "$1" == emulator-* ]] && return 0 || return 1; }
@@ -142,31 +144,44 @@ device_name() {
 }
 
 # ── Device detection ───────────────────────────────────────────────────────────
-echo -e "\n${BLUE}🔍 Detecting Android devices...${NC}"
+printf "\n${BLUE}🔍 Detecting Android devices...${NC}\n"
 
 ADB_DEVICES=$(adb devices 2>/dev/null | grep -v "List of devices" | grep "device$" | awk '{print $1}')
 
+# Warn about unauthorized devices (USB debugging prompt not yet accepted on phone)
+UNAUTH=$(adb devices 2>/dev/null | grep -v "List of devices" | grep "unauthorized" | awk '{print $1}')
+if [ -n "$UNAUTH" ]; then
+    printf "${YELLOW}⚠️  Unauthorized device(s) — accept the 'Allow USB debugging' prompt on your phone:${NC}\n"
+    while IFS= read -r dev; do
+        printf "   ${YELLOW}• ${dev}${NC}\n"
+    done <<< "$UNAUTH"
+    echo ""
+fi
+
 if [ -z "$ADB_DEVICES" ]; then
-    echo -e "${YELLOW}📱 No connected devices found. Checking available emulators...${NC}"
+    printf "${YELLOW}📱 No connected devices found.${NC}\n"
+    printf "${CYAN}   To use a physical device: enable USB debugging (Settings → Developer options) and connect via USB.${NC}\n"
+    printf "${CYAN}   Checking available emulators...${NC}\n"
+    echo ""
 
     if ! command -v emulator &>/dev/null; then
-        echo -e "${RED}❌ No devices connected and emulator command not found.${NC}"
+        printf "${RED}❌ No devices connected and emulator command not found.${NC}\n"
         echo "Connect a device or install Android SDK emulator support."
         exit 1
     fi
 
     AVAILABLE_EMULATORS=$(emulator -list-avds 2>/dev/null)
     if [ -z "$AVAILABLE_EMULATORS" ]; then
-        echo -e "${RED}❌ No connected devices and no AVDs found.${NC}"
-        echo "Create an emulator in Android Studio or via avdmanager."
+        printf "${RED}❌ No connected devices and no AVDs found.${NC}\n"
+        echo "Connect a physical device via USB or create an emulator in Android Studio."
         exit 1
     fi
 
-    echo -e "${CYAN}Available emulators:${NC}"
+    printf "${CYAN}Available emulators:${NC}\n"
     idx=1
     declare -a EMULATOR_ARRAY
     while IFS= read -r avd; do
-        echo -e "  ${GREEN}${idx})${NC} $avd"
+        printf "  ${GREEN}${idx})${NC} $avd\n"
         EMULATOR_ARRAY[$idx]="$avd"
         ((idx++))
     done <<< "$AVAILABLE_EMULATORS"
@@ -174,18 +189,18 @@ if [ -z "$ADB_DEVICES" ]; then
     echo ""
     read -p "Select emulator to start (1-$((idx-1))): " selection
     if [ -z "$selection" ] || [ "$selection" -lt 1 ] || [ "$selection" -ge "$idx" ]; then
-        echo -e "${RED}❌ Invalid selection${NC}"; exit 1
+        printf "${RED}❌ Invalid selection${NC}\n"; exit 1
     fi
 
-    echo -e "${YELLOW}📱 Starting emulator: ${EMULATOR_ARRAY[$selection]}${NC}"
+    printf "${YELLOW}📱 Starting emulator: ${EMULATOR_ARRAY[$selection]}${NC}\n"
     emulator -avd "${EMULATOR_ARRAY[$selection]}" -no-snapshot-load >/dev/null 2>&1 &
 
-    echo -e "${BLUE}⏳ Waiting for emulator to boot...${NC}"
+    printf "${BLUE}⏳ Waiting for emulator to boot...${NC}\n"
     adb wait-for-device
     while [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" != "1" ]; do
         sleep 2
     done
-    echo -e "${GREEN}✅ Emulator booted${NC}"
+    printf "${GREEN}✅ Emulator booted${NC}\n"
 
     DEVICE_ID=$(adb devices | grep -v "List of devices" | grep "device$" | awk '{print $1}' | head -1)
 else
@@ -194,27 +209,27 @@ else
     if [ -n "$DEVICE_ID_ARG" ]; then
         if echo "$ADB_DEVICES" | grep -q "^${DEVICE_ID_ARG}$"; then
             DEVICE_ID="$DEVICE_ID_ARG"
-            echo -e "${GREEN}✅ Using specified device: ${DEVICE_ID}${NC}"
+            printf "${GREEN}✅ Using specified device: ${DEVICE_ID}${NC}\n"
         else
-            echo -e "${RED}❌ Device '$DEVICE_ID_ARG' not found.${NC}"
+            printf "${RED}❌ Device '$DEVICE_ID_ARG' not found.${NC}\n"
             echo "Connected devices:"; echo "$ADB_DEVICES"; exit 1
         fi
     elif [ "$DEVICE_COUNT" -eq 1 ]; then
         DEVICE_ID=$(echo "$ADB_DEVICES" | head -1)
         NAME=$(device_name "$DEVICE_ID")
         TYPE=$(is_emulator "$DEVICE_ID" && echo "Emulator" || echo "Physical Device")
-        echo -e "${GREEN}✅ Auto-selected: ${NAME} (${DEVICE_ID}) — ${TYPE}${NC}"
+        printf "${GREEN}✅ Auto-selected: ${NAME} (${DEVICE_ID}) — ${TYPE}${NC}\n"
     else
-        echo -e "${CYAN}📱 Multiple devices found. Select one:${NC}"
+        printf "${CYAN}📱 Multiple devices found. Select one:${NC}\n"
         echo ""
         idx=1
         declare -a DEVICE_ID_ARRAY
         while IFS= read -r dev; do
             NAME=$(device_name "$dev")
             TYPE=$(is_emulator "$dev" && echo "Emulator" || echo "Physical Device")
-            echo -e "  ${GREEN}${idx})${NC} ${NAME}"
-            echo -e "     ${BLUE}ID:${NC}   ${dev}"
-            echo -e "     ${BLUE}Type:${NC} ${TYPE}"
+            printf "  ${GREEN}${idx})${NC} ${NAME}\n"
+            printf "     ${BLUE}ID:${NC}   ${dev}\n"
+            printf "     ${BLUE}Type:${NC} ${TYPE}\n"
             echo ""
             DEVICE_ID_ARRAY[$idx]="$dev"
             ((idx++))
@@ -222,46 +237,46 @@ else
 
         read -p "Select device (1-$((idx-1))): " selection
         if [ -z "$selection" ] || [ "$selection" -lt 1 ] || [ "$selection" -ge "$idx" ]; then
-            echo -e "${RED}❌ Invalid selection${NC}"; exit 1
+            printf "${RED}❌ Invalid selection${NC}\n"; exit 1
         fi
 
         DEVICE_ID="${DEVICE_ID_ARRAY[$selection]}"
         NAME=$(device_name "$DEVICE_ID")
         TYPE=$(is_emulator "$DEVICE_ID" && echo "Emulator" || echo "Physical Device")
-        echo -e "${GREEN}✅ Selected: ${NAME} (${DEVICE_ID}) — ${TYPE}${NC}"
+        printf "${GREEN}✅ Selected: ${NAME} (${DEVICE_ID}) — ${TYPE}${NC}\n"
     fi
 fi
 
 # Ensure emulator is fully booted before building
 if is_emulator "$DEVICE_ID"; then
-    echo -e "${BLUE}⏳ Ensuring emulator is fully booted...${NC}"
+    printf "${BLUE}⏳ Ensuring emulator is fully booted...${NC}\n"
     while [ "$(adb -s "$DEVICE_ID" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" != "1" ]; do
         sleep 2
     done
 fi
 
-echo -e "${GREEN}✅ Device ready: ${DEVICE_ID}${NC}"
+printf "${GREEN}✅ Device ready: ${DEVICE_ID}${NC}\n"
 
 # ── Supabase connectivity check ────────────────────────────────────────────────
 CHECK_URL="$SUPABASE_URL"
 if [[ "$SUPABASE_URL" == *"10.0.2.2"* ]]; then
     CHECK_URL="${SUPABASE_URL//10.0.2.2/127.0.0.1}"
-    echo -e "\n${BLUE}🔗 Checking Supabase (${SUPABASE_URL} → testing via 127.0.0.1)...${NC}"
+    printf "\n${BLUE}🔗 Checking Supabase (${SUPABASE_URL} → testing via 127.0.0.1)...${NC}\n"
 else
-    echo -e "\n${BLUE}🔗 Checking Supabase: ${SUPABASE_URL}${NC}"
+    printf "\n${BLUE}🔗 Checking Supabase: ${SUPABASE_URL}${NC}\n"
 fi
 
 if ! curl -s --connect-timeout 5 --max-time 10 "${CHECK_URL}/rest/v1/" >/dev/null 2>&1; then
-    echo -e "${RED}❌ Supabase is not accessible at ${SUPABASE_URL}${NC}"
+    printf "${RED}❌ Supabase is not accessible at ${SUPABASE_URL}${NC}\n"
     echo "  • For local backend: run ./run_backend.sh first"
     echo "  • For emulator targeting host: use SUPABASE_URL=http://10.0.2.2:54321"
     echo "  • For remote Supabase: verify SUPABASE_URL in ${ENV_FILE}"
     exit 1
 fi
-echo -e "${GREEN}✅ Supabase accessible${NC}"
+printf "${GREEN}✅ Supabase accessible${NC}\n"
 
 # ── Build & install ────────────────────────────────────────────────────────────
-echo -e "\n${BLUE}🔨 Building debug APK...${NC}"
+printf "\n${BLUE}🔨 Building debug APK...${NC}\n"
 
 # Compose Gradle -P flags
 GRADLE_PROPS="-PSUPABASE_URL=${SUPABASE_URL} -PSUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}"
@@ -272,27 +287,23 @@ fi
 cd "$ANDROID_DIR"
 ./gradlew installDebug $GRADLE_PROPS
 
-echo -e "${GREEN}✅ APK built and installed${NC}"
+printf "${GREEN}✅ APK built and installed${NC}\n"
 
 # ── Launch app ─────────────────────────────────────────────────────────────────
 APP_ID="com.fenn.callguard.debug"
 MAIN_ACTIVITY="com.fenn.callguard.MainActivity"
 
-echo -e "\n${BLUE}🚀 Launching ${APP_ID}...${NC}"
+printf "\n${BLUE}🚀 Launching ${APP_ID}...${NC}\n"
 adb -s "$DEVICE_ID" shell am start -n "${APP_ID}/${MAIN_ACTIVITY}"
 
-echo -e ""
-echo -e "${GREEN}✅ CallGuard launched on device${NC}"
-echo -e ""
-echo -e "${YELLOW}📱 Device:${NC} $(device_name "$DEVICE_ID") (${DEVICE_ID})"
-echo -e "${YELLOW}📦 App ID:${NC} ${APP_ID}"
-echo -e ""
-echo -e "${BLUE}Useful adb commands:${NC}"
-echo -e "  ${GREEN}adb -s $DEVICE_ID shell am force-stop $APP_ID${NC}  # Kill app"
-echo -e "  ${GREEN}adb -s $DEVICE_ID uninstall $APP_ID${NC}             # Uninstall"
-echo -e ""
-echo -e "${CYAN}📋 Streaming logcat (Ctrl+C to stop)...${NC}"
-echo -e "${BLUE}──────────────────────────────────────────────${NC}"
+printf "\n${GREEN}✅ CallGuard launched on device${NC}\n"
+printf "\n${YELLOW}📱 Device:${NC} $(device_name "$DEVICE_ID") (${DEVICE_ID})\n"
+printf "${YELLOW}📦 App ID:${NC} ${APP_ID}\n"
+printf "\n${BLUE}Useful adb commands:${NC}\n"
+printf "  ${GREEN}adb -s $DEVICE_ID shell am force-stop $APP_ID${NC}  # Kill app\n"
+printf "  ${GREEN}adb -s $DEVICE_ID uninstall $APP_ID${NC}             # Uninstall\n"
+printf "\n${CYAN}📋 Streaming logcat (Ctrl+C to stop)...${NC}\n"
+printf "${BLUE}──────────────────────────────────────────────${NC}\n"
 
 # Clear stale logs before streaming
 adb -s "$DEVICE_ID" logcat -c
@@ -306,16 +317,16 @@ for i in $(seq 1 10); do
 done
 
 if [ -n "$APP_PID" ]; then
-    echo -e "${GREEN}🔎 Attached to PID ${APP_PID}${NC}"
+    printf "${GREEN}🔎 Attached to PID ${APP_PID}${NC}\n"
     # Stream logs for this specific process only
     adb -s "$DEVICE_ID" logcat --pid="$APP_PID" 2>/dev/null &
 else
-    echo -e "${YELLOW}⚠️  Could not detect app PID — streaming all logs (filtered to package)${NC}"
+    printf "${YELLOW}⚠️  Could not detect app PID — streaming all logs (filtered to package)${NC}\n"
     # Fallback: stream everything and grep for the package name + crash signals
     adb -s "$DEVICE_ID" logcat 2>/dev/null | grep --line-buffered -E "callguard|AndroidRuntime|FATAL" &
 fi
 LOGCAT_PID=$!
 
 # Ctrl+C kills logcat stream and exits cleanly
-trap "kill $LOGCAT_PID 2>/dev/null; echo ''; echo -e '${YELLOW}💡 To rebuild and reinstall: re-run this script.${NC}'; exit 0" INT
+trap "kill $LOGCAT_PID 2>/dev/null; printf '\n${YELLOW}💡 To rebuild and reinstall: re-run this script.${NC}\n'; exit 0" INT
 wait $LOGCAT_PID
