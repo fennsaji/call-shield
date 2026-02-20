@@ -1,0 +1,78 @@
+# ========================
+# Android
+# ========================
+*.iml
+.gradle/
+local.properties
+.idea/
+.DS_Store
+build/
+captures/
+.externalNativeBuild/
+.cxx/
+*.apk
+*.aab
+*.ap_
+*.dex
+*.class
+bin/
+gen/
+out/
+release/
+*.keystore
+!debug.keystore
+google-services.json
+
+# ========================
+# React / Node
+# ========================
+node_modules/
+dist/
+.next/
+out/
+.cache/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnpm-store/
+.yarn/
+
+# ========================
+# TypeScript
+# ========================
+*.js.map
+*.d.ts.map
+tsconfig.tsbuildinfo
+
+# ========================
+# Supabase
+# ========================
+.supabase/
+supabase/.temp/
+supabase/functions/.env
+
+# ========================
+# Environment & Secrets
+# ========================
+.env
+.env.*
+!.env.example
+*.pem
+*.p8
+*.p12
+secrets/
+
+# ========================
+# OS
+# ========================
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ========================
+# Editors
+# ========================
+.vscode/
+*.swp
+*.swo
