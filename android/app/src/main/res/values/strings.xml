@@ -143,6 +143,17 @@
     <string name="nav_activity">Activity</string>
     <string name="nav_settings">Settings</string>
 
+    <!-- Content descriptions -->
+    <string name="cd_navigate_back">Navigate back</string>
+
+    <!-- Blocklist / Whitelist hints -->
+    <string name="empty_blocklist_hint">Tap + to add your first number</string>
+    <string name="empty_whitelist_hint">Tap + to add your first number</string>
+
+    <!-- Reason transparency (no-placeholder variants) -->
+    <string name="reason_prefix_matched">Matched a prefix blocking rule</string>
+    <string name="reason_remote_confidence">Flagged by community (%1$d%%\u00a0confidence)</string>
+
     <!-- Errors / generic -->
     <string name="error_no_internet">No internet connection</string>
     <string name="error_generic">Something went wrong. Try again.</string>

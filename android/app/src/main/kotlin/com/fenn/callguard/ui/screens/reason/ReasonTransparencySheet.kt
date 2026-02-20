@@ -127,7 +127,7 @@ fun ReasonTransparencySheet(
                     ReasonRow(
                         icon = Icons.Filled.Warning,
                         tint = warningColor,
-                        text = stringResource(R.string.reason_remote, 0, percent),
+                        text = stringResource(R.string.reason_remote_confidence, percent),
                     )
                     // Confidence progress bar
                     Column {
@@ -149,7 +149,7 @@ fun ReasonTransparencySheet(
                     ReasonRow(
                         icon = Icons.Filled.Block,
                         tint = dangerColor,
-                        text = stringResource(R.string.reason_prefix, ""),
+                        text = stringResource(R.string.reason_prefix_matched),
                     )
                 }
                 DecisionSource.HIDDEN -> {

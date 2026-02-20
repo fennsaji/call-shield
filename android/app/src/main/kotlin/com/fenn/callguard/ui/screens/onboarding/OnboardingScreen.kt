@@ -33,6 +33,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -65,6 +66,7 @@ fun OnboardingScreen(
     viewModel: OnboardingViewModel = hiltViewModel(),
 ) {
     var currentPage by remember { mutableIntStateOf(0) }
+    var isCompleting by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
     val primary = MaterialTheme.colorScheme.primary
@@ -132,7 +134,8 @@ fun OnboardingScreen(
                     onClick = {
                         if (currentPage < pages.lastIndex) {
                             currentPage++
-                        } else {
+                        } else if (!isCompleting) {
+                            isCompleting = true
                             scope.launch {
                                 viewModel.markOnboardingComplete()
                                 onComplete()

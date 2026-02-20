@@ -9,7 +9,6 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -27,8 +26,6 @@ class NotSpamActionReceiver : BroadcastReceiver() {
 
     @Inject lateinit var markNotSpamUseCase: MarkNotSpamUseCase
 
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action != ACTION_NOT_SPAM) return
 
@@ -36,11 +33,19 @@ class NotSpamActionReceiver : BroadcastReceiver() {
         val displayLabel = intent.getStringExtra(EXTRA_DISPLAY_LABEL) ?: "Unknown"
         val notifId = intent.getIntExtra(EXTRA_NOTIFICATION_ID, -1)
 
-        scope.launch {
-            markNotSpamUseCase.execute(numberHash, displayLabel)
+        // goAsync() keeps the receiver process alive until pendingResult.finish()
+        // is called, preventing the OS from killing the process before the
+        // coroutine (DB write + network call) completes.
+        val pendingResult = goAsync()
+        CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
+            try {
+                markNotSpamUseCase.execute(numberHash, displayLabel)
+            } finally {
+                pendingResult.finish()
+            }
         }
 
-        // Dismiss the notification
+        // Dismiss the notification (safe to do synchronously before finish())
         if (notifId != -1) {
             val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             nm.cancel(notifId)

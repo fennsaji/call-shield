@@ -69,7 +69,7 @@ fun BlocklistScreen(
                 title = { Text(stringResource(R.string.blocklist_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.cd_navigate_back))
                     }
                 },
             )
@@ -102,7 +102,7 @@ fun BlocklistScreen(
                 )
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    "Tap + to add your first number",
+                    stringResource(R.string.empty_blocklist_hint),
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
                     style = MaterialTheme.typography.bodyMedium,
                 )

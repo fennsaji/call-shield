@@ -65,7 +65,6 @@ fun ReportSpamScreen(
 
     LaunchedEffect(state.submitted) {
         if (state.submitted) {
-            snackbarHostState.showSnackbar(message = "Report submitted. Thank you!")
             onDismiss()
         }
     }

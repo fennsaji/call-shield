@@ -1,5 +1,6 @@
 package com.fenn.callguard.ui
 
+import android.net.Uri
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
@@ -41,7 +42,10 @@ object Destinations {
     const val PAYWALL = "paywall?trigger={trigger}"
 
     fun reportSpam(numberHash: String, displayLabel: String) =
-        "report_spam/$numberHash/$displayLabel"
+        "report_spam/${Uri.encode(numberHash)}/${Uri.encode(displayLabel)}"
+
+    /** Concrete paywall route with the trigger value substituted. */
+    fun paywallRoute(trigger: Boolean = false) = "paywall?trigger=$trigger"
 }
 
 @Composable
@@ -50,15 +54,18 @@ fun CallGuardNavHost(
     paywallTrigger: PaywallTriggerManager,
     navController: NavHostController = rememberNavController(),
 ) {
+    // null = not yet loaded (suppress NavHost until DataStore emits to avoid onboarding flash)
     val onboardingComplete by prefs.observeOnboardingComplete()
-        .collectAsStateWithLifecycle(initialValue = false)
+        .collectAsStateWithLifecycle(initialValue = null)
 
-    val startDestination = if (onboardingComplete) Destinations.HOME else Destinations.ONBOARDING
+    if (onboardingComplete == null) return
+
+    val startDestination = if (onboardingComplete == true) Destinations.HOME else Destinations.ONBOARDING
 
     // Observe paywall trigger from screening service
     LaunchedEffect(Unit) {
         paywallTrigger.paywallTrigger.collect {
-            navController.navigate("${Destinations.PAYWALL}?trigger=true") {
+            navController.navigate(Destinations.paywallRoute(trigger = true)) {
                 launchSingleTop = true
             }
         }
@@ -107,7 +114,7 @@ fun CallGuardNavHost(
                 onNavigateToWhitelist = { navController.navigate(Destinations.WHITELIST) },
                 onNavigateToPrefixRules = { navController.navigate(Destinations.PREFIX_RULES) },
                 onNavigateToPrivacy = { navController.navigate(Destinations.PRIVACY_DASHBOARD) },
-                onNavigateToPaywall = { navController.navigate(Destinations.PAYWALL) },
+                onNavigateToPaywall = { navController.navigate(Destinations.paywallRoute()) },
                 onNavigateToPermissions = { navController.navigate(Destinations.PERMISSIONS_SETTINGS) },
                 onNavigateToReport = { hash, label ->
                     navController.navigate(Destinations.reportSpam(hash, label))

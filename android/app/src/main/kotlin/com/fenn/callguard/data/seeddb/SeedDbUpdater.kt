@@ -57,8 +57,9 @@ class SeedDbUpdater @Inject constructor(
         manifest: com.fenn.callguard.network.SeedDbManifestResponse,
     ): Int {
         val digest = MessageDigest.getInstance("SHA-256")
-        val batch = mutableListOf<SeedDbNumber>()
-        var totalRows = 0
+        // Accumulate all rows in memory — nothing is written to the DB until the
+        // checksum is verified, so a mismatch never corrupts previously valid data.
+        val allRows = mutableListOf<SeedDbNumber>()
 
         val response = apiClient.http.get(manifest.download_url)
         val channel = response.bodyAsChannel()
@@ -75,32 +76,21 @@ class SeedDbUpdater @Inject constructor(
             val (hash, category, scoreStr) = parts
             val score = scoreStr.trim().toDoubleOrNull() ?: continue
 
-            batch.add(SeedDbNumber(numberHash = hash.trim(), category = category.trim(), confidenceScore = score))
-
-            if (batch.size >= BATCH_SIZE) {
-                seedDbDao.insertAll(batch)
-                totalRows += batch.size
-                batch.clear()
-            }
+            allRows.add(SeedDbNumber(numberHash = hash.trim(), category = category.trim(), confidenceScore = score))
         }
 
-        if (batch.isNotEmpty()) {
-            seedDbDao.insertAll(batch)
-            totalRows += batch.size
-        }
-
-        // Verify checksum
+        // Verify checksum before touching the DB
         val actualChecksum = digest.digest().joinToString("") { "%02x".format(it) }
         if (actualChecksum != manifest.sha256) {
-            // Wipe partial data; next run will re-download
-            seedDbDao.clearAll()
             throw SecurityException(
                 "Seed DB checksum mismatch: expected ${manifest.sha256}, got $actualChecksum"
             )
         }
 
+        // Atomically swap old data for new in a single transaction
+        seedDbDao.replaceAll(allRows)
         seedDbDao.upsertMeta(SeedDbMeta(version = manifest.version, sha256Checksum = manifest.sha256))
-        return totalRows
+        return allRows.size
     }
 
     companion object {

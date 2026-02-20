@@ -52,15 +52,9 @@
             </intent-filter>
         </receiver>
 
-        <!-- WorkManager — seed DB background updates -->
-        <provider
-            android:name="androidx.startup.InitializationProvider"
-            android:authorities="${applicationId}.androidx-startup"
-            android:exported="false">
-            <meta-data
-                android:name="androidx.work.WorkManagerInitializer"
-                android:value="androidx.startup" />
-        </provider>
+        <!-- WorkManager initialized manually via CallGuardApp (Configuration.Provider).
+             The default auto-init via androidx.startup is intentionally removed to
+             prevent double-initialization and crashes. -->
 
     </application>
 
