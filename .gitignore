@@ -77,3 +77,4 @@ desktop.ini
 .vscode/
 *.swp
 *.swo
+.mcp.json
