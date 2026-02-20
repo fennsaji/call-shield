@@ -50,6 +50,7 @@ tsconfig.tsbuildinfo
 # ========================
 .supabase/
 supabase/.temp/
+supabase/.branches/
 supabase/functions/.env
 
 # ========================

@@ -1,6 +1,14 @@
 package com.fenn.callguard.ui.screens.home
 
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -10,148 +18,83 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Block
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.List
-import androidx.compose.material.icons.filled.PrivacyTip
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.outlined.Block
+import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.FilterList
 import androidx.compose.material.icons.filled.Shield
-import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.fenn.callguard.R
-import com.fenn.callguard.data.local.entity.CallHistoryEntry
 import com.fenn.callguard.ui.components.ScamDigestCard
-import com.fenn.callguard.ui.screens.reason.ReasonTransparencySheet
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
+    modifier: Modifier = Modifier,
     onNavigateToBlocklist: () -> Unit,
     onNavigateToWhitelist: () -> Unit,
     onNavigateToPrefixRules: () -> Unit,
     onNavigateToPrivacy: () -> Unit,
-    onNavigateToSettings: () -> Unit,
+    onNavigateToSettings: () -> Unit = {},
     onNavigateToPaywall: () -> Unit,
     onNavigateToReport: (hash: String, label: String) -> Unit,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.app_name)) },
-                actions = {
-                    IconButton(onClick = onNavigateToPrivacy) {
-                        Icon(Icons.Filled.PrivacyTip, contentDescription = "Privacy")
-                    }
-                    IconButton(onClick = onNavigateToSettings) {
-                        Icon(Icons.Filled.Settings, contentDescription = "Settings")
-                    }
-                },
+    LazyColumn(
+        modifier = modifier,
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        item {
+            Text(
+                text = stringResource(R.string.app_name),
+                style = MaterialTheme.typography.headlineMedium,
+                modifier = Modifier.padding(bottom = 4.dp),
             )
-        },
-    ) { padding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            // ── Status card ───────────────────────────────────────────────────
-            item {
-                StatusCard(isActive = state.isScreeningActive)
-            }
+        }
 
-            // ── Stats row ─────────────────────────────────────────────────────
-            item {
-                StatsRow(screened = state.stats.totalScreened, blocked = state.stats.totalBlocked)
-            }
+        item {
+            StatusCard(isActive = state.isScreeningActive)
+        }
 
-            // ── Quick-access buttons ──────────────────────────────────────────
+        item {
+            StatsRow(screened = state.stats.totalScreened, blocked = state.stats.totalBlocked)
+        }
+
+        item {
+            QuickAccessRow(
+                onBlocklist = onNavigateToBlocklist,
+                onWhitelist = onNavigateToWhitelist,
+                onPrefixRules = onNavigateToPrefixRules,
+            )
+        }
+
+        state.scamDigest?.let { digest ->
             item {
-                QuickAccessRow(
-                    onBlocklist = onNavigateToBlocklist,
-                    onWhitelist = onNavigateToWhitelist,
-                    onPrefixRules = onNavigateToPrefixRules,
+                ScamDigestCard(
+                    entry = digest,
+                    onDismiss = { viewModel.dismissScamDigest(digest.id) },
                 )
-            }
-
-            // ── Scam digest card (PRD §3.10) ──────────────────────────────────
-            state.scamDigest?.let { digest ->
-                item {
-                    ScamDigestCard(
-                        entry = digest,
-                        onDismiss = { viewModel.dismissScamDigest(digest.id) },
-                    )
-                }
-            }
-
-            // ── Recent calls ──────────────────────────────────────────────────
-            item {
-                Text(
-                    stringResource(R.string.home_recent_calls),
-                    style = MaterialTheme.typography.titleMedium,
-                )
-            }
-
-            if (state.recentCalls.isEmpty()) {
-                item {
-                    Text(
-                        stringResource(R.string.home_no_recent_calls),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                    )
-                }
-            } else {
-                items(state.recentCalls, key = { it.id }) { entry ->
-                    var showReasonSheet by remember { mutableStateOf(false) }
-                    CallHistoryRow(
-                        entry = entry,
-                        onTap = { showReasonSheet = true },
-                    )
-                    if (showReasonSheet) {
-                        ReasonTransparencySheet(
-                            entry = entry,
-                            onDismiss = { showReasonSheet = false },
-                            onMarkNotSpam = {
-                                showReasonSheet = false
-                                viewModel.markNotSpam(entry.numberHash, entry.displayLabel)
-                            },
-                            onReport = {
-                                showReasonSheet = false
-                                onNavigateToReport(entry.numberHash, entry.displayLabel)
-                            },
-                        )
-                    }
-                }
             }
         }
     }
@@ -159,34 +102,72 @@ fun HomeScreen(
 
 @Composable
 private fun StatusCard(isActive: Boolean) {
-    Card(
-        colors = CardDefaults.cardColors(
-            containerColor = if (isActive)
-                MaterialTheme.colorScheme.primaryContainer
-            else
-                MaterialTheme.colorScheme.errorContainer,
+    val primaryColor = MaterialTheme.colorScheme.primary
+    val primaryContainerColor = MaterialTheme.colorScheme.primaryContainer
+    val errorColor = MaterialTheme.colorScheme.error
+    val errorContainerColor = MaterialTheme.colorScheme.errorContainer
+
+    val infiniteTransition = rememberInfiniteTransition(label = "shield_pulse")
+    val pulseScale by infiniteTransition.animateFloat(
+        initialValue = 1.0f,
+        targetValue = if (isActive) 1.08f else 1.0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 1800, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse,
         ),
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Row(
-            modifier = Modifier.padding(20.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
+        label = "pulse_scale",
+    )
+
+    ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    brush = if (isActive)
+                        Brush.verticalGradient(listOf(primaryContainerColor, primaryColor.copy(alpha = 0.4f)))
+                    else
+                        Brush.verticalGradient(listOf(errorContainerColor, errorColor.copy(alpha = 0.3f)))
+                )
+                .padding(24.dp),
+            contentAlignment = Alignment.Center,
         ) {
-            Icon(
-                Icons.Filled.Shield,
-                contentDescription = null,
-                modifier = Modifier.size(36.dp),
-                tint = if (isActive) MaterialTheme.colorScheme.onPrimaryContainer
-                else MaterialTheme.colorScheme.onErrorContainer,
-            )
-            Text(
-                text = if (isActive) stringResource(R.string.home_status_active)
-                else stringResource(R.string.home_status_inactive),
-                style = MaterialTheme.typography.titleLarge,
-                color = if (isActive) MaterialTheme.colorScheme.onPrimaryContainer
-                else MaterialTheme.colorScheme.onErrorContainer,
-            )
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                // Pulsing ring behind the shield
+                Box(contentAlignment = Alignment.Center) {
+                    if (isActive) {
+                        Box(
+                            modifier = Modifier
+                                .size(88.dp)
+                                .scale(pulseScale)
+                                .background(
+                                    color = primaryColor.copy(alpha = 0.15f),
+                                    shape = CircleShape,
+                                )
+                        )
+                    }
+                    Icon(
+                        Icons.Filled.Shield,
+                        contentDescription = null,
+                        modifier = Modifier.size(72.dp),
+                        tint = if (isActive) MaterialTheme.colorScheme.onPrimaryContainer
+                        else MaterialTheme.colorScheme.onErrorContainer,
+                    )
+                }
+
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = if (isActive) stringResource(R.string.home_status_active)
+                        else stringResource(R.string.home_status_inactive),
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = if (isActive) MaterialTheme.colorScheme.onPrimaryContainer
+                        else MaterialTheme.colorScheme.onErrorContainer,
+                    )
+                }
+            }
         }
     }
 }
@@ -200,21 +181,44 @@ private fun StatsRow(screened: Int, blocked: Int) {
         StatCard(
             label = stringResource(R.string.home_calls_screened),
             value = screened.toString(),
+            accentColor = MaterialTheme.colorScheme.primary,
             modifier = Modifier.weight(1f),
         )
         StatCard(
             label = stringResource(R.string.home_calls_blocked),
             value = blocked.toString(),
+            accentColor = MaterialTheme.colorScheme.error,
             modifier = Modifier.weight(1f),
         )
     }
 }
 
 @Composable
-private fun StatCard(label: String, value: String, modifier: Modifier = Modifier) {
-    Card(modifier = modifier) {
+private fun StatCard(
+    label: String,
+    value: String,
+    accentColor: Color,
+    modifier: Modifier = Modifier,
+) {
+    ElevatedCard(modifier = modifier) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(value, style = MaterialTheme.typography.headlineMedium)
+            // Top accent line
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(3.dp)
+                    .background(
+                        brush = Brush.horizontalGradient(listOf(accentColor, accentColor.copy(alpha = 0.3f))),
+                        shape = MaterialTheme.shapes.small,
+                    )
+            )
+            Spacer(Modifier.height(10.dp))
+            Text(
+                value,
+                style = MaterialTheme.typography.headlineLarge,
+                fontWeight = FontWeight.Bold,
+                color = accentColor,
+            )
             Text(
                 label,
                 style = MaterialTheme.typography.bodySmall,
@@ -230,63 +234,59 @@ private fun QuickAccessRow(
     onWhitelist: () -> Unit,
     onPrefixRules: () -> Unit,
 ) {
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        QuickButton(Icons.Filled.Block, "Blocklist", onBlocklist, Modifier.weight(1f))
-        QuickButton(Icons.Filled.Check, "Whitelist", onWhitelist, Modifier.weight(1f))
-        QuickButton(Icons.Filled.List, "Prefixes", onPrefixRules, Modifier.weight(1f))
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        QuickAccessCard(
+            icon = Icons.Outlined.Block,
+            label = "Blocklist",
+            onClick = onBlocklist,
+            modifier = Modifier.weight(1f),
+        )
+        QuickAccessCard(
+            icon = Icons.Outlined.CheckCircle,
+            label = "Whitelist",
+            onClick = onWhitelist,
+            modifier = Modifier.weight(1f),
+        )
+        QuickAccessCard(
+            icon = Icons.Outlined.FilterList,
+            label = "Prefixes",
+            onClick = onPrefixRules,
+            modifier = Modifier.weight(1f),
+        )
     }
 }
 
 @Composable
-private fun QuickButton(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+private fun QuickAccessCard(
+    icon: ImageVector,
     label: String,
     onClick: () -> Unit,
-    modifier: Modifier,
+    modifier: Modifier = Modifier,
 ) {
-    Card(modifier = modifier, onClick = onClick) {
+    ElevatedCard(
+        onClick = onClick,
+        modifier = modifier.widthIn(min = 100.dp),
+    ) {
         Column(
             modifier = Modifier
                 .padding(12.dp)
                 .fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            Icon(icon, contentDescription = label, modifier = Modifier.size(24.dp))
-            Spacer(Modifier.height(4.dp))
-            Text(label, style = MaterialTheme.typography.labelSmall)
-        }
-    }
-}
-
-@Composable
-private fun CallHistoryRow(entry: CallHistoryEntry, onTap: () -> Unit) {
-    val (icon, tint) = when (entry.outcome) {
-        "blocked" -> Icons.Filled.Block to Color(0xFFEF4444)
-        "flagged" -> Icons.Filled.Warning to Color(0xFFF97316)
-        else -> Icons.Filled.Check to Color(0xFF22C55E)
-    }
-
-    Card(modifier = Modifier.fillMaxWidth(), onClick = onTap) {
-        Row(
-            modifier = Modifier.padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(20.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(entry.displayLabel, style = MaterialTheme.typography.titleMedium)
-                entry.category?.let {
-                    Text(
-                        it.replaceFirstChar { c -> c.uppercase() },
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                    )
-                }
-            }
+            Icon(
+                icon,
+                contentDescription = label,
+                modifier = Modifier.size(28.dp),
+                tint = MaterialTheme.colorScheme.primary,
+            )
             Text(
-                SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(entry.screenedAt)),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                label,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurface,
             )
         }
     }

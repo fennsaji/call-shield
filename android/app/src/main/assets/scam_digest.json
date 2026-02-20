@@ -1,23 +1,86 @@
 [
   {
-    "id": 1,
-    "title": "Investment scams targeting UPI users are surging",
-    "body": "Scammers are posing as SEBI officials and offering guaranteed high returns on UPI-linked investments. Never share your UPI PIN with anyone claiming to be from a regulator.",
-    "source": "RBI / CERT-In",
-    "publishedAt": 1737590400000
+    "id": 8,
+    "title": "eSIM swap fraud via fake 5G upgrade calls",
+    "body": "Callers posing as your telecom provider offer a free 5G or eSIM upgrade and guide you through steps that transfer your number to their device. Once they control your SIM they receive all your OTPs and can drain your bank accounts. Never process SIM changes over an unsolicited call — always visit an authorised store.",
+    "source": "MHA / I4C",
+    "publishedAt": 1753920000000
   },
   {
-    "id": 2,
-    "title": "Fake job offers via WhatsApp on the rise",
-    "body": "Fraudsters are sending unsolicited work-from-home offers with upfront registration fees. Legitimate employers never ask for money before hiring.",
-    "source": "Ministry of Home Affairs",
-    "publishedAt": 1737504000000
+    "id": 11,
+    "title": "Fake UPI payee name scam",
+    "body": "Fraudsters create UPI IDs with misleading display names like 'SBI Refund Dept' or 'Govt Cashback' to impersonate trusted entities. NPCI now mandates that only the bank-registered name appears during payment — always verify the recipient's actual name and UPI ID before confirming any transfer.",
+    "source": "NPCI",
+    "publishedAt": 1751241600000
+  },
+  {
+    "id": 7,
+    "title": "Fake stock tips via WhatsApp and Telegram",
+    "body": "Fraudsters add you to groups impersonating SEBI-registered advisors or celebrities, luring you into fake trading apps or 'guaranteed return' investments. SEBI warns: deal only with registered intermediaries and never join unsolicited investment groups. Verify any advisor on the SEBI Intermediaries portal.",
+    "source": "SEBI",
+    "publishedAt": 1747785600000
+  },
+  {
+    "id": 9,
+    "title": "Illegal loan app harassment scam",
+    "body": "Unlicensed lending apps offer instant small loans then credit larger amounts without consent and harass borrowers with threatening calls, abusive messages, and morphed images sent to contacts. Over half of loan apps on Indian app stores are illegal. Only borrow from apps partnered with RBI-registered NBFCs.",
+    "source": "RBI",
+    "publishedAt": 1746144000000
   },
   {
     "id": 3,
-    "title": "Loan app fraud targeting young borrowers",
-    "body": "Illegal loan apps are using harassment and threats after providing tiny loans at hidden interest rates. Only use RBI-registered NBFCs for personal loans.",
+    "title": "Digital arrest scam via fake police video calls",
+    "body": "Fraudsters video-call on WhatsApp posing as CBI, ED, or police officers and place you under a fake 'digital arrest', threatening jail unless you transfer money via UPI or crypto. No law enforcement agency in India conducts arrests or demands money over a video call. Disconnect and report to 1930.",
+    "source": "NITI Aayog / MHA",
+    "publishedAt": 1744761600000
+  },
+  {
+    "id": 2,
+    "title": "Call merging OTP theft scam",
+    "body": "A scammer calls claiming to know you, then asks you to merge with an incoming 'second call' — which is actually your bank's OTP verification line. By merging, you broadcast the OTP to the fraudster who uses it to authorise transactions. Never merge calls from unknown numbers.",
+    "source": "NPCI / MHA",
+    "publishedAt": 1738368000000
+  },
+  {
+    "id": 1,
+    "title": "Fake RBI voice call account-blocking scam",
+    "body": "Automated calls impersonating RBI officials claim your bank account or Aadhaar will be blocked unless you share OTPs or transfer money to a 'secure account'. The RBI has stated it never contacts the public via unsolicited calls asking for money or personal details. Hang up and call your bank directly.",
     "source": "RBI",
-    "publishedAt": 1737417600000
+    "publishedAt": 1737072000000
+  },
+  {
+    "id": 4,
+    "title": "Fake KYC update link and APK scam",
+    "body": "SMS or WhatsApp messages posing as your bank demand KYC renewal via a link or APK file. The link leads to a phishing site; the APK grants attackers full device access to drain accounts and take loans in your name. Banks never send APK files or threaten account closure via SMS.",
+    "source": "RBI",
+    "publishedAt": 1735689600000
+  },
+  {
+    "id": 6,
+    "title": "Fake courier customs parcel scam",
+    "body": "Callers impersonating FedEx, DHL, or Blue Dart claim a parcel in your name was intercepted containing drugs, then transfer you to a 'police officer' demanding payment to avoid arrest. No courier or customs department calls you to demand payment — verify any such claim on the courier's official website.",
+    "source": "MHA / I4C",
+    "publishedAt": 1740000000000
+  },
+  {
+    "id": 5,
+    "title": "Fraudulent UPI collect request scam",
+    "body": "Scammers send UPI collect requests disguised as refunds or cashbacks, prompting victims to enter their PIN — which actually authorises an outgoing payment. Receiving money on UPI never requires your PIN. NPCI banned P2P collect requests in October 2025 to curb this fraud.",
+    "source": "NPCI",
+    "publishedAt": 1727740800000
+  },
+  {
+    "id": 10,
+    "title": "AI voice cloning and deepfake call scam",
+    "body": "Scammers use AI to clone a family member's or official's voice and call asking for urgent money transfers. CERT-In flagged a sharp rise in AI-generated voice and deepfake fraud across Indian banking in 2025. Always verify urgent requests by calling the person back on a known number — never trust voice alone.",
+    "source": "CERT-In",
+    "publishedAt": 1728345600000
+  },
+  {
+    "id": 12,
+    "title": "Investment scams targeting UPI users are surging",
+    "body": "Scammers pose as SEBI officials offering guaranteed high returns on UPI-linked investments. Never share your UPI PIN with anyone claiming to be from a regulator. If you receive such a call, hang up and report it to cybercrime.gov.in or call 1930.",
+    "source": "RBI / CERT-In",
+    "publishedAt": 1737590400000
   }
 ]

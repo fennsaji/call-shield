@@ -14,6 +14,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -31,12 +32,23 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.fenn.callguard.R
 import com.fenn.callguard.domain.model.SpamCategory
 import kotlinx.coroutines.launch
+
+private val categoryDescriptions = mapOf(
+    SpamCategory.TELEMARKETING to "Promotional or sales calls you didn't request",
+    SpamCategory.LOAN_SCAM to "Fake loan offers or financial fraud attempts",
+    SpamCategory.INVESTMENT_SCAM to "Fraudulent investment schemes or tips",
+    SpamCategory.IMPERSONATION to "Caller pretending to be a bank, government, or official",
+    SpamCategory.PHISHING to "Attempts to steal passwords or personal info",
+    SpamCategory.JOB_SCAM to "Fake job or work-from-home offers",
+    SpamCategory.OTHER to "Any other unwanted or suspicious call",
+)
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -53,9 +65,7 @@ fun ReportSpamScreen(
 
     LaunchedEffect(state.submitted) {
         if (state.submitted) {
-            snackbarHostState.showSnackbar(
-                message = "Report submitted. Thank you!"
-            )
+            snackbarHostState.showSnackbar(message = "Report submitted. Thank you!")
             onDismiss()
         }
     }
@@ -80,12 +90,21 @@ fun ReportSpamScreen(
                 .padding(horizontal = 24.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(4.dp))
 
-            Text(
-                text = "Reporting call from $displayLabel",
-                style = MaterialTheme.typography.bodyLarge,
-            )
+            // Reporting header with masked number
+            Column {
+                Text(
+                    text = "Reporting call from",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                )
+                Text(
+                    text = displayLabel,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
 
             Text(
                 text = "Select category",
@@ -100,7 +119,28 @@ fun ReportSpamScreen(
                     FilterChip(
                         selected = selectedCategory == category,
                         onClick = { selectedCategory = category },
-                        label = { Text(category.displayName) },
+                        label = {
+                            Column(modifier = Modifier.padding(vertical = 4.dp)) {
+                                Text(
+                                    category.displayName,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = if (selectedCategory == category) FontWeight.SemiBold else FontWeight.Normal,
+                                )
+                                categoryDescriptions[category]?.let { desc ->
+                                    if (selectedCategory == category) {
+                                        Text(
+                                            desc,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                                        )
+                                    }
+                                }
+                            }
+                        },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                            selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        ),
                     )
                 }
             }

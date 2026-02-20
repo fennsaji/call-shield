@@ -1,5 +1,11 @@
 package com.fenn.callguard.ui
 
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -13,14 +19,13 @@ import androidx.navigation.navArgument
 import com.fenn.callguard.data.preferences.ScreeningPreferences
 import com.fenn.callguard.screening.PaywallTriggerManager
 import com.fenn.callguard.ui.screens.blocklist.BlocklistScreen
-import com.fenn.callguard.ui.screens.home.HomeScreen
+import com.fenn.callguard.ui.screens.main.MainScreen
 import com.fenn.callguard.ui.screens.onboarding.OnboardingScreen
 import com.fenn.callguard.ui.screens.paywall.PaywallScreen
 import com.fenn.callguard.ui.screens.permissions.PermissionsScreen
 import com.fenn.callguard.ui.screens.prefix.PrefixRulesScreen
 import com.fenn.callguard.ui.screens.privacy.PrivacyDashboardScreen
 import com.fenn.callguard.ui.screens.report.ReportSpamScreen
-import com.fenn.callguard.ui.screens.settings.SettingsScreen
 import com.fenn.callguard.ui.screens.whitelist.WhitelistScreen
 
 object Destinations {
@@ -32,7 +37,6 @@ object Destinations {
     const val WHITELIST = "whitelist"
     const val PREFIX_RULES = "prefix_rules"
     const val PRIVACY_DASHBOARD = "privacy_dashboard"
-    const val SETTINGS = "settings"
     const val PAYWALL = "paywall?trigger={trigger}"
 
     fun reportSpam(numberHash: String, displayLabel: String) =
@@ -59,9 +63,20 @@ fun CallGuardNavHost(
         }
     }
 
-    NavHost(navController = navController, startDestination = startDestination) {
+    NavHost(
+        navController = navController,
+        startDestination = startDestination,
+        enterTransition = { slideInHorizontally(initialOffsetX = { it }) + fadeIn() },
+        exitTransition = { slideOutHorizontally(targetOffsetX = { -it / 3 }) + fadeOut() },
+        popEnterTransition = { slideInHorizontally(initialOffsetX = { -it / 3 }) + fadeIn() },
+        popExitTransition = { slideOutHorizontally(targetOffsetX = { it }) + fadeOut() },
+    ) {
 
-        composable(Destinations.ONBOARDING) {
+        composable(
+            Destinations.ONBOARDING,
+            enterTransition = { fadeIn() },
+            exitTransition = { fadeOut() },
+        ) {
             OnboardingScreen(onComplete = {
                 navController.navigate(Destinations.PERMISSIONS) {
                     popUpTo(Destinations.ONBOARDING) { inclusive = true }
@@ -69,7 +84,11 @@ fun CallGuardNavHost(
             })
         }
 
-        composable(Destinations.PERMISSIONS) {
+        composable(
+            Destinations.PERMISSIONS,
+            enterTransition = { fadeIn() },
+            exitTransition = { fadeOut() },
+        ) {
             PermissionsScreen(onAllGranted = {
                 navController.navigate(Destinations.HOME) {
                     popUpTo(Destinations.PERMISSIONS) { inclusive = true }
@@ -77,13 +96,16 @@ fun CallGuardNavHost(
             })
         }
 
-        composable(Destinations.HOME) {
-            HomeScreen(
+        composable(
+            Destinations.HOME,
+            enterTransition = { fadeIn() },
+            exitTransition = { fadeOut() },
+        ) {
+            MainScreen(
                 onNavigateToBlocklist = { navController.navigate(Destinations.BLOCKLIST) },
                 onNavigateToWhitelist = { navController.navigate(Destinations.WHITELIST) },
                 onNavigateToPrefixRules = { navController.navigate(Destinations.PREFIX_RULES) },
                 onNavigateToPrivacy = { navController.navigate(Destinations.PRIVACY_DASHBOARD) },
-                onNavigateToSettings = { navController.navigate(Destinations.SETTINGS) },
                 onNavigateToPaywall = { navController.navigate(Destinations.PAYWALL) },
                 onNavigateToReport = { hash, label ->
                     navController.navigate(Destinations.reportSpam(hash, label))
@@ -97,6 +119,10 @@ fun CallGuardNavHost(
                 navArgument("numberHash") { type = NavType.StringType },
                 navArgument("displayLabel") { type = NavType.StringType },
             ),
+            enterTransition = { slideInVertically(initialOffsetY = { it }) + fadeIn() },
+            exitTransition = { slideOutVertically(targetOffsetY = { it }) + fadeOut() },
+            popEnterTransition = { slideInVertically(initialOffsetY = { it }) + fadeIn() },
+            popExitTransition = { slideOutVertically(targetOffsetY = { it }) + fadeOut() },
         ) { backStackEntry ->
             ReportSpamScreen(
                 numberHash = backStackEntry.arguments?.getString("numberHash") ?: "",
@@ -121,19 +147,16 @@ fun CallGuardNavHost(
             PrivacyDashboardScreen(onBack = { navController.popBackStack() })
         }
 
-        composable(Destinations.SETTINGS) {
-            SettingsScreen(
-                onBack = { navController.popBackStack() },
-                onNavigateToPaywall = { navController.navigate(Destinations.PAYWALL) },
-            )
-        }
-
         composable(
             route = Destinations.PAYWALL,
             arguments = listOf(navArgument("trigger") {
                 type = NavType.BoolType
                 defaultValue = false
             }),
+            enterTransition = { slideInVertically(initialOffsetY = { it }) + fadeIn() },
+            exitTransition = { slideOutVertically(targetOffsetY = { it }) + fadeOut() },
+            popEnterTransition = { slideInVertically(initialOffsetY = { it }) + fadeIn() },
+            popExitTransition = { slideOutVertically(targetOffsetY = { it }) + fadeOut() },
         ) { backStackEntry ->
             PaywallScreen(
                 onDismiss = { navController.popBackStack() },

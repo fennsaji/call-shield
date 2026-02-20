@@ -138,6 +138,11 @@
     <string name="battery_oem_oneplus">On OnePlus: Settings → Battery → Battery Optimization → CallGuard → Don\'t optimize</string>
     <string name="battery_oem_generic">Go to Battery settings and disable optimization for CallGuard</string>
 
+    <!-- Bottom navigation labels -->
+    <string name="nav_home">Home</string>
+    <string name="nav_activity">Activity</string>
+    <string name="nav_settings">Settings</string>
+
     <!-- Errors / generic -->
     <string name="error_no_internet">No internet connection</string>
     <string name="error_generic">Something went wrong. Try again.</string>

@@ -1,6 +1,14 @@
 package com.fenn.callguard.ui.screens.onboarding
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -12,14 +20,15 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -29,7 +38,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -57,39 +67,62 @@ fun OnboardingScreen(
     var currentPage by remember { mutableIntStateOf(0) }
     val scope = rememberCoroutineScope()
 
-    Scaffold { padding ->
+    val primary = MaterialTheme.colorScheme.primary
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(
+                brush = Brush.verticalGradient(
+                    listOf(Color(0xFF0A0F1E), Color(0xFF1A2D6B))
+                )
+            )
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
                 .padding(horizontal = 32.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.SpaceBetween,
         ) {
-            Spacer(Modifier.height(64.dp))
+            Spacer(Modifier.height(72.dp))
 
             AnimatedContent(
                 targetState = currentPage,
                 label = "onboarding_page",
+                transitionSpec = {
+                    val direction = if (targetState > initialState) 1 else -1
+                    (slideInHorizontally(tween(300)) { it * direction } + fadeIn(tween(300)))
+                        .togetherWith(slideOutHorizontally(tween(300)) { -it * direction } + fadeOut(tween(200)))
+                },
             ) { page ->
                 PageContent(pages[page])
             }
 
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                // Dot indicators
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.padding(bottom = 48.dp),
+            ) {
+                // Pill-shape dot indicators
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.padding(bottom = 24.dp),
+                    modifier = Modifier.padding(bottom = 32.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     pages.indices.forEach { index ->
                         val isActive = index == currentPage
                         Box(
                             modifier = Modifier
-                                .size(if (isActive) 10.dp else 8.dp)
-                                .clip(CircleShape)
+                                .height(8.dp)
+                                .then(
+                                    if (isActive) Modifier.width(24.dp)
+                                    else Modifier.size(8.dp)
+                                )
+                                .animateContentSize(spring(dampingRatio = 0.7f))
                                 .background(
-                                    if (isActive) MaterialTheme.colorScheme.primary
-                                    else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
+                                    color = if (isActive) primary
+                                    else Color.White.copy(alpha = 0.3f),
+                                    shape = RoundedCornerShape(4.dp),
                                 )
                         )
                     }
@@ -107,17 +140,21 @@ fun OnboardingScreen(
                         }
                     },
                     modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = primary,
+                    ),
                 ) {
                     Text(
                         if (currentPage < pages.lastIndex)
                             stringResource(R.string.onboarding_next)
                         else
-                            stringResource(R.string.onboarding_get_started)
+                            stringResource(R.string.onboarding_get_started),
+                        style = MaterialTheme.typography.labelLarge,
                     )
                 }
 
                 // PRD §3.1: Onboarding must NOT be skippable — no skip button.
-                Spacer(Modifier.height(48.dp))
             }
         }
     }
@@ -125,28 +162,44 @@ fun OnboardingScreen(
 
 @Composable
 private fun PageContent(page: OnboardingPage) {
+    val primary = MaterialTheme.colorScheme.primary
+
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.fillMaxWidth(),
     ) {
-        Icon(
-            imageVector = page.icon,
-            contentDescription = null,
-            modifier = Modifier.size(96.dp),
-            tint = MaterialTheme.colorScheme.primary,
-        )
-        Spacer(Modifier.height(32.dp))
+        // Radial glow behind icon
+        Box(contentAlignment = Alignment.Center) {
+            Box(
+                modifier = Modifier
+                    .size(160.dp)
+                    .background(
+                        brush = Brush.radialGradient(
+                            listOf(primary.copy(alpha = 0.25f), Color.Transparent)
+                        ),
+                        shape = androidx.compose.foundation.shape.CircleShape,
+                    )
+            )
+            Icon(
+                imageVector = page.icon,
+                contentDescription = null,
+                modifier = Modifier.size(120.dp),
+                tint = primary,
+            )
+        }
+        Spacer(Modifier.height(36.dp))
         Text(
             text = stringResource(page.titleRes),
             style = MaterialTheme.typography.headlineMedium,
             textAlign = TextAlign.Center,
+            color = Color.White,
         )
         Spacer(Modifier.height(16.dp))
         Text(
             text = stringResource(page.bodyRes),
             style = MaterialTheme.typography.bodyLarge,
             textAlign = TextAlign.Center,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+            color = Color.White.copy(alpha = 0.65f),
         )
     }
 }

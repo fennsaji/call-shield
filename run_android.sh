@@ -288,8 +288,34 @@ echo -e "${YELLOW}📱 Device:${NC} $(device_name "$DEVICE_ID") (${DEVICE_ID})"
 echo -e "${YELLOW}📦 App ID:${NC} ${APP_ID}"
 echo -e ""
 echo -e "${BLUE}Useful adb commands:${NC}"
-echo -e "  ${GREEN}adb -s $DEVICE_ID logcat -s CallGuard${NC}   # Stream app logs"
 echo -e "  ${GREEN}adb -s $DEVICE_ID shell am force-stop $APP_ID${NC}  # Kill app"
-echo -e "  ${GREEN}adb -s $DEVICE_ID uninstall $APP_ID${NC}     # Uninstall"
+echo -e "  ${GREEN}adb -s $DEVICE_ID uninstall $APP_ID${NC}             # Uninstall"
 echo -e ""
-echo -e "${YELLOW}💡 To rebuild and reinstall: re-run this script.${NC}"
+echo -e "${CYAN}📋 Streaming logcat (Ctrl+C to stop)...${NC}"
+echo -e "${BLUE}──────────────────────────────────────────────${NC}"
+
+# Clear stale logs before streaming
+adb -s "$DEVICE_ID" logcat -c
+
+# Wait up to 5s for the app process to appear
+APP_PID=""
+for i in $(seq 1 10); do
+    APP_PID=$(adb -s "$DEVICE_ID" shell pidof "$APP_ID" 2>/dev/null | tr -d '\r ')
+    [ -n "$APP_PID" ] && break
+    sleep 0.5
+done
+
+if [ -n "$APP_PID" ]; then
+    echo -e "${GREEN}🔎 Attached to PID ${APP_PID}${NC}"
+    # Stream logs for this specific process only
+    adb -s "$DEVICE_ID" logcat --pid="$APP_PID" 2>/dev/null &
+else
+    echo -e "${YELLOW}⚠️  Could not detect app PID — streaming all logs (filtered to package)${NC}"
+    # Fallback: stream everything and grep for the package name + crash signals
+    adb -s "$DEVICE_ID" logcat 2>/dev/null | grep --line-buffered -E "callguard|AndroidRuntime|FATAL" &
+fi
+LOGCAT_PID=$!
+
+# Ctrl+C kills logcat stream and exits cleanly
+trap "kill $LOGCAT_PID 2>/dev/null; echo ''; echo -e '${YELLOW}💡 To rebuild and reinstall: re-run this script.${NC}'; exit 0" INT
+wait $LOGCAT_PID

@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Info
@@ -19,9 +20,11 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -31,10 +34,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.fenn.callguard.R
 import com.fenn.callguard.data.local.entity.CallHistoryEntry
 import com.fenn.callguard.domain.model.DecisionSource
+import com.fenn.callguard.ui.theme.LocalDangerColor
+import com.fenn.callguard.ui.theme.LocalWarningColor
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
@@ -52,6 +58,8 @@ fun ReasonTransparencySheet(
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
+    val dangerColor = LocalDangerColor.current
+    val warningColor = LocalWarningColor.current
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -75,22 +83,30 @@ fun ReasonTransparencySheet(
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
             )
 
-            // Risk label
+            // Risk pill badge at the top
             val (riskLabel, riskColor) = when (entry.outcome) {
                 "rejected", "silenced" -> {
                     if (entry.decisionSource == DecisionSource.SEED_DB.name)
-                        stringResource(R.string.call_outcome_known_spam) to Color(0xFFEF4444)
+                        stringResource(R.string.call_outcome_known_spam) to dangerColor
                     else
-                        stringResource(R.string.call_outcome_likely_spam) to Color(0xFFF97316)
+                        stringResource(R.string.call_outcome_likely_spam) to warningColor
                 }
-                "flagged" -> stringResource(R.string.call_outcome_likely_spam) to Color(0xFFF97316)
+                "flagged" -> stringResource(R.string.call_outcome_likely_spam) to warningColor
                 else -> stringResource(R.string.call_outcome_unknown) to MaterialTheme.colorScheme.onSurface
             }
-            Text(
-                text = riskLabel,
-                style = MaterialTheme.typography.titleMedium,
-                color = riskColor,
-            )
+
+            Surface(
+                color = riskColor.copy(alpha = 0.15f),
+                shape = RoundedCornerShape(8.dp),
+            ) {
+                Text(
+                    text = riskLabel,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    color = riskColor,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                )
+            }
 
             HorizontalDivider()
 
@@ -102,7 +118,7 @@ fun ReasonTransparencySheet(
                 DecisionSource.SEED_DB -> {
                     ReasonRow(
                         icon = Icons.Filled.Shield,
-                        tint = Color(0xFFEF4444),
+                        tint = dangerColor,
                         text = stringResource(R.string.reason_seed_db),
                     )
                 }
@@ -110,15 +126,29 @@ fun ReasonTransparencySheet(
                     val percent = (entry.confidenceScore * 100).roundToInt()
                     ReasonRow(
                         icon = Icons.Filled.Warning,
-                        tint = Color(0xFFF97316),
+                        tint = warningColor,
                         text = stringResource(R.string.reason_remote, 0, percent),
-                        // report_count not stored locally; show confidence only
                     )
+                    // Confidence progress bar
+                    Column {
+                        Text(
+                            "Confidence: $percent%",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        LinearProgressIndicator(
+                            progress = { entry.confidenceScore.toFloat() },
+                            modifier = Modifier.fillMaxWidth(),
+                            color = if (entry.confidenceScore >= 0.8) dangerColor else warningColor,
+                            trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                        )
+                    }
                 }
                 DecisionSource.PREFIX -> {
                     ReasonRow(
                         icon = Icons.Filled.Block,
-                        tint = Color(0xFFEF4444),
+                        tint = dangerColor,
                         text = stringResource(R.string.reason_prefix, ""),
                     )
                 }
@@ -132,7 +162,7 @@ fun ReasonTransparencySheet(
                 DecisionSource.BLOCKLIST -> {
                     ReasonRow(
                         icon = Icons.Filled.Block,
-                        tint = Color(0xFFEF4444),
+                        tint = dangerColor,
                         text = stringResource(R.string.reason_blocklist),
                     )
                 }
@@ -153,7 +183,7 @@ fun ReasonTransparencySheet(
                 )
             }
 
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(4.dp))
 
             // Actions
             Button(
@@ -196,7 +226,7 @@ private fun ReasonRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp), tint = tint)
-        Text(text, style = MaterialTheme.typography.bodyLarge)
+        Icon(icon, contentDescription = null, modifier = Modifier.size(28.dp), tint = tint)
+        Text(text, style = MaterialTheme.typography.titleSmall)
     }
 }
