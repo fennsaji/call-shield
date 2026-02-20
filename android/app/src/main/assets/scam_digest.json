@@ -1,0 +1,23 @@
+[
+  {
+    "id": 1,
+    "title": "Investment scams targeting UPI users are surging",
+    "body": "Scammers are posing as SEBI officials and offering guaranteed high returns on UPI-linked investments. Never share your UPI PIN with anyone claiming to be from a regulator.",
+    "source": "RBI / CERT-In",
+    "publishedAt": 1737590400000
+  },
+  {
+    "id": 2,
+    "title": "Fake job offers via WhatsApp on the rise",
+    "body": "Fraudsters are sending unsolicited work-from-home offers with upfront registration fees. Legitimate employers never ask for money before hiring.",
+    "source": "Ministry of Home Affairs",
+    "publishedAt": 1737504000000
+  },
+  {
+    "id": 3,
+    "title": "Loan app fraud targeting young borrowers",
+    "body": "Illegal loan apps are using harassment and threats after providing tiny loans at hidden interest rates. Only use RBI-registered NBFCs for personal loans.",
+    "source": "RBI",
+    "publishedAt": 1737417600000
+  }
+]

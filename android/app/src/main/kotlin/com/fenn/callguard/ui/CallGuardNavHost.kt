@@ -1,0 +1,144 @@
+package com.fenn.callguard.ui
+
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavHostController
+import androidx.navigation.NavType
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
+import com.fenn.callguard.data.preferences.ScreeningPreferences
+import com.fenn.callguard.screening.PaywallTriggerManager
+import com.fenn.callguard.ui.screens.blocklist.BlocklistScreen
+import com.fenn.callguard.ui.screens.home.HomeScreen
+import com.fenn.callguard.ui.screens.onboarding.OnboardingScreen
+import com.fenn.callguard.ui.screens.paywall.PaywallScreen
+import com.fenn.callguard.ui.screens.permissions.PermissionsScreen
+import com.fenn.callguard.ui.screens.prefix.PrefixRulesScreen
+import com.fenn.callguard.ui.screens.privacy.PrivacyDashboardScreen
+import com.fenn.callguard.ui.screens.report.ReportSpamScreen
+import com.fenn.callguard.ui.screens.settings.SettingsScreen
+import com.fenn.callguard.ui.screens.whitelist.WhitelistScreen
+
+object Destinations {
+    const val ONBOARDING = "onboarding"
+    const val PERMISSIONS = "permissions"
+    const val HOME = "home"
+    const val REPORT_SPAM = "report_spam/{numberHash}/{displayLabel}"
+    const val BLOCKLIST = "blocklist"
+    const val WHITELIST = "whitelist"
+    const val PREFIX_RULES = "prefix_rules"
+    const val PRIVACY_DASHBOARD = "privacy_dashboard"
+    const val SETTINGS = "settings"
+    const val PAYWALL = "paywall?trigger={trigger}"
+
+    fun reportSpam(numberHash: String, displayLabel: String) =
+        "report_spam/$numberHash/$displayLabel"
+}
+
+@Composable
+fun CallGuardNavHost(
+    prefs: ScreeningPreferences,
+    paywallTrigger: PaywallTriggerManager,
+    navController: NavHostController = rememberNavController(),
+) {
+    val onboardingComplete by prefs.observeOnboardingComplete()
+        .collectAsStateWithLifecycle(initialValue = false)
+
+    val startDestination = if (onboardingComplete) Destinations.HOME else Destinations.ONBOARDING
+
+    // Observe paywall trigger from screening service
+    LaunchedEffect(Unit) {
+        paywallTrigger.paywallTrigger.collect {
+            navController.navigate("${Destinations.PAYWALL}?trigger=true") {
+                launchSingleTop = true
+            }
+        }
+    }
+
+    NavHost(navController = navController, startDestination = startDestination) {
+
+        composable(Destinations.ONBOARDING) {
+            OnboardingScreen(onComplete = {
+                navController.navigate(Destinations.PERMISSIONS) {
+                    popUpTo(Destinations.ONBOARDING) { inclusive = true }
+                }
+            })
+        }
+
+        composable(Destinations.PERMISSIONS) {
+            PermissionsScreen(onAllGranted = {
+                navController.navigate(Destinations.HOME) {
+                    popUpTo(Destinations.PERMISSIONS) { inclusive = true }
+                }
+            })
+        }
+
+        composable(Destinations.HOME) {
+            HomeScreen(
+                onNavigateToBlocklist = { navController.navigate(Destinations.BLOCKLIST) },
+                onNavigateToWhitelist = { navController.navigate(Destinations.WHITELIST) },
+                onNavigateToPrefixRules = { navController.navigate(Destinations.PREFIX_RULES) },
+                onNavigateToPrivacy = { navController.navigate(Destinations.PRIVACY_DASHBOARD) },
+                onNavigateToSettings = { navController.navigate(Destinations.SETTINGS) },
+                onNavigateToPaywall = { navController.navigate(Destinations.PAYWALL) },
+                onNavigateToReport = { hash, label ->
+                    navController.navigate(Destinations.reportSpam(hash, label))
+                },
+            )
+        }
+
+        composable(
+            route = Destinations.REPORT_SPAM,
+            arguments = listOf(
+                navArgument("numberHash") { type = NavType.StringType },
+                navArgument("displayLabel") { type = NavType.StringType },
+            ),
+        ) { backStackEntry ->
+            ReportSpamScreen(
+                numberHash = backStackEntry.arguments?.getString("numberHash") ?: "",
+                displayLabel = backStackEntry.arguments?.getString("displayLabel") ?: "",
+                onDismiss = { navController.popBackStack() },
+            )
+        }
+
+        composable(Destinations.BLOCKLIST) {
+            BlocklistScreen(onBack = { navController.popBackStack() })
+        }
+
+        composable(Destinations.WHITELIST) {
+            WhitelistScreen(onBack = { navController.popBackStack() })
+        }
+
+        composable(Destinations.PREFIX_RULES) {
+            PrefixRulesScreen(onBack = { navController.popBackStack() })
+        }
+
+        composable(Destinations.PRIVACY_DASHBOARD) {
+            PrivacyDashboardScreen(onBack = { navController.popBackStack() })
+        }
+
+        composable(Destinations.SETTINGS) {
+            SettingsScreen(
+                onBack = { navController.popBackStack() },
+                onNavigateToPaywall = { navController.navigate(Destinations.PAYWALL) },
+            )
+        }
+
+        composable(
+            route = Destinations.PAYWALL,
+            arguments = listOf(navArgument("trigger") {
+                type = NavType.BoolType
+                defaultValue = false
+            }),
+        ) { backStackEntry ->
+            PaywallScreen(
+                onDismiss = { navController.popBackStack() },
+                fromTrigger = backStackEntry.arguments?.getBoolean("trigger") ?: false,
+            )
+        }
+    }
+}
