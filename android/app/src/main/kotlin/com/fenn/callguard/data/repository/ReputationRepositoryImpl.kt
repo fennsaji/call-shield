@@ -1,0 +1,94 @@
+package com.fenn.callguard.data.repository
+
+import com.fenn.callguard.data.local.dao.SeedDbDao
+import com.fenn.callguard.domain.model.ReputationResult
+import com.fenn.callguard.domain.model.ReputationSource
+import com.fenn.callguard.domain.repository.ReputationRepository
+import com.fenn.callguard.network.ApiClient
+import com.fenn.callguard.network.CircuitBreaker
+import com.fenn.callguard.network.CircuitOpenException
+import com.fenn.callguard.util.DeviceTokenManager
+import kotlinx.coroutines.withTimeout
+import javax.inject.Inject
+import javax.inject.Singleton
+
+@Singleton
+class ReputationRepositoryImpl @Inject constructor(
+    private val apiClient: ApiClient,
+    private val seedDbDao: SeedDbDao,
+    private val deviceTokenManager: DeviceTokenManager,
+    private val circuitBreaker: CircuitBreaker,
+) : ReputationRepository {
+
+    override suspend fun lookup(numberHash: String): ReputationResult {
+        // ── 1. Seed DB (synchronous, always available) ────────────────────────
+        val seedEntry = seedDbDao.lookup(numberHash)
+        if (seedEntry != null) {
+            return ReputationResult(
+                confidenceScore = seedEntry.confidenceScore,
+                category = seedEntry.category,
+                reportCount = 0,
+                uniqueReporters = 0,
+                source = ReputationSource.SEED_DB,
+            )
+        }
+
+        // ── 2. Remote API with circuit breaker + 1200ms timeout ───────────────
+        return try {
+            withTimeout(1200L) {
+                circuitBreaker.execute {
+                    val response = apiClient.getReputation(
+                        numberHash = numberHash,
+                        deviceTokenHash = deviceTokenManager.deviceTokenHash,
+                    )
+                    ReputationResult(
+                        confidenceScore = response.confidence_score,
+                        category = response.category,
+                        reportCount = response.report_count,
+                        uniqueReporters = response.unique_reporters,
+                        source = ReputationSource.REMOTE,
+                    )
+                }
+            }
+        } catch (_: CircuitOpenException) {
+            notFound()
+        } catch (_: kotlinx.coroutines.TimeoutCancellationException) {
+            notFound()
+        } catch (_: Exception) {
+            notFound()
+        }
+    }
+
+    override suspend fun submitReport(numberHash: String, category: String): Result<Unit> {
+        return try {
+            apiClient.postReport(
+                numberHash = numberHash,
+                deviceTokenHash = deviceTokenManager.deviceTokenHash,
+                category = category,
+            )
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun submitCorrection(numberHash: String): Result<Unit> {
+        return try {
+            apiClient.postCorrect(
+                numberHash = numberHash,
+                deviceTokenHash = deviceTokenManager.deviceTokenHash,
+            )
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    private fun notFound() = ReputationResult(
+        confidenceScore = 0.0,
+        category = null,
+        reportCount = 0,
+        uniqueReporters = 0,
+        source = ReputationSource.NOT_FOUND,
+    )
+}

@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">CallGuard</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_title_1">Stop spam calls before they ring</string>
+    <string name="onboarding_body_1">CallGuard silently checks every incoming call against a crowdsourced database of known spam numbers — before your phone rings.</string>
+    <string name="onboarding_title_2">Your privacy is non-negotiable</string>
+    <string name="onboarding_body_2">We never see your contacts or call log. Numbers are one-way hashed before any check. Nothing leaves your phone in plain text.</string>
+    <string name="onboarding_get_started">Get started</string>
+    <string name="onboarding_next">Next</string>
+
+    <!-- Permissions -->
+    <string name="permission_screening_title">Set CallGuard as your call screener</string>
+    <string name="permission_screening_body">Android requires you to grant the Call Screening role so CallGuard can check calls before they ring.</string>
+    <string name="permission_screening_button">Grant call screening</string>
+    <string name="permission_notifications_title">Allow notifications</string>
+    <string name="permission_notifications_body">Get alerted when a call is blocked or flagged as high-risk.</string>
+    <string name="permission_notifications_button">Allow notifications</string>
+    <string name="permission_battery_title">Disable battery optimisation</string>
+    <string name="permission_battery_body">Some manufacturers kill background apps aggressively. Disable optimisation for CallGuard to ensure it screens calls reliably.</string>
+    <string name="permission_battery_button">Open battery settings</string>
+    <string name="permission_skip">Skip for now</string>
+
+    <!-- Home -->
+    <string name="home_status_active">Protection active</string>
+    <string name="home_status_inactive">Protection inactive</string>
+    <string name="home_recent_calls">Recent activity</string>
+    <string name="home_no_recent_calls">No calls screened yet</string>
+    <string name="home_calls_screened">calls screened</string>
+    <string name="home_calls_blocked">blocked</string>
+
+    <!-- Call outcomes -->
+    <string name="outcome_allowed">Allowed</string>
+    <string name="outcome_blocked">Blocked</string>
+    <string name="outcome_flagged">Flagged</string>
+    <string name="outcome_unknown">Unknown caller</string>
+
+    <!-- Risk labels -->
+    <string name="risk_high">High risk</string>
+    <string name="risk_medium">Likely spam</string>
+    <string name="risk_low">Possibly spam</string>
+    <string name="risk_safe">Likely safe</string>
+    <string name="risk_unknown">Unknown</string>
+
+    <!-- Report spam -->
+    <string name="report_title">Report spam call</string>
+    <string name="report_category_telemarketing">Telemarketing / Promotional</string>
+    <string name="report_category_loan_scam">Loan or Financial Scam</string>
+    <string name="report_category_investment_scam">Investment Scam</string>
+    <string name="report_category_impersonation">Impersonation (Bank / Govt)</string>
+    <string name="report_category_phishing">Phishing</string>
+    <string name="report_category_job_scam">Job or Work From Home Scam</string>
+    <string name="report_category_other">Other</string>
+    <string name="report_submit">Submit report</string>
+    <string name="report_success">Report submitted. Thank you!</string>
+    <string name="report_error">Could not submit report. Try again.</string>
+
+    <!-- Blocklist / Whitelist -->
+    <string name="blocklist_title">Blocklist</string>
+    <string name="whitelist_title">Whitelist</string>
+    <string name="prefix_rules_title">Prefix rules</string>
+    <string name="add_number">Add number</string>
+    <string name="add_prefix">Add prefix</string>
+    <string name="remove">Remove</string>
+    <string name="empty_blocklist">No blocked numbers</string>
+    <string name="empty_whitelist">No whitelisted numbers</string>
+
+    <!-- Privacy dashboard -->
+    <string name="privacy_title">Privacy dashboard</string>
+    <string name="privacy_data_sent">Data sent to server</string>
+    <string name="privacy_hashed_numbers">Hashed numbers checked</string>
+    <string name="privacy_reports_submitted">Reports submitted</string>
+    <string name="privacy_no_contacts">Contacts accessed: None</string>
+    <string name="privacy_no_call_log">Call log accessed: None</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_screening_threshold">Screening threshold</string>
+    <string name="settings_auto_block">Auto-block high-confidence spam</string>
+    <string name="settings_notifications">Notifications</string>
+    <string name="settings_about">About</string>
+    <string name="settings_version">Version %1$s</string>
+
+    <!-- Pro / Paywall -->
+    <string name="pro_title">CallGuard Pro</string>
+    <string name="pro_feature_unlimited">Unlimited call screening</string>
+    <string name="pro_feature_history">Full call history</string>
+    <string name="pro_feature_prefix">Custom prefix rules</string>
+    <string name="pro_price_annual">₹399 / year</string>
+    <string name="pro_price_monthly">₹49 / month</string>
+    <string name="pro_subscribe">Subscribe</string>
+    <string name="pro_restore">Restore purchase</string>
+    <string name="pro_terms">Terms &amp; Privacy</string>
+
+    <!-- Not spam / correction -->
+    <string name="not_spam">Not Spam</string>
+    <string name="not_spam_undo">Mark as Not Spam</string>
+    <string name="not_spam_success">Marked as safe. Added to your whitelist.</string>
+
+    <!-- Reason transparency -->
+    <string name="reason_panel_title">Why was this flagged?</string>
+    <string name="reason_seed_db">Found in local spam database</string>
+    <string name="reason_remote">Reported by community (%1$d reports, %2$d%%\u00a0confidence)</string>
+    <string name="reason_prefix">Matched prefix rule: %1$s</string>
+    <string name="reason_hidden">Hidden / private number</string>
+    <string name="reason_blocklist">In your personal blocklist</string>
+    <string name="call_outcome_known_spam">Known Spam</string>
+    <string name="call_outcome_likely_spam">Likely Spam</string>
+    <string name="call_outcome_unknown">Unknown Number</string>
+
+    <!-- Scam digest -->
+    <string name="scam_digest_title">Scam alert this week</string>
+    <string name="scam_digest_source">Source: %1$s</string>
+    <string name="scam_digest_dismiss">Dismiss</string>
+
+    <!-- Pro / Paywall extras -->
+    <string name="pro_trial_trigger_title">Pro would have blocked this before it rang</string>
+    <string name="pro_trial_trigger_body">This call is from a high-confidence scam number. Upgrade to block it silently next time.</string>
+    <string name="pro_trial_cta">Start 7-day free trial</string>
+    <string name="pro_family_upsell">Want to protect a family member too?</string>
+    <string name="pro_family_waitlist">Join the Family Plan waitlist</string>
+    <string name="pro_family_email_hint">Enter email address</string>
+    <string name="pro_family_joined">You\'re on the waitlist!</string>
+
+    <!-- Privacy dashboard extras -->
+    <string name="privacy_delete_all_data">Delete all local data</string>
+    <string name="privacy_delete_confirm_title">Delete all data?</string>
+    <string name="privacy_delete_confirm_body">This will clear your blocklist, whitelist, prefix rules, call history, and local spam database. This cannot be undone.</string>
+    <string name="privacy_delete_confirm">Delete</string>
+    <string name="privacy_last_sync">Last database sync: %1$s</string>
+    <string name="privacy_last_sync_never">Local database: Not yet downloaded</string>
+    <string name="privacy_trust_statement">We store only a hashed fingerprint of numbers you report. We never see your contacts, call logs, or who called you.</string>
+
+    <!-- OEM battery -->
+    <string name="battery_oem_miui">On MIUI: Security → Battery → CallGuard → No restrictions</string>
+    <string name="battery_oem_samsung">On Samsung: Device Care → Battery → App power management → CallGuard → Unrestricted</string>
+    <string name="battery_oem_oneplus">On OnePlus: Settings → Battery → Battery Optimization → CallGuard → Don\'t optimize</string>
+    <string name="battery_oem_generic">Go to Battery settings and disable optimization for CallGuard</string>
+
+    <!-- Bottom navigation labels -->
+    <string name="nav_home">Home</string>
+    <string name="nav_activity">Activity</string>
+    <string name="nav_settings">Settings</string>
+
+    <!-- Content descriptions -->
+    <string name="cd_navigate_back">Navigate back</string>
+
+    <!-- Blocklist / Whitelist hints -->
+    <string name="empty_blocklist_hint">Tap + to add your first number</string>
+    <string name="empty_whitelist_hint">Tap + to add your first number</string>
+
+    <!-- Reason transparency (no-placeholder variants) -->
+    <string name="reason_prefix_matched">Matched a prefix blocking rule</string>
+    <string name="reason_remote_confidence">Flagged by community (%1$d%%\u00a0confidence)</string>
+
+    <!-- Errors / generic -->
+    <string name="error_no_internet">No internet connection</string>
+    <string name="error_generic">Something went wrong. Try again.</string>
+    <string name="loading">Loading…</string>
+    <string name="retry">Retry</string>
+    <string name="cancel">Cancel</string>
+    <string name="done">Done</string>
+    <string name="ok">OK</string>
+</resources>
