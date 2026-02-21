@@ -22,6 +22,7 @@ release/
 *.keystore
 !debug.keystore
 google-services.json
+upload-keystore.jks
 
 # ========================
 # React / Node
