@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Base theme — Compose handles all UI; this only applies to the window/system chrome
+    before Compose renders. Colors align with the Material 3 seed color defined in
+    the Compose theme (CallShieldTheme).
+-->
+<resources>
+    <style name="Theme.CallShield" parent="Theme.Material3.DayNight.NoActionBar">
+        <!-- Window background matches Compose surface color to avoid flash -->
+        <item name="android:windowBackground">@color/window_background</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+</resources>

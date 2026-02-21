@@ -1,8 +1,8 @@
-# CallGuard
+# CallShield
 
 **You decide what gets through. We never see who's calling.**
 
-CallGuard is a privacy-first spam and scam call protection app for Android, built for the Indian market. Unlike Truecaller, it works without uploading your contacts, storing your call logs, or showing you ads.
+CallShield is a privacy-first spam and scam call protection app for Android, built for the Indian market. Unlike Truecaller, it works without uploading your contacts, storing your call logs, or showing you ads.
 
 ## How it works
 

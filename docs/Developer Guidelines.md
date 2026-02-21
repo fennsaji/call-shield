@@ -1,4 +1,4 @@
-# CallGuard – Developer Guidelines
+# CallShield – Developer Guidelines
 
 ## Privacy Rules (Non-Negotiable)
 

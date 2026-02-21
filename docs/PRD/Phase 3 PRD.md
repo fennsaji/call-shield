@@ -1,4 +1,4 @@
-# CallGuard – Phase 3 Detailed PRD
+# CallShield – Phase 3 Detailed PRD
 
 ## 0. Trigger Conditions
 
@@ -12,7 +12,7 @@ Phase 3 is initiated when the following criteria are met:
 
 ## 1. Phase 3 Objective
 
-Expand CallGuard from an intelligent spam blocker into a scalable privacy ecosystem while maintaining strict privacy-first principles.
+Expand CallShield from an intelligent spam blocker into a scalable privacy ecosystem while maintaining strict privacy-first principles.
 
 Phase 3 focuses on secure cloud capabilities, family protection features, stronger abuse resistance, and infrastructure hardening for growth.
 
@@ -190,4 +190,4 @@ Token hashes are deleted when the guardian initiates unpair. The table stores no
 * Full enterprise product line.
 * Large-scale machine learning training pipelines.
 
-Phase 3 transforms CallGuard into a hardened, scalable privacy infrastructure while preserving the original mission: protection without surveillance.
+Phase 3 transforms CallShield into a hardened, scalable privacy infrastructure while preserving the original mission: protection without surveillance.

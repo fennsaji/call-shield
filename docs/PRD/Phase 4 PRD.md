@@ -1,8 +1,8 @@
-# CallGuard – Phase 4 Detailed PRD
+# CallShield – Phase 4 Detailed PRD
 
 ## 1. Phase 4 Objective
 
-Scale CallGuard from a growing privacy-first application into a mature telecom protection platform capable of supporting large user volumes, strategic partnerships, and long-term sustainability.
+Scale CallShield from a growing privacy-first application into a mature telecom protection platform capable of supporting large user volumes, strategic partnerships, and long-term sustainability.
 
 Phase 4 focuses on scale, partnerships, advanced intelligence refinement, and business expansion while maintaining strict privacy guarantees.
 
@@ -160,4 +160,4 @@ Supabase (managed Postgres + Edge Functions) is sufficient for Phases 1–3. At 
 * Ad-based monetization.
 * Behavioral surveillance models.
 
-Phase 4 positions CallGuard as a mature privacy-first telecom protection platform capable of long-term growth and strategic collaboration without compromising its foundational principles.
+Phase 4 positions CallShield as a mature privacy-first telecom protection platform capable of long-term growth and strategic collaboration without compromising its foundational principles.

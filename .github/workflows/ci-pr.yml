@@ -1,0 +1,186 @@
+name: CI — Pull Request Checks
+
+on:
+  pull_request:
+    branches: [main, dev]
+
+concurrency:
+  # Cancel in-progress CI runs for the same PR when new commits are pushed
+  group: ci-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  # ─────────────────────────────────────────────────────────────────────
+  # Detect which parts of the repo actually changed so we skip irrelevant
+  # jobs (e.g. don't run Android tests on a backend-only PR).
+  # ─────────────────────────────────────────────────────────────────────
+  changes:
+    name: Detect Changed Paths
+    runs-on: ubuntu-latest
+    outputs:
+      android: ${{ steps.filter.outputs.android }}
+      backend: ${{ steps.filter.outputs.backend }}
+    steps:
+    - uses: actions/checkout@v4
+    - uses: dorny/paths-filter@v3
+      id: filter
+      with:
+        filters: |
+          android:
+            - 'android/**'
+          backend:
+            - 'supabase/**'
+
+  # ─────────────────────────────────────────────────────────────────────
+  # ANDROID: lint + unit tests
+  # ─────────────────────────────────────────────────────────────────────
+  android-ci:
+    name: Android — Lint & Unit Tests
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.android == 'true'
+    timeout-minutes: 20
+
+    steps:
+    - name: 🔄 Checkout
+      uses: actions/checkout@v4
+
+    - name: ☕ Setup Java 17
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'zulu'
+        java-version: '17'
+        cache: 'gradle'
+
+    # Provide stub values so BuildConfig fields compile — no real secrets needed for CI checks
+    - name: 📝 Create stub local.properties
+      run: |
+        cat > android/local.properties << EOF
+        sdk.dir=$ANDROID_HOME
+        SUPABASE_URL=https://stub.supabase.co
+        SUPABASE_ANON_KEY=stub_anon_key
+        EOF
+
+    - name: 🔍 Run Android Lint
+      working-directory: ./android
+      run: ./gradlew lintDebug --no-daemon
+      env:
+        GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx3g"
+
+    - name: 🧪 Run Unit Tests
+      working-directory: ./android
+      run: ./gradlew testDebugUnitTest --no-daemon
+      env:
+        GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx3g"
+
+    - name: 📊 Upload lint report
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: android-lint-report-${{ github.event.pull_request.number }}
+        path: android/app/build/reports/lint-results-debug.html
+        retention-days: 14
+
+    - name: 📊 Upload test results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: android-test-results-${{ github.event.pull_request.number }}
+        path: android/app/build/reports/tests/testDebugUnitTest/
+        retention-days: 14
+
+  # ─────────────────────────────────────────────────────────────────────
+  # BACKEND: TypeScript type check + Deno tests
+  # ─────────────────────────────────────────────────────────────────────
+  backend-ci:
+    name: Backend — Type Check & Tests
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
+    timeout-minutes: 10
+
+    steps:
+    - name: 🔄 Checkout
+      uses: actions/checkout@v4
+
+    - name: 🦕 Setup Deno
+      uses: denoland/setup-deno@v2
+      with:
+        deno-version: v2.x
+
+    - name: 🔍 TypeScript type check — all Edge Functions
+      working-directory: ./supabase/functions
+      run: |
+        echo "Checking TypeScript across all Edge Functions..."
+        find . -name "*.ts" -type f | while read -r file; do
+          echo "  → $file"
+          deno check "$file" || { echo "❌ Type error in $file"; exit 1; }
+        done
+        echo "✅ All TypeScript files passed"
+
+    - name: 🔒 Security scan
+      working-directory: ./supabase/functions
+      run: |
+        if grep -rn "console\.log.*password\|console\.log.*secret\|console\.log.*key" . 2>/dev/null; then
+          echo "❌ Potential credential logging found"
+          exit 1
+        fi
+        echo "✅ No credential logging found"
+
+    - name: 🧪 Run Deno tests
+      working-directory: ./supabase/functions
+      run: |
+        # Run any *.test.ts files found under functions/
+        TEST_FILES=$(find . -name "*.test.ts" -type f)
+        if [ -z "$TEST_FILES" ]; then
+          echo "ℹ️  No test files found — skipping"
+          exit 0
+        fi
+        echo "Running tests..."
+        deno test --allow-env --allow-net $TEST_FILES
+        echo "✅ All tests passed"
+
+    - name: 🧪 Validate Edge Function structure
+      working-directory: ./supabase/functions
+      run: |
+        for func_dir in */; do
+          func_name=$(basename "$func_dir")
+          [ "$func_name" = "_shared" ] && continue
+          if [ ! -f "${func_dir}index.ts" ]; then
+            echo "❌ Missing index.ts in: $func_name"
+            exit 1
+          fi
+          if ! grep -q "Deno.serve" "${func_dir}index.ts"; then
+            echo "⚠️  $func_name: Deno.serve pattern not found"
+          fi
+          echo "✅ $func_name"
+        done
+
+  # ─────────────────────────────────────────────────────────────────────
+  # Gate — this job always runs and summarises pass/fail for branch
+  # protection rules. Configure branch protection to require "CI Gate".
+  # ─────────────────────────────────────────────────────────────────────
+  ci-gate:
+    name: CI Gate
+    runs-on: ubuntu-latest
+    needs: [android-ci, backend-ci]
+    # Run even when upstream jobs were skipped (path filter didn't match)
+    if: always()
+    steps:
+    - name: ✅ Check CI results
+      run: |
+        ANDROID="${{ needs.android-ci.result }}"
+        BACKEND="${{ needs.backend-ci.result }}"
+
+        echo "Android CI : $ANDROID"
+        echo "Backend CI : $BACKEND"
+
+        # 'skipped' means the path filter didn't match — that's fine
+        for result in "$ANDROID" "$BACKEND"; do
+          if [ "$result" = "failure" ] || [ "$result" = "cancelled" ]; then
+            echo "❌ CI failed"
+            exit 1
+          fi
+        done
+
+        echo "✅ All required checks passed"

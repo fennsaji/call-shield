@@ -1,4 +1,4 @@
-# CallGuard – Product Roadmap
+# CallShield – Product Roadmap
 
 ## Vision
 
@@ -29,7 +29,7 @@ This phase focuses on reliability, clarity, and compliance — not advanced inte
 
 ### 1. Trust-Model Onboarding
 
-Purpose: Users don't know Truecaller harvests contacts. Without explaining CallGuard's model, they cannot understand what they're paying for.
+Purpose: Users don't know Truecaller harvests contacts. Without explaining CallShield's model, they cannot understand what they're paying for.
 
 Two-screen onboarding (shown once on first install):
 
@@ -162,7 +162,7 @@ Important:
 
 ### 7. Privacy Dashboard (Trust Statement)
 
-Purpose: Make the trust model visible — not a complex settings screen, but a single clear statement of what CallGuard does and doesn't collect.
+Purpose: Make the trust model visible — not a complex settings screen, but a single clear statement of what CallShield does and doesn't collect.
 
 Screen shows:
 
@@ -455,7 +455,7 @@ Mitigation principles:
 
 # Long-Term Vision
 
-CallGuard becomes India's user-controlled distributed reputation and scam detection layer.
+CallShield becomes India's user-controlled distributed reputation and scam detection layer.
 
 Built on intelligence, not surveillance.
 Built on user agency, not carrier decisions.

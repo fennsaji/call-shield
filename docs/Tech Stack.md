@@ -1,4 +1,4 @@
-# CallGuard – Tech Stack
+# CallShield – Tech Stack
 
 ## Mobile (Android)
 

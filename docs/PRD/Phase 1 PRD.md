@@ -1,4 +1,4 @@
-# CallGuard – Phase 1 Detailed PRD
+# CallShield – Phase 1 Detailed PRD
 
 ## 1. Phase 1 Objective
 
