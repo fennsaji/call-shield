@@ -163,26 +163,24 @@ jobs:
         PROJECT_REF: ${{ env.PROJECT_REF }}
 
     - name: 🔑 Update Function Secrets
-      working-directory: ./supabase
       run: |
         echo "🔑 Pushing Edge Function secrets..."
-        # Write a minimal secrets file — only what CallShield functions need
-        cat > .env.production << 'EOF'
-        SUPABASE_URL=https://${{ env.PROJECT_REF }}.supabase.co
-        SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
-        SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-        GOOGLE_SERVICE_ACCOUNT_KEY=${{ secrets.GOOGLE_SERVICE_ACCOUNT_KEY }}
-        EOF
-
+        # Pass each secret as a positional KEY=VALUE argument.
+        # Using env: below keeps multiline values (e.g. JSON) intact — avoids
+        # the env-file parser choking on embedded newlines or quotes.
         supabase secrets set \
-          --env-file .env.production \
+          "SUPABASE_URL=https://${PROJECT_REF}.supabase.co" \
+          "SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}" \
+          "SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}" \
+          "GOOGLE_SERVICE_ACCOUNT_KEY=${GOOGLE_SERVICE_ACCOUNT_KEY}" \
           --project-ref "$PROJECT_REF"
-
-        rm -f .env.production
         echo "✅ Secrets updated"
       env:
         SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         PROJECT_REF: ${{ env.PROJECT_REF }}
+        SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        GOOGLE_SERVICE_ACCOUNT_KEY: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_KEY }}
 
     - name: 🧪 Smoke test production deployment
       run: |
