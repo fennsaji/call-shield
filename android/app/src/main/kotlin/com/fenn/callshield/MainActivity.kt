@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.fenn.callshield.data.preferences.ScreeningPreferences
 import com.fenn.callshield.screening.PaywallTriggerManager
 import com.fenn.callshield.ui.CallShieldNavHost
@@ -18,6 +19,7 @@ class MainActivity : ComponentActivity() {
     @Inject lateinit var paywallTriggerManager: PaywallTriggerManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        installSplashScreen()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {

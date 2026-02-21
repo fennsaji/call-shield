@@ -21,6 +21,7 @@ import kotlin.math.roundToInt
 
 private const val CHANNEL_BLOCKED = "cg_blocked_calls"
 private const val CHANNEL_FLAGGED = "cg_flagged_calls"
+private const val CHANNEL_MISSED_WARNING = "cg_missed_call_warning"
 
 @Singleton
 class CallNotificationManager @Inject constructor(
@@ -48,17 +49,24 @@ class CallNotificationManager @Inject constructor(
      * PRD §3.13: notification must show "Undo / Mark as Not Spam" action.
      * @param numberHash HMAC hash of the number — passed to MarkNotSpamUseCase on action tap.
      */
-    fun showBlockedCallNotification(displayLabel: String, numberHash: String) {
+    /**
+     * PRD §3.13: auto-block notification with reason + "Undo / Mark as Not Spam" action.
+     * @param reason Human-readable reason e.g. "In your blocklist", "Reported by community".
+     */
+    fun showBlockedCallNotification(
+        displayLabel: String,
+        numberHash: String,
+        reason: String? = null,
+    ) {
         if (!hasNotificationPermission()) return
         val notifId = notifIdCounter.getAndIncrement()
-        Log.d(TAG, "Posting blocked notification id=$notifId for $displayLabel")
+        Log.d(TAG, "Posting blocked notification id=$notifId for $displayLabel reason=$reason")
 
         val openIntent = PendingIntent.getActivity(
             context, notifId, mainActivityIntent(),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 
-        // "Mark as Not Spam" action
         val notSpamIntent = Intent(ACTION_NOT_SPAM).apply {
             setPackage(context.packageName)
             putExtra(EXTRA_NUMBER_HASH, numberHash)
@@ -72,10 +80,13 @@ class CallNotificationManager @Inject constructor(
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 
+        val bodyText = if (reason != null) "$displayLabel · $reason" else "Blocked call from $displayLabel"
+
         val notification = NotificationCompat.Builder(context, CHANNEL_BLOCKED)
             .setSmallIcon(R.drawable.ic_shield_blocked)
             .setContentTitle("Spam call blocked")
-            .setContentText("Blocked call from $displayLabel")
+            .setContentText(bodyText)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(bodyText))
             .setContentIntent(openIntent)
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
@@ -87,6 +98,63 @@ class CallNotificationManager @Inject constructor(
             .build()
 
         notifManager.notify(notifId, notification)
+    }
+
+    /**
+     * PRD §3.3: Missed call callback risk indicator.
+     * Fires after a call is silenced (ring suppressed → goes to missed calls).
+     * Warns the user not to call back a reported spam number.
+     */
+    fun showMissedCallWarningNotification(
+        displayLabel: String,
+        numberHash: String,
+        category: String?,
+    ) {
+        if (!hasNotificationPermission()) return
+        val notifId = notifIdCounter.getAndIncrement()
+        val categoryLabel = category
+            ?.replace('_', ' ')
+            ?.replaceFirstChar { it.uppercase() }
+            ?: "Spam"
+
+        val openIntent = PendingIntent.getActivity(
+            context, notifId, mainActivityIntent(),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+
+        val notSpamIntent = Intent(ACTION_NOT_SPAM).apply {
+            setPackage(context.packageName)
+            putExtra(EXTRA_NUMBER_HASH, numberHash)
+            putExtra(EXTRA_DISPLAY_LABEL, displayLabel)
+            putExtra(EXTRA_NOTIFICATION_ID, notifId)
+        }
+        val notSpamPending = PendingIntent.getBroadcast(
+            context,
+            notifId + 10_000,
+            notSpamIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+
+        val notification = NotificationCompat.Builder(context, CHANNEL_MISSED_WARNING)
+            .setSmallIcon(R.drawable.ic_shield_warning)
+            .setContentTitle("Missed call — $categoryLabel risk")
+            .setContentText("$displayLabel has been reported as $categoryLabel. Avoid calling back.")
+            .setStyle(
+                NotificationCompat.BigTextStyle()
+                    .bigText("$displayLabel has been reported as $categoryLabel. Proceed with caution before calling back — this may be a callback scam.")
+            )
+            .setContentIntent(openIntent)
+            .setAutoCancel(true)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .addAction(
+                R.drawable.ic_shield_warning,
+                context.getString(R.string.not_spam_undo),
+                notSpamPending,
+            )
+            .build()
+
+        notifManager.notify(notifId, notification)
+        Log.d(TAG, "Missed call warning posted id=$notifId for $displayLabel category=$categoryLabel")
     }
 
     fun showFlaggedCallNotification(
@@ -132,7 +200,15 @@ class CallNotificationManager @Inject constructor(
             description = "Notifications when an incoming call is flagged as possible spam"
         }
 
-        notifManager.createNotificationChannels(listOf(blockedChannel, flaggedChannel))
+        val missedWarningChannel = NotificationChannel(
+            CHANNEL_MISSED_WARNING,
+            "Missed call warnings",
+            NotificationManager.IMPORTANCE_HIGH,
+        ).apply {
+            description = "Warns you when a missed call is from a reported spam number — helps prevent callback scams"
+        }
+
+        notifManager.createNotificationChannels(listOf(blockedChannel, flaggedChannel, missedWarningChannel))
     }
 
     private fun mainActivityIntent() =

@@ -34,6 +34,7 @@
     <string name="outcome_allowed">Allowed</string>
     <string name="outcome_blocked">Blocked</string>
     <string name="outcome_flagged">Flagged</string>
+    <string name="outcome_silenced">Silenced</string>
     <string name="outcome_unknown">Unknown caller</string>
 
     <!-- Risk labels -->

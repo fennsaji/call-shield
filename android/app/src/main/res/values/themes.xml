@@ -5,6 +5,18 @@
     the Compose theme (CallShieldTheme).
 -->
 <resources>
+    <!-- Splash screen theme — applied to MainActivity until installSplashScreen() swaps it -->
+    <style name="Theme.CallShield.Starting" parent="Theme.SplashScreen">
+        <!-- Deep navy background matching the app -->
+        <item name="windowSplashScreenBackground">#0A0F1E</item>
+        <!-- Logo icon centered on the splash -->
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_logo</item>
+        <!-- Icon background circle color — matches logo_dark.png background -->
+        <item name="windowSplashScreenIconBackgroundColor">#0A0F1E</item>
+        <!-- Transition to full app theme after splash -->
+        <item name="postSplashScreenTheme">@style/Theme.CallShield</item>
+    </style>
+
     <style name="Theme.CallShield" parent="Theme.Material3.DayNight.NoActionBar">
         <!-- Window background matches Compose surface color to avoid flash -->
         <item name="android:windowBackground">@color/window_background</item>
