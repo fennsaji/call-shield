@@ -2,7 +2,7 @@
 # Re-exec with bash if invoked via `sh run_android.sh`
 [ -z "$BASH_VERSION" ] && exec bash "$0" "$@"
 
-# CallGuard Android Local Development Script
+# CallShield Android Local Development Script
 # Builds the debug APK with env-injected BuildConfig fields, installs it on a
 # connected device/emulator, and launches the app.
 #
@@ -39,7 +39,7 @@ else
     ENV_FILE="$SCRIPT_DIR/$ENV_FILE_ARG"
 fi
 
-printf "${BLUE}🛡️  CallGuard Android — Local Development Build${NC}\n"
+printf "${BLUE}🛡️  CallShield Android — Local Development Build${NC}\n"
 printf "${BLUE}📄 Env file: ${ENV_FILE}${NC}\n"
 
 # ── Validate env file ──────────────────────────────────────────────────────────
@@ -80,7 +80,7 @@ printf "  SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY:0:20}...\n"
 if [ -n "$HMAC_SALT" ]; then
     printf "  HMAC_SALT:         ${HMAC_SALT}\n"
 else
-    printf "  HMAC_SALT:         ${YELLOW}(using default: callguard-v1-salt-2024)${NC}\n"
+    printf "  HMAC_SALT:         ${YELLOW}(using default: callshield-v1-salt-2024)${NC}\n"
 fi
 
 # ── Detect Android SDK ─────────────────────────────────────────────────────────
@@ -290,13 +290,13 @@ cd "$ANDROID_DIR"
 printf "${GREEN}✅ APK built and installed${NC}\n"
 
 # ── Launch app ─────────────────────────────────────────────────────────────────
-APP_ID="com.fenn.callguard.debug"
-MAIN_ACTIVITY="com.fenn.callguard.MainActivity"
+APP_ID="com.fenn.callshield.debug"
+MAIN_ACTIVITY="com.fenn.callshield.MainActivity"
 
 printf "\n${BLUE}🚀 Launching ${APP_ID}...${NC}\n"
 adb -s "$DEVICE_ID" shell am start -n "${APP_ID}/${MAIN_ACTIVITY}"
 
-printf "\n${GREEN}✅ CallGuard launched on device${NC}\n"
+printf "\n${GREEN}✅ CallShield launched on device${NC}\n"
 printf "\n${YELLOW}📱 Device:${NC} $(device_name "$DEVICE_ID") (${DEVICE_ID})\n"
 printf "${YELLOW}📦 App ID:${NC} ${APP_ID}\n"
 printf "\n${BLUE}Useful adb commands:${NC}\n"
@@ -323,7 +323,7 @@ if [ -n "$APP_PID" ]; then
 else
     printf "${YELLOW}⚠️  Could not detect app PID — streaming all logs (filtered to package)${NC}\n"
     # Fallback: stream everything and grep for the package name + crash signals
-    adb -s "$DEVICE_ID" logcat 2>/dev/null | grep --line-buffered -E "callguard|AndroidRuntime|FATAL" &
+    adb -s "$DEVICE_ID" logcat 2>/dev/null | grep --line-buffered -E "callshield|AndroidRuntime|FATAL" &
 fi
 LOGCAT_PID=$!
 

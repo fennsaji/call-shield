@@ -1,10 +1,10 @@
-# CallGuard – Investor Deck
+# CallShield – Investor Deck
 
 ## 1. Executive Summary
 
-CallGuard is a spam and scam call protection app built for the Indian market. You decide what gets through. We never see who’s calling.
+CallShield is a spam and scam call protection app built for the Indian market. You decide what gets through. We never see who’s calling.
 
-Unlike Truecaller and carrier-level solutions, CallGuard gives users full control — on-device intelligence, anonymous hash-based reputation, and zero contact upload. No ads. No surveillance.
+Unlike Truecaller and carrier-level solutions, CallShield gives users full control — on-device intelligence, anonymous hash-based reputation, and zero contact upload. No ads. No surveillance.
 
 Our mission: build India’s most trusted user-controlled protection layer against phone scams.
 
@@ -32,7 +32,7 @@ There is no widely adopted privacy-first alternative focused on intelligent dete
 
 ## 3. Solution
 
-CallGuard provides:
+CallShield provides:
 
 * On-device spam detection
 * Prefix-based blocking (e.g., promotional number series)
@@ -126,7 +126,7 @@ No ad-based monetization. Ever.
 
 ## 7. Competitive Positioning
 
-CallGuard differentiates by:
+CallShield differentiates by:
 
 * User control — you decide what gets through, not the carrier or an algorithm you can't inspect
 * No contact harvesting — architecturally impossible in our model, not just a policy promise
@@ -190,7 +190,7 @@ Infrastructure costs remain low due to minimal backend data storage — the hash
 
 ## 12. Vision
 
-CallGuard aims to become a distributed reputation and scam detection layer for India’s telecom ecosystem.
+CallShield aims to become a distributed reputation and scam detection layer for India’s telecom ecosystem.
 
 Built on intelligence.
 Built on transparency.

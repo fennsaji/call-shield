@@ -1,4 +1,4 @@
-# CallGuard – Phase 2 Detailed PRD
+# CallShield – Phase 2 Detailed PRD
 
 ## 0. Trigger Conditions
 
@@ -16,7 +16,7 @@ If the Phase 1.5 checkpoint (6 weeks post-launch) returns Yellow or Red, Phase 2
 
 ## 1. Phase 2 Objective
 
-Enhance CallGuard from a rule-based spam blocker into an intelligence-driven detection system while preserving privacy-first architecture.
+Enhance CallShield from a rule-based spam blocker into an intelligence-driven detection system while preserving privacy-first architecture.
 
 Phase 2 focuses on behavioral detection, smarter reputation scoring, and improved transparency without introducing invasive data collection.
 

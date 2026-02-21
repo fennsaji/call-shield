@@ -1,4 +1,4 @@
--- CallGuard Row Level Security Policies
+-- CallShield Row Level Security Policies
 -- Edge Functions are the ONLY entry point — clients never access tables directly.
 -- RLS is a second line of defence.
 

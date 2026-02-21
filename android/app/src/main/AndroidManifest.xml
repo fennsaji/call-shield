@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <!-- Required permissions -->
     <uses-permission android:name="android.permission.INTERNET" />
@@ -12,7 +13,7 @@
     <!-- NOT requested: READ_CALL_LOG, READ_CONTACTS, RECORD_AUDIO -->
 
     <application
-        android:name=".CallGuardApp"
+        android:name=".CallShieldApp"
         android:allowBackup="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -20,7 +21,7 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.CallGuard">
+        android:theme="@style/Theme.CallShield">
 
         <!-- Main activity -->
         <activity
@@ -35,7 +36,7 @@
 
         <!-- Call Screening Service -->
         <service
-            android:name=".screening.CallGuardScreeningService"
+            android:name=".screening.CallShieldScreeningService"
             android:exported="true"
             android:permission="android.permission.BIND_SCREENING_SERVICE">
             <intent-filter>
@@ -48,13 +49,18 @@
             android:name=".notification.NotSpamActionReceiver"
             android:exported="false">
             <intent-filter>
-                <action android:name="com.fenn.callguard.action.NOT_SPAM" />
+                <action android:name="com.fenn.callshield.action.NOT_SPAM" />
             </intent-filter>
         </receiver>
 
-        <!-- WorkManager initialized manually via CallGuardApp (Configuration.Provider).
+        <!-- WorkManager initialized manually via CallShieldApp (Configuration.Provider).
              The default auto-init via androidx.startup is intentionally removed to
              prevent double-initialization and crashes. -->
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            android:exported="false"
+            tools:node="remove" />
 
     </application>
 

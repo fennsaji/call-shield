@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# CallGuard Local Development Script
+# CallShield Local Development Script
 # Starts Supabase services and serves Edge Functions for local development.
 #
 # Usage: ./run_backend.sh [options] [env-file]
@@ -27,7 +27,7 @@ YELLOW='\033[1;33m'
 NC='\033[0m'
 
 show_usage() {
-    echo -e "${BLUE}CallGuard Local Development Server${NC}"
+    echo -e "${BLUE}CallShield Local Development Server${NC}"
     echo ""
     echo "Usage: $0 [options] [env-file]"
     echo ""
@@ -107,7 +107,7 @@ if [ ! -f "$ENV_FILE" ]; then
 fi
 
 # ── Print startup summary ──────────────────────────────────────────────────────
-echo -e "${BLUE}🛡️  CallGuard Local Development${NC}"
+echo -e "${BLUE}🛡️  CallShield Local Development${NC}"
 echo -e "  Env file : ${GREEN}$ENV_FILE${NC}"
 
 if [ "$RESET_DB" = true ]; then

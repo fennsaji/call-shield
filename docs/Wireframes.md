@@ -1,4 +1,4 @@
-# CallGuard – Phase 1 Wireframes
+# CallShield – Phase 1 Wireframes
 
 ## Screen Map
 
@@ -134,7 +134,7 @@ System notifications (outside app):
 ║                                   ║
 ║    One permission needed          ║
 ║                                   ║
-║  CallGuard needs to be set as     ║
+║  CallShield needs to be set as     ║
 ║  your call screening service to   ║
 ║  filter spam before it rings.     ║
 ║                                   ║
@@ -158,7 +158,7 @@ System notifications (outside app):
 
 **Notes:**
 - Tapping the button launches the Android system role picker
-- If denied, show a persistent in-app banner on Home: "CallGuard is inactive — tap to set up"
+- If denied, show a persistent in-app banner on Home: "CallShield is inactive — tap to set up"
 
 ---
 
@@ -170,7 +170,7 @@ System notifications (outside app):
 ╔═══════════════════════════════════╗
 ║  9:41                      ⚡ 📶 ║
 ╠═══════════════════════════════════╣
-║  CallGuard                    ⚙️  ║
+║  CallShield                    ⚙️  ║
 ╠═══════════════════════════════════╣
 ║  ┌─────────────────────────────┐  ║
 ║  │  🛡️  Protected               │  ║
@@ -630,17 +630,17 @@ System notifications (outside app):
 ║  ←  Battery Optimization          ║
 ╠═══════════════════════════════════╣
 ║                                   ║
-║  ⚡  Keep CallGuard running        ║
+║  ⚡  Keep CallShield running        ║
 ║                                   ║
 ║  Your phone (Xiaomi MIUI) may     ║
-║  stop CallGuard in the background,║
+║  stop CallShield in the background,║
 ║  which prevents spam screening.   ║
 ║                                   ║
 ║  ┌─────────────────────────────┐  ║
 ║  │  Steps for Xiaomi / MIUI:   │  ║
 ║  │                             │  ║
 ║  │  1.  Settings               │  ║
-║  │  2.  Apps → CallGuard       │  ║
+║  │  2.  Apps → CallShield       │  ║
 ║  │  3.  Battery Saver          │  ║
 ║  │      → No restrictions      │  ║
 ║  │  4.  Autostart → Enable     │  ║
@@ -662,7 +662,7 @@ System notifications (outside app):
 
 ```
   ┌─────────────────────────────────┐
-  │  🛡️  CallGuard                  │
+  │  🛡️  CallShield                  │
   │  Call blocked                   │
   │  +91 98765 43210                │
   │  Known Spam · Loan Scam         │

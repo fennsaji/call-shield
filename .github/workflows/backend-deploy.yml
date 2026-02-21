@@ -1,0 +1,247 @@
+name: Backend Production Deployment
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/**'
+      - '.github/workflows/backend-deploy.yml'
+  workflow_dispatch:
+    inputs:
+      deploy_functions:
+        description: 'Deploy Edge Functions'
+        required: false
+        default: true
+        type: boolean
+      deploy_migrations:
+        description: 'Deploy Database Migrations'
+        required: false
+        default: true
+        type: boolean
+
+concurrency:
+  group: backend-deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # ─────────────────────────────────────────────────────────────
+  # JOB 1 — Validate TypeScript + structure before any deployment
+  # ─────────────────────────────────────────────────────────────
+  validate-backend:
+    name: Validate Backend Code
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+    - name: 🔄 Checkout repository
+      uses: actions/checkout@v4
+
+    - name: 🦕 Setup Deno
+      uses: denoland/setup-deno@v2
+      with:
+        deno-version: v2.x   # Track latest Deno 2 minor
+
+    - name: 🔍 TypeScript compilation check
+      working-directory: ./supabase/functions
+      run: |
+        echo "🔍 Checking TypeScript for all Edge Functions..."
+        find . -name "*.ts" -type f | while read -r file; do
+          echo "  Checking: $file"
+          deno check "$file" || { echo "❌ TypeScript error in $file"; exit 1; }
+        done
+        echo "✅ All TypeScript files are valid"
+
+    - name: 🧪 Validate Edge Function structure
+      working-directory: ./supabase/functions
+      run: |
+        echo "🔍 Validating Edge Function structure..."
+        for func_dir in */; do
+          func_name=$(basename "$func_dir")
+          # _shared contains utilities, not deployable functions
+          if [ "$func_name" = "_shared" ]; then
+            echo "ℹ️  Skipping _shared (utility code)"
+            continue
+          fi
+          if [ ! -f "${func_dir}index.ts" ]; then
+            echo "❌ Missing index.ts in function: $func_name"
+            exit 1
+          fi
+          if ! grep -q "Deno.serve" "${func_dir}index.ts"; then
+            echo "⚠️  $func_name may not follow Deno.serve pattern"
+          fi
+          echo "✅ $func_name structure valid"
+        done
+
+    - name: 🔒 Security scan
+      working-directory: ./supabase/functions
+      run: |
+        echo "🔒 Running security checks..."
+        # Flag any accidental credential logging
+        if grep -rn "console\.log.*password\|console\.log.*secret\|console\.log.*key" . 2>/dev/null; then
+          echo "❌ Potential credential logging found — aborting"
+          exit 1
+        fi
+        # Warn on localhost refs (expected in dev, suspicious in prod code)
+        if grep -rn "localhost\|127\.0\.0\.1" . 2>/dev/null; then
+          echo "⚠️  Found localhost references (verify these are not in production paths)"
+        fi
+        echo "✅ Security scan passed"
+
+  # ─────────────────────────────────────────────────────────────
+  # JOB 2 — Deploy migrations + functions + secrets
+  # ─────────────────────────────────────────────────────────────
+  deploy-to-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: validate-backend
+    timeout-minutes: 15
+    environment: production
+
+    outputs:
+      project_ref: ${{ steps.env-setup.outputs.project_ref }}
+
+    steps:
+    - name: 🔄 Checkout repository
+      uses: actions/checkout@v4
+
+    - name: 🔧 Install Supabase CLI
+      run: |
+        SUPABASE_VERSION="2.33.9"
+        curl -fsSL \
+          "https://github.com/supabase/cli/releases/download/v${SUPABASE_VERSION}/supabase_linux_amd64.tar.gz" \
+          | tar -xz -C /tmp
+        sudo mv /tmp/supabase /usr/local/bin/supabase
+        supabase --version
+
+    - name: 🔍 Setup environment
+      id: env-setup
+      run: |
+        echo "project_ref=${SUPABASE_PROJECT_REF}" >> $GITHUB_OUTPUT
+        echo "PROJECT_REF=${SUPABASE_PROJECT_REF}" >> $GITHUB_ENV
+        echo "📍 Project ref: ${SUPABASE_PROJECT_REF}"
+      env:
+        SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+
+    - name: ✅ Validate Supabase connection
+      run: |
+        if [ -z "$PROJECT_REF" ]; then
+          echo "❌ SUPABASE_PROJECT_REF secret is not set"
+          exit 1
+        fi
+        supabase projects list > /dev/null
+        echo "✅ Supabase connection successful"
+      env:
+        SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+    - name: 🔗 Link project & push migrations
+      if: ${{ github.event.inputs.deploy_migrations != 'false' }}
+      working-directory: ./supabase
+      run: |
+        echo "🔗 Linking to project $PROJECT_REF..."
+        supabase link --project-ref "$PROJECT_REF"
+
+        echo "📦 Pushing DB migrations..."
+        supabase db push --include-all
+
+        echo "✅ Migrations applied successfully"
+      env:
+        SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        PROJECT_REF: ${{ env.PROJECT_REF }}
+
+    - name: 📦 Deploy Edge Functions
+      if: ${{ github.event.inputs.deploy_functions != 'false' }}
+      working-directory: ./supabase
+      run: |
+        echo "🚀 Deploying Edge Functions..."
+        # --no-verify-jwt: device-token auth is enforced inside each function,
+        # not at the JWT layer (no user accounts in CallShield)
+        supabase functions deploy --no-verify-jwt --project-ref "$PROJECT_REF"
+        echo "✅ Edge Functions deployed"
+      env:
+        SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        PROJECT_REF: ${{ env.PROJECT_REF }}
+
+    - name: 🔑 Update Function Secrets
+      working-directory: ./supabase
+      run: |
+        echo "🔑 Pushing Edge Function secrets..."
+        # Write a minimal secrets file — only what CallShield functions need
+        cat > .env.production << 'EOF'
+        SUPABASE_URL=https://${{ env.PROJECT_REF }}.supabase.co
+        SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
+        SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        GOOGLE_SERVICE_ACCOUNT_KEY=${{ secrets.GOOGLE_SERVICE_ACCOUNT_KEY }}
+        EOF
+
+        supabase secrets set \
+          --env-file .env.production \
+          --project-ref "$PROJECT_REF"
+
+        rm -f .env.production
+        echo "✅ Secrets updated"
+      env:
+        SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        PROJECT_REF: ${{ env.PROJECT_REF }}
+
+    - name: 🧪 Smoke test production deployment
+      run: |
+        BASE="https://$PROJECT_REF.supabase.co"
+        echo "🧪 Smoke-testing $BASE ..."
+
+        # REST API health
+        if curl -fsS "$BASE/rest/v1/" \
+            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" > /dev/null; then
+          echo "✅ REST API healthy"
+        else
+          echo "⚠️  REST API check failed"
+        fi
+
+        # Each Edge Function should return something (even 401/422 means it's alive)
+        FUNCTIONS=(report reputation correct seed-db-manifest verify-subscription)
+        for func in "${FUNCTIONS[@]}"; do
+          STATUS=$(curl -o /dev/null -w "%{http_code}" -fsS \
+            "$BASE/functions/v1/$func" \
+            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" || true)
+          if [ "$STATUS" != "000" ]; then
+            echo "✅ $func is responding (HTTP $STATUS)"
+          else
+            echo "⚠️  $func did not respond"
+          fi
+        done
+
+        echo "🎉 Smoke tests complete"
+      env:
+        PROJECT_REF: ${{ env.PROJECT_REF }}
+
+    - name: 📊 Deployment summary
+      run: |
+        echo ""
+        echo "🎉 CallShield backend deployed to production!"
+        echo "🌐 API:       https://$PROJECT_REF.supabase.co"
+        echo "📋 Components deployed:"
+        echo "   • DB Migrations : ${{ github.event.inputs.deploy_migrations != 'false' && '✅' || '⏭️ skipped' }}"
+        echo "   • Edge Functions: ${{ github.event.inputs.deploy_functions != 'false' && '✅' || '⏭️ skipped' }}"
+        echo "   • Secrets       : ✅"
+      env:
+        PROJECT_REF: ${{ env.PROJECT_REF }}
+
+  # ─────────────────────────────────────────────────────────────
+  # JOB 3 — Final status notification
+  # ─────────────────────────────────────────────────────────────
+  notify-deployment:
+    name: Notify Deployment Status
+    runs-on: ubuntu-latest
+    needs: [validate-backend, deploy-to-production]
+    if: always()
+
+    steps:
+    - name: 📢 Report result
+      run: |
+        if [ "${{ needs.deploy-to-production.result }}" = "success" ]; then
+          echo "🎉 CallShield backend deployment succeeded!"
+          echo "🌐 Production API is live"
+        else
+          echo "❌ CallShield backend deployment failed — check logs above"
+          exit 1
+        fi

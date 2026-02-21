@@ -7,7 +7,7 @@
  * Body (JSON):
  *   {
  *     purchase_token:    string,   // from Google Play Billing
- *     product_id:        string,   // e.g. "callguard_pro_annual"
+ *     product_id:        string,   // e.g. "callshield_pro_annual"
  *     device_token_hash: string,
  *   }
  *
@@ -18,9 +18,9 @@
 import { handleCors } from "../_shared/cors.ts";
 import { errorResponse, jsonResponse } from "../_shared/errors.ts";
 
-const PACKAGE_NAME = "com.fenn.callguard";
+const PACKAGE_NAME = "com.fenn.callshield";
 
-const PRODUCT_IDS = ["callguard_pro_annual", "callguard_pro_monthly"];
+const PRODUCT_IDS = ["callshield_pro_annual", "callshield_pro_monthly"];
 
 Deno.serve(async (req: Request) => {
   const corsResult = handleCors(req);

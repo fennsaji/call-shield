@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-**CallGuard** — a privacy-first spam and scam call protection app for Android, targeting the Indian market. No contact uploads. No ads. No raw phone number storage. The repository is in pre-development; all content is documentation and planning.
+**CallShield** — a privacy-first spam and scam call protection app for Android, targeting the Indian market. No contact uploads. No ads. No raw phone number storage. The repository is in pre-development; all content is documentation and planning.
 
 Full specs: `docs/PRD/`, `docs/Tech Stack.md`, `docs/Developer Guidelines.md`, `docs/Wireframes.md`
 
