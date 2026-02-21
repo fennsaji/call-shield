@@ -14,6 +14,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
+import androidx.compose.material.icons.outlined.Block
+import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.FilterList
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.PrivacyTip
@@ -46,6 +49,9 @@ import kotlinx.coroutines.launch
 fun SettingsScreen(
     modifier: Modifier = Modifier,
     onBack: () -> Unit = {},
+    onNavigateToBlocklist: () -> Unit = {},
+    onNavigateToWhitelist: () -> Unit = {},
+    onNavigateToPrefixRules: () -> Unit = {},
     onNavigateToPrivacy: () -> Unit = {},
     onNavigateToPaywall: () -> Unit = {},
     onNavigateToPermissions: () -> Unit = {},
@@ -124,6 +130,31 @@ fun SettingsScreen(
                     onCheckedChange = { scope.launch { viewModel.setNotifyOnFlag(it) } },
                 )
             },
+        )
+
+        Spacer(Modifier.height(16.dp))
+
+        // ── Lists ─────────────────────────────────────────────────────────────
+        SectionHeader("Lists")
+        SettingRow(
+            icon = Icons.Outlined.Block,
+            title = stringResource(R.string.blocklist_title),
+            onClick = onNavigateToBlocklist,
+            trailing = { ChevronIcon() },
+        )
+        HorizontalDivider(modifier = Modifier.padding(start = 56.dp))
+        SettingRow(
+            icon = Icons.Outlined.CheckCircle,
+            title = stringResource(R.string.whitelist_title),
+            onClick = onNavigateToWhitelist,
+            trailing = { ChevronIcon() },
+        )
+        HorizontalDivider(modifier = Modifier.padding(start = 56.dp))
+        SettingRow(
+            icon = Icons.Outlined.FilterList,
+            title = stringResource(R.string.prefix_rules_title),
+            onClick = onNavigateToPrefixRules,
+            trailing = { ChevronIcon() },
         )
 
         Spacer(Modifier.height(16.dp))

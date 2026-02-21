@@ -100,7 +100,7 @@ fun WhitelistScreen(
                 )
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    "Tap + to add your first number",
+                    stringResource(R.string.empty_whitelist_hint),
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
                     style = MaterialTheme.typography.bodyMedium,
                 )

@@ -99,6 +99,9 @@ fun MainScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding),
+                onNavigateToBlocklist = onNavigateToBlocklist,
+                onNavigateToWhitelist = onNavigateToWhitelist,
+                onNavigateToPrefixRules = onNavigateToPrefixRules,
                 onNavigateToPrivacy = onNavigateToPrivacy,
                 onNavigateToPaywall = onNavigateToPaywall,
                 onNavigateToPermissions = onNavigateToPermissions,
