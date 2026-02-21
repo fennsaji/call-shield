@@ -23,6 +23,7 @@ release/
 !debug.keystore
 google-services.json
 upload-keystore.jks
+key.properties
 
 # ========================
 # React / Node

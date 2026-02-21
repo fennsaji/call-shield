@@ -8,6 +8,11 @@
 -dontwarn okhttp3.**
 -dontwarn okio.**
 
+# SLF4J — only the API jar is on the classpath; the StaticLoggerBinder
+# binding class ships in implementation jars (logback, slf4j-simple) which
+# are not included in Android builds. Safe to suppress.
+-dontwarn org.slf4j.impl.StaticLoggerBinder
+
 # Supabase SDK
 -keep class io.github.jan.supabase.** { *; }
 
