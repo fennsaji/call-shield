@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -5,6 +7,13 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.hilt)
     alias(libs.plugins.ksp)
+}
+
+// Read signing credentials from key.properties (local or CI-generated).
+// File is gitignored; CI creates it from secrets before invoking Gradle.
+val keystorePropertiesFile = rootProject.file("key.properties")
+val keystoreProperties = Properties().apply {
+    if (keystorePropertiesFile.exists()) load(keystorePropertiesFile.inputStream())
 }
 
 android {
@@ -15,8 +24,9 @@ android {
         applicationId = "com.fenn.callshield"
         minSdk = 29
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0.0"
+        // versionCode / versionName can be overridden via -P flags in CI
+        versionCode = (project.findProperty("versionCode") as String?)?.toInt() ?: 1
+        versionName = (project.findProperty("versionName") as String?) ?: "1.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -28,8 +38,19 @@ android {
         buildConfigField("String", "HMAC_SALT", "\"${project.findProperty("HMAC_SALT") ?: "callshield-v1-salt-2024"}\"")
     }
 
+    signingConfigs {
+        create("release") {
+            // Values come from key.properties; build proceeds unsigned if file is absent
+            keyAlias     = keystoreProperties["keyAlias"]     as? String ?: ""
+            keyPassword  = keystoreProperties["keyPassword"]  as? String ?: ""
+            storeFile    = (keystoreProperties["storeFile"]   as? String)?.let { file(it) }
+            storePassword = keystoreProperties["storePassword"] as? String ?: ""
+        }
+    }
+
     buildTypes {
         release {
+            signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
