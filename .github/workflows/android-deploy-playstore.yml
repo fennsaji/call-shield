@@ -106,6 +106,7 @@ jobs:
         track: internal
         status: completed
         whatsNewDirectory: distribution/whatsnew
+        debugSymbols: android/app/build/intermediates/merged_native_libs/release/mergeReleaseNativeLibs/out/lib
 
     # ── Cleanup sensitive files ───────────────────────────────
     - name: 🧹 Security cleanup

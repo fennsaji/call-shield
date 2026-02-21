@@ -117,13 +117,14 @@ class CallShieldScreeningService : CallScreeningService() {
 
         when (decision) {
             is CallDecision.Reject -> {
-                if (settings.notifyOnBlock) notificationManager.showBlockedCallNotification(label, hash)
+                if (settings.notifyOnBlock) notificationManager.showBlockedCallNotification(label, hash, decision.source.displayLabel)
                 else Log.d(TAG, "Blocked notification suppressed — notifyOnBlock=false")
                 paywallTrigger.onSpamCallDetected()
             }
             is CallDecision.Silence -> {
-                if (settings.notifyOnBlock) notificationManager.showBlockedCallNotification(label, hash)
-                else Log.d(TAG, "Silenced notification suppressed — notifyOnBlock=false")
+                // PRD §3.3: silenced calls go to missed calls — warn user about callback risk
+                if (settings.notifyOnBlock) notificationManager.showMissedCallWarningNotification(label, hash, decision.category)
+                else Log.d(TAG, "Missed call warning suppressed — notifyOnBlock=false")
                 paywallTrigger.onSpamCallDetected()
             }
             is CallDecision.Flag -> {

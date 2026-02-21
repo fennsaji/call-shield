@@ -134,31 +134,6 @@ fun SettingsScreen(
 
         Spacer(Modifier.height(16.dp))
 
-        // ── Lists ─────────────────────────────────────────────────────────────
-        SectionHeader("Lists")
-        SettingRow(
-            icon = Icons.Outlined.Block,
-            title = stringResource(R.string.blocklist_title),
-            onClick = onNavigateToBlocklist,
-            trailing = { ChevronIcon() },
-        )
-        HorizontalDivider(modifier = Modifier.padding(start = 56.dp))
-        SettingRow(
-            icon = Icons.Outlined.CheckCircle,
-            title = stringResource(R.string.whitelist_title),
-            onClick = onNavigateToWhitelist,
-            trailing = { ChevronIcon() },
-        )
-        HorizontalDivider(modifier = Modifier.padding(start = 56.dp))
-        SettingRow(
-            icon = Icons.Outlined.FilterList,
-            title = stringResource(R.string.prefix_rules_title),
-            onClick = onNavigateToPrefixRules,
-            trailing = { ChevronIcon() },
-        )
-
-        Spacer(Modifier.height(16.dp))
-
         // ── Setup ─────────────────────────────────────────────────────────────
         SectionHeader("Setup")
         SettingRow(

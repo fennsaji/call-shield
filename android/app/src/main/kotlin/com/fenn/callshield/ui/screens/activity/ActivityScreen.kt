@@ -18,11 +18,14 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.VolumeOff
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -32,6 +35,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -40,6 +44,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.fenn.callshield.R
 import com.fenn.callshield.data.local.entity.CallHistoryEntry
+import com.fenn.callshield.domain.model.DecisionSource
 import com.fenn.callshield.ui.screens.home.HomeViewModel
 import com.fenn.callshield.ui.screens.reason.ReasonTransparencySheet
 import com.fenn.callshield.ui.theme.LocalDangerColor
@@ -48,6 +53,7 @@ import com.fenn.callshield.ui.theme.LocalWarningColor
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -120,7 +126,7 @@ private fun ActivityCallRow(entry: CallHistoryEntry, onTap: () -> Unit) {
     val warningColor = LocalWarningColor.current
     val successColor = LocalSuccessColor.current
 
-    val (borderColor, outcomeLabel, outcomeContainerColor, outcomeLabelColor, icon) = when (entry.outcome) {
+    val style = when (entry.outcome) {
         "blocked", "rejected" -> OutcomeStyle(
             border = dangerColor,
             label = stringResource(R.string.outcome_blocked),
@@ -128,7 +134,14 @@ private fun ActivityCallRow(entry: CallHistoryEntry, onTap: () -> Unit) {
             labelColor = MaterialTheme.colorScheme.onErrorContainer,
             icon = Icons.Filled.Block,
         )
-        "flagged", "silenced" -> OutcomeStyle(
+        "silenced" -> OutcomeStyle(
+            border = warningColor,
+            label = stringResource(R.string.outcome_silenced),
+            container = MaterialTheme.colorScheme.tertiaryContainer,
+            labelColor = MaterialTheme.colorScheme.onTertiaryContainer,
+            icon = Icons.Filled.VolumeOff,
+        )
+        "flagged" -> OutcomeStyle(
             border = warningColor,
             label = stringResource(R.string.outcome_flagged),
             container = MaterialTheme.colorScheme.tertiaryContainer,
@@ -140,9 +153,16 @@ private fun ActivityCallRow(entry: CallHistoryEntry, onTap: () -> Unit) {
             label = stringResource(R.string.outcome_allowed),
             container = MaterialTheme.colorScheme.primaryContainer,
             labelColor = MaterialTheme.colorScheme.onPrimaryContainer,
-            icon = Icons.Filled.Check,
+            icon = Icons.Filled.Phone,
         )
     }
+
+    val sourceLabel = runCatching {
+        DecisionSource.valueOf(entry.decisionSource).displayLabel
+    }.getOrNull()
+
+    val showConfidence = entry.outcome != "allowed" && entry.confidenceScore > 0.0
+    val confidencePct = (entry.confidenceScore * 100).roundToInt()
 
     ElevatedCard(
         onClick = onTap,
@@ -156,27 +176,71 @@ private fun ActivityCallRow(entry: CallHistoryEntry, onTap: () -> Unit) {
             Box(
                 modifier = Modifier
                     .width(4.dp)
-                    .height(72.dp)
-                    .background(borderColor),
+                    .height(80.dp)
+                    .background(style.border),
             )
             Spacer(Modifier.width(12.dp))
-            Icon(
-                icon,
-                contentDescription = null,
-                tint = borderColor,
-                modifier = Modifier.size(20.dp),
-            )
+
+            // Avatar circle
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(MaterialTheme.shapes.medium)
+                    .background(style.border.copy(alpha = 0.15f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    style.icon,
+                    contentDescription = null,
+                    tint = style.border,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
             Spacer(Modifier.width(12.dp))
+
+            // Number + source + confidence
             Column(modifier = Modifier.weight(1f).padding(vertical = 12.dp)) {
-                Text(entry.displayLabel, style = MaterialTheme.typography.titleSmall)
-                entry.category?.let { cat ->
+                Text(
+                    entry.displayLabel,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                val subtitle = listOfNotNull(
+                    entry.category?.replace('_', ' ')?.replaceFirstChar { it.uppercase() },
+                    sourceLabel,
+                ).joinToString(" · ")
+                if (subtitle.isNotEmpty()) {
+                    Spacer(Modifier.height(2.dp))
                     Text(
-                        cat.replace('_', ' ').replaceFirstChar { it.uppercase() },
+                        subtitle,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
                     )
                 }
+                if (showConfidence) {
+                    Spacer(Modifier.height(6.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        LinearProgressIndicator(
+                            progress = { entry.confidenceScore.toFloat() },
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(4.dp)
+                                .clip(MaterialTheme.shapes.small),
+                            color = style.border,
+                            trackColor = style.border.copy(alpha = 0.15f),
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            "$confidencePct%",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = style.border,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                    }
+                }
             }
+
+            // Time + badge
             Column(
                 horizontalAlignment = Alignment.End,
                 modifier = Modifier.padding(end = 12.dp, top = 12.dp, bottom = 12.dp),
@@ -186,11 +250,11 @@ private fun ActivityCallRow(entry: CallHistoryEntry, onTap: () -> Unit) {
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
                 )
-                Spacer(Modifier.height(4.dp))
+                Spacer(Modifier.height(6.dp))
                 OutcomeBadge(
-                    label = outcomeLabel,
-                    containerColor = outcomeContainerColor,
-                    labelColor = outcomeLabelColor,
+                    label = style.label,
+                    containerColor = style.container,
+                    labelColor = style.labelColor,
                 )
             }
         }
