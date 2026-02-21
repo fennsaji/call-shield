@@ -49,5 +49,6 @@ enum class DecisionSource(val displayLabel: String) {
     HIDDEN("Hidden / private number"),
     SEED_DB("Found in local spam database"),
     REMOTE("Reported by community"),
+    BEHAVIORAL("Suspicious call pattern"),
     DEFAULT("Unknown"),
 }

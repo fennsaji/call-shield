@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -27,6 +28,7 @@ class ScreeningPreferences @Inject constructor(
         val ONBOARDING_COMPLETE = booleanPreferencesKey("onboarding_complete")
         val TRIAL_TRIGGERED = booleanPreferencesKey("trial_triggered")
         val FAMILY_WAITLIST_EMAIL = androidx.datastore.preferences.core.stringPreferencesKey("family_waitlist_email")
+        val TRAI_REPORTS_COUNT = intPreferencesKey("trai_reports_count")
     }
 
     suspend fun autoBlockHighConfidence(): Boolean =
@@ -79,5 +81,14 @@ class ScreeningPreferences @Inject constructor(
 
     suspend fun setFamilyWaitlistEmail(email: String) {
         context.dataStore.edit { it[Keys.FAMILY_WAITLIST_EMAIL] = email }
+    }
+
+    suspend fun getTraiReportsCount(): Int =
+        context.dataStore.data.first()[Keys.TRAI_REPORTS_COUNT] ?: 0
+
+    suspend fun incrementTraiReportsCount() {
+        context.dataStore.edit {
+            it[Keys.TRAI_REPORTS_COUNT] = (it[Keys.TRAI_REPORTS_COUNT] ?: 0) + 1
+        }
     }
 }

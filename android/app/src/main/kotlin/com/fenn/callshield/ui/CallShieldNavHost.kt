@@ -27,6 +27,7 @@ import com.fenn.callshield.ui.screens.permissions.PermissionsScreen
 import com.fenn.callshield.ui.screens.prefix.PrefixRulesScreen
 import com.fenn.callshield.ui.screens.privacy.PrivacyDashboardScreen
 import com.fenn.callshield.ui.screens.report.ReportSpamScreen
+import com.fenn.callshield.ui.screens.trai.TraiReportedNumbersScreen
 import com.fenn.callshield.ui.screens.whitelist.WhitelistScreen
 
 object Destinations {
@@ -39,6 +40,7 @@ object Destinations {
     const val WHITELIST = "whitelist"
     const val PREFIX_RULES = "prefix_rules"
     const val PRIVACY_DASHBOARD = "privacy_dashboard"
+    const val TRAI_REPORTED_NUMBERS = "trai_reported_numbers"
     const val PAYWALL = "paywall?trigger={trigger}"
 
     fun reportSpam(numberHash: String, displayLabel: String) =
@@ -114,6 +116,7 @@ fun CallShieldNavHost(
                 onNavigateToWhitelist = { navController.navigate(Destinations.WHITELIST) },
                 onNavigateToPrefixRules = { navController.navigate(Destinations.PREFIX_RULES) },
                 onNavigateToPrivacy = { navController.navigate(Destinations.PRIVACY_DASHBOARD) },
+                onNavigateToTraiReported = { navController.navigate(Destinations.TRAI_REPORTED_NUMBERS) },
                 onNavigateToPaywall = { navController.navigate(Destinations.paywallRoute()) },
                 onNavigateToPermissions = { navController.navigate(Destinations.PERMISSIONS_SETTINGS) },
                 onNavigateToReport = { hash, label ->
@@ -161,6 +164,10 @@ fun CallShieldNavHost(
 
         composable(Destinations.PRIVACY_DASHBOARD) {
             PrivacyDashboardScreen(onBack = { navController.popBackStack() })
+        }
+
+        composable(Destinations.TRAI_REPORTED_NUMBERS) {
+            TraiReportedNumbersScreen(onBack = { navController.popBackStack() })
         }
 
         composable(

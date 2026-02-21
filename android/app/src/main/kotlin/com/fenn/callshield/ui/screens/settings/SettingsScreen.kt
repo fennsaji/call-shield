@@ -17,6 +17,7 @@ import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.Block
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.FilterList
+import androidx.compose.material.icons.outlined.GppBad
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.PrivacyTip
@@ -53,6 +54,7 @@ fun SettingsScreen(
     onNavigateToWhitelist: () -> Unit = {},
     onNavigateToPrefixRules: () -> Unit = {},
     onNavigateToPrivacy: () -> Unit = {},
+    onNavigateToTraiReported: () -> Unit = {},
     onNavigateToPaywall: () -> Unit = {},
     onNavigateToPermissions: () -> Unit = {},
     viewModel: SettingsViewModel = hiltViewModel(),
@@ -151,6 +153,17 @@ fun SettingsScreen(
             icon = Icons.Outlined.PrivacyTip,
             title = stringResource(R.string.privacy_title),
             onClick = onNavigateToPrivacy,
+            trailing = { ChevronIcon() },
+        )
+
+        Spacer(Modifier.height(16.dp))
+
+        // ── Reports ───────────────────────────────────────────────────────────
+        SectionHeader("Reports")
+        SettingRow(
+            icon = Icons.Outlined.GppBad,
+            title = stringResource(R.string.trai_reported_numbers_title),
+            onClick = onNavigateToTraiReported,
             trailing = { ChevronIcon() },
         )
 

@@ -155,6 +155,12 @@
     <string name="reason_prefix_matched">Matched a prefix blocking rule</string>
     <string name="reason_remote_confidence">Flagged by community (%1$d%%\u00a0confidence)</string>
 
+    <!-- TRAI Quick Report -->
+    <string name="trai_report_button">Report to TRAI (DND 1909)</string>
+    <string name="trai_report_sent">TRAI complaint prepared</string>
+    <string name="trai_reported_numbers_title">Reported Numbers</string>
+    <string name="trai_reported_empty">No TRAI complaints prepared yet</string>
+
     <!-- Errors / generic -->
     <string name="error_no_internet">No internet connection</string>
     <string name="error_generic">Something went wrong. Try again.</string>

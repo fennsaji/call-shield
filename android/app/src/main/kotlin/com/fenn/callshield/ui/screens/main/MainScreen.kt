@@ -32,6 +32,7 @@ fun MainScreen(
     onNavigateToWhitelist: () -> Unit,
     onNavigateToPrefixRules: () -> Unit,
     onNavigateToPrivacy: () -> Unit,
+    onNavigateToTraiReported: () -> Unit,
     onNavigateToPaywall: () -> Unit,
     onNavigateToPermissions: () -> Unit,
     onNavigateToReport: (hash: String, label: String) -> Unit,
@@ -103,6 +104,7 @@ fun MainScreen(
                 onNavigateToWhitelist = onNavigateToWhitelist,
                 onNavigateToPrefixRules = onNavigateToPrefixRules,
                 onNavigateToPrivacy = onNavigateToPrivacy,
+                onNavigateToTraiReported = onNavigateToTraiReported,
                 onNavigateToPaywall = onNavigateToPaywall,
                 onNavigateToPermissions = onNavigateToPermissions,
             )

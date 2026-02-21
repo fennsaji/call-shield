@@ -7,6 +7,7 @@ import com.fenn.callshield.data.local.dao.CallHistoryDao
 import com.fenn.callshield.data.local.dao.PrefixRuleDao
 import com.fenn.callshield.data.local.dao.SeedDbDao
 import com.fenn.callshield.data.local.dao.WhitelistDao
+import com.fenn.callshield.data.preferences.ScreeningPreferences
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -20,6 +21,7 @@ import javax.inject.Inject
 data class PrivacyDashboardState(
     val hashedLookupsSent: Int = 0,
     val reportsSubmitted: Int = 0,
+    val traiReportsCount: Int = 0,
     val seedDbVersion: String? = null,
     val lastSyncDisplay: String = "Never",
 )
@@ -31,6 +33,7 @@ class PrivacyDashboardViewModel @Inject constructor(
     private val whitelistDao: WhitelistDao,
     private val prefixRuleDao: PrefixRuleDao,
     private val callHistoryDao: CallHistoryDao,
+    private val screeningPreferences: ScreeningPreferences,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(PrivacyDashboardState())
@@ -42,9 +45,11 @@ class PrivacyDashboardViewModel @Inject constructor(
             val lastSync = meta?.downloadedAt?.let {
                 SimpleDateFormat("d MMM yyyy, HH:mm", Locale.getDefault()).format(Date(it))
             } ?: "Never"
+            val traiCount = screeningPreferences.getTraiReportsCount()
             _state.value = _state.value.copy(
                 seedDbVersion = meta?.version?.let { "v$it" },
                 lastSyncDisplay = lastSync,
+                traiReportsCount = traiCount,
             )
         }
     }

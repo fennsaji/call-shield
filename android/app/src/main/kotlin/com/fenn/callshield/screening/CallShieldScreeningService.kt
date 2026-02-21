@@ -3,6 +3,9 @@ package com.fenn.callshield.screening
 import android.telecom.Call
 import android.telecom.CallScreeningService
 import android.util.Log
+import com.fenn.callshield.Phase2Flags
+import com.fenn.callshield.data.local.dao.CallerEventDao
+import com.fenn.callshield.data.local.entity.CallerEventEntry
 import com.fenn.callshield.domain.model.CallDecision
 import com.fenn.callshield.domain.repository.CallHistoryRepository
 import com.fenn.callshield.domain.usecase.GetScreeningSettingsUseCase
@@ -35,12 +38,19 @@ class CallShieldScreeningService : CallScreeningService() {
     @Inject lateinit var hasher: PhoneNumberHasher
     @Inject lateinit var paywallTrigger: PaywallTriggerManager
     @Inject lateinit var getScreeningSettings: GetScreeningSettingsUseCase
+    @Inject lateinit var ringTimeRegistry: RingTimeRegistry
+    @Inject lateinit var callerEventDao: CallerEventDao
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override fun onScreenCall(callDetails: Call.Details) {
         val rawNumber = callDetails.handle?.schemeSpecificPart
         Log.d(TAG, "onScreenCall: number=$rawNumber direction=${callDetails.callDirection}")
+
+        // Notify RingTimeRegistry so short-ring detection works on next IDLE transition
+        if (Phase2Flags.BEHAVIORAL_DETECTION && rawNumber != null) {
+            hasher.hash(rawNumber)?.let { ringTimeRegistry.onRingStart(it) }
+        }
 
         serviceScope.launch {
             var responded = false
@@ -102,6 +112,12 @@ class CallShieldScreeningService : CallScreeningService() {
     private suspend fun recordAndNotify(rawNumber: String?, decision: CallDecision) {
         val hash = rawNumber?.let { hasher.hash(it) } ?: "unknown"
         val label = rawNumber?.takeLast(4)?.let { "****$it" } ?: "Hidden"
+
+        // Record behavioral event for frequency / burst detection
+        if (Phase2Flags.BEHAVIORAL_DETECTION && hash != "unknown") {
+            callerEventDao.insert(CallerEventEntry(numberHash = hash, eventType = "INCOMING_CALL"))
+            callerEventDao.enforceCapForHash(hash)
+        }
 
         val (score, category, source) = when (decision) {
             is CallDecision.Silence -> Triple(decision.confidenceScore, decision.category, decision.source)

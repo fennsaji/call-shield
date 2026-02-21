@@ -16,11 +16,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Shield
-import androidx.compose.material.icons.filled.VolumeOff
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -111,6 +111,9 @@ fun ActivityScreen(
                                     showReasonSheet = false
                                     onNavigateToReport(entry.numberHash, entry.displayLabel)
                                 },
+                                onTraiReported = {
+                                    viewModel.recordTraiReport(entry.numberHash, entry.displayLabel)
+                                },
                             )
                         }
                     }
@@ -139,7 +142,7 @@ private fun ActivityCallRow(entry: CallHistoryEntry, onTap: () -> Unit) {
             label = stringResource(R.string.outcome_silenced),
             container = MaterialTheme.colorScheme.tertiaryContainer,
             labelColor = MaterialTheme.colorScheme.onTertiaryContainer,
-            icon = Icons.Filled.VolumeOff,
+            icon = Icons.AutoMirrored.Filled.VolumeOff,
         )
         "flagged" -> OutcomeStyle(
             border = warningColor,

@@ -1,8 +1,10 @@
 package com.fenn.callshield.domain.usecase
 
+import com.fenn.callshield.Phase2Flags
 import com.fenn.callshield.billing.BillingManager
 import com.fenn.callshield.domain.model.CONFIDENCE_BLOCK_THRESHOLD
 import com.fenn.callshield.domain.model.CONFIDENCE_FLAG_THRESHOLD
+import com.fenn.callshield.domain.model.BehavioralSignals
 import com.fenn.callshield.domain.model.CallDecision
 import com.fenn.callshield.domain.model.DecisionSource
 import com.fenn.callshield.domain.model.MIN_REPORTERS_TO_ACT
@@ -11,12 +13,13 @@ import com.fenn.callshield.domain.repository.BlocklistRepository
 import com.fenn.callshield.domain.repository.PrefixRuleRepository
 import com.fenn.callshield.domain.repository.ReputationRepository
 import com.fenn.callshield.domain.repository.WhitelistRepository
+import com.fenn.callshield.screening.CallFrequencyAnalyzer
 import com.fenn.callshield.util.PhoneNumberHasher
 import javax.inject.Inject
 
 /**
  * Core screening logic. Implements the call decision priority:
- *   Whitelist → Blocklist → Prefix → Hidden → Seed DB → Remote → Allow
+ *   Whitelist → Blocklist → Prefix → Behavioral (Phase 2) → Seed DB → Remote → Allow
  *
  * Free tier:  spam calls → Silence (ring suppressed, shows in missed calls)
  * Pro tier:   high-confidence spam (≥0.8) → Reject if auto-block enabled
@@ -31,6 +34,7 @@ class ScreenCallUseCase @Inject constructor(
     private val reputationRepo: ReputationRepository,
     private val settingsUseCase: GetScreeningSettingsUseCase,
     private val billingManager: BillingManager,
+    private val frequencyAnalyzer: CallFrequencyAnalyzer,
 ) {
 
     suspend fun execute(rawNumber: String?): CallDecision {
@@ -72,6 +76,22 @@ class ScreenCallUseCase @Inject constructor(
             }
         }
 
+        // ── 4b. Behavioral signals (Phase 2) ─────────────────────────────────
+        val behavioral: BehavioralSignals = if (Phase2Flags.BEHAVIORAL_DETECTION && hash != null) {
+            BehavioralSignals(
+                frequencyAnomaly = frequencyAnalyzer.isFrequencyAnomaly(hash),
+                burstPattern = frequencyAnalyzer.isBurstPattern(hash),
+                shortRing = frequencyAnalyzer.hadRecentShortRing(hash),
+            )
+        } else {
+            BehavioralSignals.NONE
+        }
+
+        // Burst pattern alone is strong enough to flag the call
+        if (behavioral.burstPattern) {
+            return CallDecision.Flag(0.5, "burst_pattern", DecisionSource.BEHAVIORAL)
+        }
+
         // ── 5 & 6. Seed DB then Remote reputation ─────────────────────────────
         if (hash != null) {
             val result = reputationRepo.lookup(hash)
@@ -100,6 +120,17 @@ class ScreenCallUseCase @Inject constructor(
                 if (score >= CONFIDENCE_FLAG_THRESHOLD) {
                     return CallDecision.Flag(score, result.category, source)
                 }
+            }
+
+            // Unknown reputation but behavioral signals present → Flag
+            if (behavioral.hasAnySignal) {
+                val behavioralCategory = when {
+                    behavioral.burstPattern -> "burst_pattern"
+                    behavioral.frequencyAnomaly -> "frequency_anomaly"
+                    behavioral.shortRing -> "short_ring"
+                    else -> "behavioral"
+                }
+                return CallDecision.Flag(0.3, behavioralCategory, DecisionSource.BEHAVIORAL)
             }
         }
 
