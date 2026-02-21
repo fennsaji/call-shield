@@ -17,7 +17,7 @@ import javax.inject.Singleton
  * Output: lowercase hex string (64 chars).
  */
 @Singleton
-class PhoneNumberHasher @Inject constructor() {
+open class PhoneNumberHasher @Inject constructor() {
 
     private val saltBytes: ByteArray =
         BuildConfig.HMAC_SALT.toByteArray(StandardCharsets.UTF_8)
