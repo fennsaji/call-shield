@@ -17,9 +17,12 @@ import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.Block
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.FilterList
+import androidx.compose.material.icons.outlined.DoNotDisturb
+import androidx.compose.material.icons.outlined.GppBad
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.PrivacyTip
+import androidx.compose.material.icons.outlined.SaveAlt
 import androidx.compose.material.icons.outlined.Security
 import androidx.compose.material.icons.outlined.Shield
 import androidx.compose.material.icons.outlined.Star
@@ -53,8 +56,11 @@ fun SettingsScreen(
     onNavigateToWhitelist: () -> Unit = {},
     onNavigateToPrefixRules: () -> Unit = {},
     onNavigateToPrivacy: () -> Unit = {},
+    onNavigateToTraiReported: () -> Unit = {},
+    onNavigateToDndManagement: () -> Unit = {},
     onNavigateToPaywall: () -> Unit = {},
     onNavigateToPermissions: () -> Unit = {},
+    onNavigateToBackup: () -> Unit = {},
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -156,12 +162,41 @@ fun SettingsScreen(
 
         Spacer(Modifier.height(16.dp))
 
+        // ── Reports ───────────────────────────────────────────────────────────
+        SectionHeader("Reports")
+        SettingRow(
+            icon = Icons.Outlined.GppBad,
+            title = stringResource(R.string.trai_reported_numbers_title),
+            onClick = onNavigateToTraiReported,
+            trailing = { ChevronIcon() },
+        )
+        HorizontalDivider(modifier = Modifier.padding(start = 56.dp))
+        SettingRow(
+            icon = Icons.Outlined.DoNotDisturb,
+            title = stringResource(R.string.dnd_title),
+            onClick = onNavigateToDndManagement,
+            trailing = { ChevronIcon() },
+        )
+
+        Spacer(Modifier.height(16.dp))
+
         // ── Account ───────────────────────────────────────────────────────────
         SectionHeader("Account")
         SettingRow(
             icon = Icons.Outlined.Star,
             title = "Upgrade to Pro",
             onClick = onNavigateToPaywall,
+            trailing = { ChevronIcon() },
+        )
+
+        Spacer(Modifier.height(16.dp))
+
+        // ── Data (Phase 3) ────────────────────────────────────────────────────
+        SectionHeader("Data")
+        SettingRow(
+            icon = Icons.Outlined.SaveAlt,
+            title = "Backup & Restore",
+            onClick = onNavigateToBackup,
             trailing = { ChevronIcon() },
         )
 

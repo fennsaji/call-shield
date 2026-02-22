@@ -3,8 +3,11 @@ package com.fenn.callshield.ui.screens.home
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.fenn.callshield.data.local.dao.ScamDigestDao
+import com.fenn.callshield.data.local.dao.TraiReportDao
 import com.fenn.callshield.data.local.entity.CallHistoryEntry
 import com.fenn.callshield.data.local.entity.ScamDigestEntry
+import com.fenn.callshield.data.local.entity.TraiReportEntry
+import com.fenn.callshield.data.preferences.ScreeningPreferences
 import com.fenn.callshield.domain.repository.CallHistoryRepository
 import com.fenn.callshield.domain.repository.CallStats
 import com.fenn.callshield.domain.usecase.MarkNotSpamUseCase
@@ -28,6 +31,8 @@ class HomeViewModel @Inject constructor(
     private val callHistoryRepo: CallHistoryRepository,
     private val markNotSpamUseCase: MarkNotSpamUseCase,
     private val scamDigestDao: ScamDigestDao,
+    private val screeningPreferences: ScreeningPreferences,
+    private val traiReportDao: TraiReportDao,
 ) : ViewModel() {
 
     val uiState: StateFlow<HomeUiState> = combine(
@@ -51,6 +56,13 @@ class HomeViewModel @Inject constructor(
     fun dismissScamDigest(id: Int) {
         viewModelScope.launch {
             scamDigestDao.dismiss(id)
+        }
+    }
+
+    fun recordTraiReport(numberHash: String, displayLabel: String) {
+        viewModelScope.launch {
+            traiReportDao.insert(TraiReportEntry(numberHash = numberHash, displayLabel = displayLabel))
+            screeningPreferences.incrementTraiReportsCount()
         }
     }
 }

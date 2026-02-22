@@ -6,11 +6,22 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+    <!-- Camera — used only for QR pairing scan (Phase 3 Family Protection) -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
 
     <!-- Call Screening role — not a permission, requested via RoleManager -->
     <!-- android.app.role.CALL_SCREENING is declared in the service below -->
 
     <!-- NOT requested: READ_CALL_LOG, READ_CONTACTS, RECORD_AUDIO -->
+
+    <!-- Package visibility: required on API 30+ for resolving implicit intents -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.SENDTO" />
+            <data android:scheme="smsto" />
+        </intent>
+    </queries>
 
     <application
         android:name=".CallShieldApp"

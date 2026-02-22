@@ -25,8 +25,8 @@ android {
         minSdk = 29
         targetSdk = 35
         // versionCode / versionName can be overridden via -P flags in CI
-        versionCode = (project.findProperty("versionCode") as String?)?.toInt() ?: 1
-        versionName = (project.findProperty("versionName") as String?) ?: "1.0.0"
+        versionCode = (project.findProperty("versionCode") as String?)?.toInt() ?: 2
+        versionName = (project.findProperty("versionName") as String?) ?: "1.1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -140,6 +140,15 @@ dependencies {
     implementation(libs.work.runtime.ktx)
     implementation(libs.hilt.work)
     ksp(libs.hilt.work.compiler)
+
+    // QR code generation (ZXing core — no camera required)
+    implementation(libs.zxing.core)
+
+    // QR scanning — CameraX + ML Kit Barcode
+    implementation(libs.mlkit.barcode.scanning)
+    implementation(libs.camerax.camera2)
+    implementation(libs.camerax.lifecycle)
+    implementation(libs.camerax.view)
 
     // Testing
     testImplementation(libs.junit)

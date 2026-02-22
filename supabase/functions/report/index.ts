@@ -5,6 +5,10 @@
  * Rate-limited to 20 reports per device per hour.
  * Enforces reporter deduplication — a device contributes to unique_reporters only once per number.
  *
+ * Phase 2 additions:
+ *   - Category voting via number_categories table (dominant category wins)
+ *   - Quarantine queue: numbers with ≥5 reports in 24h are quarantined (velocity guard)
+ *
  * Body (JSON):
  *   {
  *     number_hash:       string,   // HMAC-SHA256 of phone number
@@ -31,6 +35,10 @@ const VALID_CATEGORIES = [
   "job_scam",
   "other",
 ];
+
+/** Number of reports in 60 minutes that triggers quarantine (PRD §9: velocity guard). */
+const QUARANTINE_VELOCITY_THRESHOLD = 5;
+const QUARANTINE_VELOCITY_WINDOW_MS = 60 * 60 * 1000;  // 60 minutes
 
 Deno.serve(async (req: Request) => {
   const corsResult = handleCors(req);
@@ -98,10 +106,75 @@ Deno.serve(async (req: Request) => {
     });
   }
 
+  // ── Phase 2: Category voting ─────────────────────────────────────────────
+  // Upsert into number_categories, incrementing vote count for this category.
+  await supabase.from("number_categories").upsert(
+    {
+      number_hash,
+      category,
+      vote_count: 1,
+      last_voted_at: new Date().toISOString(),
+    },
+    {
+      onConflict: "number_hash,category",
+      // Use a raw SQL expression for the increment via RPC would be cleaner,
+      // but the upsert with ignoreDuplicates = false + merge is the Supabase JS way.
+      // We'll fetch + update to ensure accurate counts.
+      ignoreDuplicates: false,
+    },
+  );
+
+  // Fetch current vote for this category and increment
+  const { data: existingVote } = await supabase
+    .from("number_categories")
+    .select("vote_count")
+    .eq("number_hash", number_hash)
+    .eq("category", category)
+    .single();
+
+  if (existingVote && existingVote.vote_count > 1) {
+    // Row already existed before our upsert — increment by 1
+    await supabase
+      .from("number_categories")
+      .update({
+        vote_count: existingVote.vote_count + 1,
+        last_voted_at: new Date().toISOString(),
+      })
+      .eq("number_hash", number_hash)
+      .eq("category", category);
+  }
+
+  // Determine dominant category with ≥3 lead over runner-up (PRD §9 category voting rule).
+  // Prevents single-actor category flipping — a category must clearly dominate before promotion.
+  const { data: allCategoryVotes } = await supabase
+    .from("number_categories")
+    .select("category, vote_count")
+    .eq("number_hash", number_hash)
+    .order("vote_count", { ascending: false })
+    .limit(2);
+
+  let dominantCategory = category;  // fallback: keep the newly reported category
+  if (allCategoryVotes && allCategoryVotes.length > 0) {
+    const top = allCategoryVotes[0];
+    const runnerUp = allCategoryVotes[1];
+    const lead = top.vote_count - (runnerUp?.vote_count ?? 0);
+    if (lead >= 3) {
+      dominantCategory = top.category;
+    } else {
+      // Lead < 3: retain the current category on the reputation record (no flip)
+      const { data: currentRep } = await supabase
+        .from("reputation")
+        .select("category")
+        .eq("number_hash", number_hash)
+        .single();
+      dominantCategory = currentRep?.category ?? category;
+    }
+  }
+
   // Fetch current reputation state
   const { data: current } = await supabase
     .from("reputation")
-    .select("report_count, unique_reporters, negative_signals, last_reported_at, category")
+    .select("report_count, unique_reporters, negative_signals, last_reported_at")
     .eq("number_hash", number_hash)
     .single();
 
@@ -110,19 +183,44 @@ Deno.serve(async (req: Request) => {
   const negativeSignals = current?.negative_signals ?? 0;
   const now = new Date();
 
-  // Determine dominant category (simple: use the newly reported one if unique reporters > existing)
-  // Full category voting is Phase 2 (number_categories table). Phase 1 uses last-write wins for category.
-  const newCategory = category;
+  let newConfidenceScore = computeConfidenceScore(newUniqueReporters, negativeSignals, now);
 
-  const newConfidenceScore = computeConfidenceScore(newUniqueReporters, negativeSignals, now);
+  // ── Phase 2: Quarantine velocity check ──────────────────────────────────
+  // Count reports for this number in the last 60 minutes (PRD §9 velocity window)
+  const sinceVelocityWindow = new Date(Date.now() - QUARANTINE_VELOCITY_WINDOW_MS).toISOString();
+  const { count: recentReportCount } = await supabase
+    .from("report_events")
+    .select("id", { count: "exact", head: true })
+    .eq("number_hash", number_hash)
+    .gte("reported_at", sinceVelocityWindow);
 
-  // Upsert reputation record
+  const isVelocityBurst = (recentReportCount ?? 0) >= QUARANTINE_VELOCITY_THRESHOLD;
+
+  if (isVelocityBurst) {
+    // Upsert into quarantine queue
+    await supabase.from("quarantine_queue").upsert(
+      {
+        number_hash,
+        trigger_reason: "velocity",
+        report_count_24h: recentReportCount ?? QUARANTINE_VELOCITY_THRESHOLD,
+        quarantined_at: now.toISOString(),
+        expires_at: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString(),
+        reviewed: false,
+      },
+      { onConflict: "number_hash" },
+    );
+
+    // Cap confidence score at 0.75 for quarantined numbers (prevents auto-block until reviewed)
+    newConfidenceScore = Math.min(newConfidenceScore, 0.75);
+  }
+
+  // Upsert reputation record with dominant category
   await supabase.from("reputation").upsert({
     number_hash,
     report_count: newReportCount,
     unique_reporters: newUniqueReporters,
     confidence_score: newConfidenceScore,
-    category: newCategory,
+    category: dominantCategory,
     last_reported_at: now.toISOString(),
     last_computed_at: now.toISOString(),
   });
@@ -131,5 +229,6 @@ Deno.serve(async (req: Request) => {
     success: true,
     confidence_score: newConfidenceScore,
     unique_reporters: newUniqueReporters,
+    quarantined: isVelocityBurst,
   });
 });

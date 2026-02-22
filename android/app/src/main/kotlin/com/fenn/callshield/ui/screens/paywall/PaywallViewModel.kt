@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.android.billingclient.api.BillingClient
 import com.android.billingclient.api.ProductDetails
 import com.fenn.callshield.billing.BillingManager
+import com.fenn.callshield.billing.PRODUCT_FAMILY_ANNUAL
 import com.fenn.callshield.billing.PRODUCT_PRO_ANNUAL
 import com.fenn.callshield.billing.PRODUCT_PRO_MONTHLY
 import com.fenn.callshield.data.preferences.ScreeningPreferences
@@ -31,6 +32,7 @@ data class PaywallState(
     val loading: Boolean = false,
     val annualProduct: ProductDetails? = null,
     val monthlyProduct: ProductDetails? = null,
+    val familyProduct: ProductDetails? = null,
     val purchaseSuccess: Boolean = false,
     val error: String? = null,
     val familyWaitlistEmail: String = "",
@@ -72,10 +74,12 @@ class PaywallViewModel @Inject constructor(
                 val products = billingManager.queryProducts()
                 val annual = products.firstOrNull { it.productId == PRODUCT_PRO_ANNUAL }
                 val monthly = products.firstOrNull { it.productId == PRODUCT_PRO_MONTHLY }
+                val family = products.firstOrNull { it.productId == PRODUCT_FAMILY_ANNUAL }
                 _state.value = _state.value.copy(
                     loading = false,
                     annualProduct = annual,
                     monthlyProduct = monthly,
+                    familyProduct = family,
                     error = if (annual == null && monthly == null)
                         "Plans unavailable — app must be published on Google Play for purchases to work"
                     else null,

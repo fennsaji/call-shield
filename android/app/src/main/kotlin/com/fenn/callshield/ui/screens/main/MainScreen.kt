@@ -32,8 +32,12 @@ fun MainScreen(
     onNavigateToWhitelist: () -> Unit,
     onNavigateToPrefixRules: () -> Unit,
     onNavigateToPrivacy: () -> Unit,
+    onNavigateToTraiReported: () -> Unit,
+    onNavigateToDndManagement: () -> Unit,
     onNavigateToPaywall: () -> Unit,
     onNavigateToPermissions: () -> Unit,
+    onNavigateToBackup: () -> Unit,
+    onNavigateToFamilyProtection: () -> Unit,
     onNavigateToReport: (hash: String, label: String) -> Unit,
 ) {
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
@@ -87,6 +91,8 @@ fun MainScreen(
                 onNavigateToPrefixRules = onNavigateToPrefixRules,
                 onNavigateToPrivacy = onNavigateToPrivacy,
                 onNavigateToPaywall = onNavigateToPaywall,
+                onNavigateToDndManagement = onNavigateToDndManagement,
+                onNavigateToFamilyProtection = onNavigateToFamilyProtection,
                 onNavigateToReport = onNavigateToReport,
             )
             1 -> ActivityScreen(
@@ -103,8 +109,11 @@ fun MainScreen(
                 onNavigateToWhitelist = onNavigateToWhitelist,
                 onNavigateToPrefixRules = onNavigateToPrefixRules,
                 onNavigateToPrivacy = onNavigateToPrivacy,
+                onNavigateToTraiReported = onNavigateToTraiReported,
+                onNavigateToDndManagement = onNavigateToDndManagement,
                 onNavigateToPaywall = onNavigateToPaywall,
                 onNavigateToPermissions = onNavigateToPermissions,
+                onNavigateToBackup = onNavigateToBackup,
             )
         }
     }

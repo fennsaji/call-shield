@@ -305,28 +305,80 @@ printf "  ${GREEN}adb -s $DEVICE_ID uninstall $APP_ID${NC}             # Uninsta
 printf "\n${CYAN}📋 Streaming logcat (Ctrl+C to stop)...${NC}\n"
 printf "${BLUE}──────────────────────────────────────────────${NC}\n"
 
-# Clear stale logs before streaming
+# ── Logcat helpers ─────────────────────────────────────────────────────────────
+
+# Attach logcat to the running app process (or fall back to package grep)
+start_logcat() {
+    APP_PID=""
+    for i in $(seq 1 10); do
+        APP_PID=$(adb -s "$DEVICE_ID" shell pidof "$APP_ID" 2>/dev/null | tr -d '\r ')
+        [ -n "$APP_PID" ] && break
+        sleep 0.5
+    done
+
+    if [ -n "$APP_PID" ]; then
+        printf "${GREEN}🔎 Attached to PID ${APP_PID}${NC}\n"
+        adb -s "$DEVICE_ID" logcat --pid="$APP_PID" 2>/dev/null &
+    else
+        printf "${YELLOW}⚠️  Could not detect app PID — streaming all logs (filtered to package)${NC}\n"
+        adb -s "$DEVICE_ID" logcat 2>/dev/null | grep --line-buffered -E "callshield|AndroidRuntime|FATAL" &
+    fi
+    LOGCAT_PID=$!
+}
+
+# Rebuild, reinstall and restart logcat
+rebuild_and_reinstall() {
+    kill $LOGCAT_PID 2>/dev/null
+    wait $LOGCAT_PID 2>/dev/null
+    printf "\n${YELLOW}🔄 Rebuilding...${NC}\n"
+    printf "${BLUE}──────────────────────────────────────────────${NC}\n"
+    cd "$ANDROID_DIR"
+    set +e
+    ./gradlew installDebug $GRADLE_PROPS
+    BUILD_STATUS=$?
+    set -e
+    if [ $BUILD_STATUS -eq 0 ]; then
+        printf "${GREEN}✅ APK built and installed${NC}\n"
+        printf "\n${BLUE}🚀 Relaunching ${APP_ID}...${NC}\n"
+        adb -s "$DEVICE_ID" shell am start -n "${APP_ID}/${MAIN_ACTIVITY}"
+        adb -s "$DEVICE_ID" logcat -c
+        start_logcat
+    else
+        printf "${RED}❌ Build failed — fix errors and press 'r' to retry.${NC}\n"
+        # Resume streaming the already-installed build
+        adb -s "$DEVICE_ID" logcat -c
+        start_logcat
+    fi
+    printf "${BLUE}──────────────────────────────────────────────${NC}\n"
+    printf "${CYAN}Press 'r' to rebuild · 'q' to quit${NC}\n"
+}
+
+# ── Start initial logcat stream ────────────────────────────────────────────────
 adb -s "$DEVICE_ID" logcat -c
+start_logcat
 
-# Wait up to 5s for the app process to appear
-APP_PID=""
-for i in $(seq 1 10); do
-    APP_PID=$(adb -s "$DEVICE_ID" shell pidof "$APP_ID" 2>/dev/null | tr -d '\r ')
-    [ -n "$APP_PID" ] && break
-    sleep 0.5
+# ── Keypress watch loop ────────────────────────────────────────────────────────
+printf "${CYAN}Press 'r' to rebuild · 'q' to quit${NC}\n"
+printf "${BLUE}──────────────────────────────────────────────${NC}\n"
+
+trap "kill \$LOGCAT_PID 2>/dev/null; printf '\n${YELLOW}👋 Exiting.${NC}\n'; exit 0" INT
+
+while true; do
+    # Exit loop if logcat died unexpectedly
+    if ! kill -0 $LOGCAT_PID 2>/dev/null; then
+        printf "${YELLOW}⚠️  Logcat process ended.${NC}\n"
+        break
+    fi
+    # read -n 1 reads one character; -s hides it; -t 0.5 times out so the loop
+    # keeps checking whether logcat is still alive
+    if read -r -n 1 -s -t 0.5 key 2>/dev/null; then
+        case "$key" in
+            r|R) rebuild_and_reinstall ;;
+            q|Q)
+                kill $LOGCAT_PID 2>/dev/null
+                printf "\n${YELLOW}👋 Exiting.${NC}\n"
+                exit 0
+                ;;
+        esac
+    fi
 done
-
-if [ -n "$APP_PID" ]; then
-    printf "${GREEN}🔎 Attached to PID ${APP_PID}${NC}\n"
-    # Stream logs for this specific process only
-    adb -s "$DEVICE_ID" logcat --pid="$APP_PID" 2>/dev/null &
-else
-    printf "${YELLOW}⚠️  Could not detect app PID — streaming all logs (filtered to package)${NC}\n"
-    # Fallback: stream everything and grep for the package name + crash signals
-    adb -s "$DEVICE_ID" logcat 2>/dev/null | grep --line-buffered -E "callshield|AndroidRuntime|FATAL" &
-fi
-LOGCAT_PID=$!
-
-# Ctrl+C kills logcat stream and exits cleanly
-trap "kill $LOGCAT_PID 2>/dev/null; printf '\n${YELLOW}💡 To rebuild and reinstall: re-run this script.${NC}\n'; exit 0" INT
-wait $LOGCAT_PID

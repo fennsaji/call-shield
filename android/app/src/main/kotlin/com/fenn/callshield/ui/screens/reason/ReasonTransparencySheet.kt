@@ -1,5 +1,7 @@
 package com.fenn.callshield.ui.screens.reason
 
+import android.content.ActivityNotFoundException
+import android.content.Context
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -12,7 +14,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
@@ -33,14 +37,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.fenn.callshield.Phase2Flags
 import com.fenn.callshield.R
 import com.fenn.callshield.data.local.entity.CallHistoryEntry
 import com.fenn.callshield.domain.model.DecisionSource
 import com.fenn.callshield.ui.theme.LocalDangerColor
 import com.fenn.callshield.ui.theme.LocalWarningColor
+import com.fenn.callshield.util.TraiReportHelper
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
@@ -55,11 +62,13 @@ fun ReasonTransparencySheet(
     onDismiss: () -> Unit,
     onMarkNotSpam: () -> Unit,
     onReport: () -> Unit,
+    onTraiReported: () -> Unit = {},
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
     val dangerColor = LocalDangerColor.current
     val warningColor = LocalWarningColor.current
+    val context = LocalContext.current
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -166,6 +175,30 @@ fun ReasonTransparencySheet(
                         text = stringResource(R.string.reason_blocklist),
                     )
                 }
+                DecisionSource.BEHAVIORAL -> {
+                    when (entry.category) {
+                        "burst_pattern" -> ReasonRow(
+                            icon = Icons.Filled.Repeat,
+                            tint = warningColor,
+                            text = "Rapid repeated calls detected in the last 15 minutes",
+                        )
+                        "frequency_anomaly" -> ReasonRow(
+                            icon = Icons.Filled.Repeat,
+                            tint = warningColor,
+                            text = "Called 3 or more times in the last hour",
+                        )
+                        "short_ring" -> ReasonRow(
+                            icon = Icons.Filled.Timer,
+                            tint = warningColor,
+                            text = "Multiple short-ring calls detected — possible bait-and-callback scam",
+                        )
+                        else -> ReasonRow(
+                            icon = Icons.Filled.Warning,
+                            tint = warningColor,
+                            text = "Suspicious call pattern detected",
+                        )
+                    }
+                }
                 else -> {
                     ReasonRow(
                         icon = Icons.Filled.Info,
@@ -175,12 +208,16 @@ fun ReasonTransparencySheet(
                 }
             }
 
-            entry.category?.let { cat ->
-                Text(
-                    text = "Category: ${cat.replace('_', ' ').replaceFirstChar { it.uppercase() }}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-                )
+            // Show category only for reputation-based decisions (not behavioral, where
+            // category encodes the signal type and is already shown in the reason row)
+            if (source != DecisionSource.BEHAVIORAL) {
+                entry.category?.let { cat ->
+                    Text(
+                        text = "Category: ${cat.replace('_', ' ').replaceFirstChar { it.uppercase() }}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                    )
+                }
             }
 
             Spacer(Modifier.height(4.dp))
@@ -212,7 +249,31 @@ fun ReasonTransparencySheet(
             ) {
                 Text(stringResource(R.string.report_title))
             }
+
+            if (Phase2Flags.TRAI_REPORT) {
+                OutlinedButton(
+                    onClick = {
+                        scope.launch {
+                            sheetState.hide()
+                            launchTraiReport(context, entry.displayLabel)
+                            onTraiReported()
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(stringResource(R.string.trai_report_button))
+                }
+            }
         }
+    }
+}
+
+private fun launchTraiReport(context: Context, maskedLabel: String) {
+    try {
+        context.startActivity(TraiReportHelper.createSmsIntent(maskedLabel))
+    } catch (e: ActivityNotFoundException) {
+        // No SMS app — fall back to dialer
+        context.startActivity(TraiReportHelper.createCallIntent())
     }
 }
 

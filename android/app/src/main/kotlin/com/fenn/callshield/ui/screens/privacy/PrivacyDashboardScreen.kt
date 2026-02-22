@@ -22,6 +22,7 @@ import androidx.compose.material.icons.outlined.Contacts
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Fingerprint
 import androidx.compose.material.icons.outlined.Flag
+import androidx.compose.material.icons.outlined.GppBad
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Mic
 import androidx.compose.material.icons.outlined.Storage
@@ -239,6 +240,15 @@ fun PrivacyDashboardScreen(
                                 icon = Icons.Outlined.Flag,
                                 label = "Reports submitted",
                                 value = state.reportsSubmitted.toString(),
+                            )
+                            HorizontalDivider(
+                                modifier = Modifier.padding(horizontal = 16.dp),
+                                color = MaterialTheme.colorScheme.outlineVariant,
+                            )
+                            ActivityStatRow(
+                                icon = Icons.Outlined.GppBad,
+                                label = "TRAI complaints prepared",
+                                value = state.traiReportsCount.toString(),
                             )
                             HorizontalDivider(
                                 modifier = Modifier.padding(horizontal = 16.dp),

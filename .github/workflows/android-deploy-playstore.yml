@@ -75,7 +75,7 @@ jobs:
       run: |
         ./gradlew bundleRelease \
           -PversionCode=${{ github.run_number }} \
-          -PversionName=1.0.${{ github.run_number }} \
+          -PversionName=1.1.${{ github.run_number }} \
           --no-daemon \
           --stacktrace
       env:
@@ -104,7 +104,7 @@ jobs:
         packageName: com.fenn.callshield
         releaseFiles: android/app/build/outputs/bundle/release/app-release.aab
         track: internal
-        status: completed
+        status: draft
         whatsNewDirectory: distribution/whatsnew
         debugSymbols: android/app/build/intermediates/merged_native_libs/release/mergeReleaseNativeLibs/out/lib
 
@@ -131,11 +131,11 @@ jobs:
     - name: 🏷️ Create GitHub Release
       uses: softprops/action-gh-release@v2
       with:
-        tag_name: v1.0.${{ github.run_number }}-beta
-        name: Beta v1.0.${{ github.run_number }}
+        tag_name: v1.1.${{ github.run_number }}-beta
+        name: Beta v1.1.${{ github.run_number }}
         prerelease: true
         body: |
-          ## 🛡️ CallShield Beta v1.0.${{ github.run_number }}
+          ## 🛡️ CallShield Beta v1.1.${{ github.run_number }}
 
           **Track:** Internal Testing (Play Store)
 

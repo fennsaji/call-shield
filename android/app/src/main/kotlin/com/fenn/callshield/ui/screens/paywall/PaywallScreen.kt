@@ -31,7 +31,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -52,6 +51,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.android.billingclient.api.ProductDetails
 import com.fenn.callshield.BuildConfig
 import com.fenn.callshield.R
 import com.fenn.callshield.ui.theme.LocalSuccessColor
@@ -65,7 +65,6 @@ fun PaywallScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
-    val successColor = LocalSuccessColor.current
 
     LaunchedEffect(Unit) {
         viewModel.loadProducts()
@@ -285,13 +284,13 @@ fun PaywallScreen(
 
                 HorizontalDivider()
 
-                // ── Family upsell (PRD §3.11) ─────────────────────────────────
-                FamilyWaitlistSection(
-                    email = state.familyWaitlistEmail,
-                    joined = state.familyWaitlistJoined,
-                    onEmailChange = viewModel::onFamilyEmailChange,
-                    onJoin = viewModel::joinFamilyWaitlist,
-                    successColor = successColor,
+                // ── Family Plan (Phase 3) ──────────────────────────────────────
+                FamilyPlanCard(
+                    product = state.familyProduct,
+                    onClick = {
+                        val product = state.familyProduct
+                        if (product != null) viewModel.purchase(context, product)
+                    },
                 )
 
                 Text(
@@ -309,41 +308,51 @@ fun PaywallScreen(
 }
 
 @Composable
-private fun FamilyWaitlistSection(
-    email: String,
-    joined: Boolean,
-    onEmailChange: (String) -> Unit,
-    onJoin: () -> Unit,
-    successColor: Color,
+private fun FamilyPlanCard(
+    product: ProductDetails?,
+    onClick: () -> Unit,
 ) {
     Column(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Icon(
+                Icons.Filled.People,
+                contentDescription = null,
+                modifier = Modifier.size(20.dp),
+                tint = MaterialTheme.colorScheme.secondary,
+            )
+            Text("Family Plan", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+        }
         Text(
-            stringResource(R.string.pro_family_upsell),
-            style = MaterialTheme.typography.titleMedium,
+            "Protect two devices with one plan. Share your blocking rules with a family member via QR code pairing.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
         )
-        if (joined) {
-            Text(
-                stringResource(R.string.pro_family_joined),
-                color = successColor,
-                style = MaterialTheme.typography.bodyMedium,
-            )
-        } else {
-            OutlinedTextField(
-                value = email,
-                onValueChange = onEmailChange,
-                label = { Text(stringResource(R.string.pro_family_email_hint)) },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-            )
-            OutlinedButton(
-                onClick = onJoin,
-                modifier = Modifier.fillMaxWidth(),
-                enabled = email.contains("@"),
-            ) {
-                Text(stringResource(R.string.pro_family_waitlist))
+        OutlinedCard(
+            onClick = onClick,
+            modifier = Modifier.fillMaxWidth(),
+            enabled = product != null,
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(
+                    product?.subscriptionOfferDetails
+                        ?.firstOrNull()?.pricingPhases?.pricingPhaseList
+                        ?.firstOrNull()?.formattedPrice
+                        ?.let { "$it / year" }
+                        ?: "₹699 / year",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Medium,
+                )
+                Text(
+                    "Covers 2 devices — guardian + 1 family member",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                )
             }
         }
     }

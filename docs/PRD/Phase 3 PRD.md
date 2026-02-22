@@ -1,5 +1,19 @@
 # CallShield – Phase 3 Detailed PRD
 
+## Phase 3 Kickoff Decisions
+
+Recorded: 2026-02-23
+
+| Decision | Choice | Rationale |
+|---|---|---|
+| Cloud sync approach | **Local file export/import** | Lower complexity, no key management, no backend storage. Google Account-backed sync deferred indefinitely. |
+| Backup encryption | AES-256-GCM + PBKDF2WithHmacSHA256 (100k iterations, 256-bit key) | Standard Android crypto APIs, no extra dependencies. |
+| Backup file format | `[4-byte magic "CSBK"][1-byte version][16-byte salt][12-byte IV][GCM ciphertext]` | Self-contained, version-upgradable. |
+| Family sync transport | Supabase `family_sync_rules` table + Edge Functions (`family-pair`, `family-sync`, `family-unpair`) | Consistent with existing backend architecture. |
+| Family plan price | ₹699/year | Per PRD roadmap. |
+
+---
+
 ## 0. Trigger Conditions
 
 Phase 3 is initiated when the following criteria are met:
@@ -48,7 +62,7 @@ A simpler alternative is to skip cloud sync entirely in Phase 3 and provide a lo
 
 **Do not implement:** an irrecoverable key model where the backup cannot be restored without a passphrase the user must remember and record. In practice, mainstream users will not save a passphrase, will fail to restore on a new phone, and will attribute the data loss to the app. The feature must be designed around how real users behave, not how engineers expect users to behave.
 
-**Decision required before Phase 3 build:** choose between Google Account-backed sync or local file export/import. The chosen approach must be documented in the Phase 3 kickoff.
+**Decision:** Local file export/import chosen. See Phase 3 Kickoff Decisions table above.
 
 ### 3.3 Privacy Constraints
 
