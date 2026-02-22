@@ -1,5 +1,6 @@
 package com.fenn.callshield.ui.screens.reason
 
+import android.content.ActivityNotFoundException
 import android.content.Context
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -268,11 +269,10 @@ fun ReasonTransparencySheet(
 }
 
 private fun launchTraiReport(context: Context, maskedLabel: String) {
-    val smsIntent = TraiReportHelper.createSmsIntent(maskedLabel)
-    if (smsIntent.resolveActivity(context.packageManager) != null) {
-        context.startActivity(smsIntent)
-    } else {
-        // Fallback: open dialer with 1909
+    try {
+        context.startActivity(TraiReportHelper.createSmsIntent(maskedLabel))
+    } catch (e: ActivityNotFoundException) {
+        // No SMS app — fall back to dialer
         context.startActivity(TraiReportHelper.createCallIntent())
     }
 }

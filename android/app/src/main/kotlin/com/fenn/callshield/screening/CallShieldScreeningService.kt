@@ -111,7 +111,7 @@ class CallShieldScreeningService : CallScreeningService() {
 
     private suspend fun recordAndNotify(rawNumber: String?, decision: CallDecision) {
         val hash = rawNumber?.let { hasher.hash(it) } ?: "unknown"
-        val label = rawNumber?.takeLast(4)?.let { "****$it" } ?: "Hidden"
+        val label = rawNumber ?: "Hidden"
 
         // Record behavioral event for frequency / burst detection
         if (Phase2Flags.BEHAVIORAL_DETECTION && hash != "unknown") {

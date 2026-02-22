@@ -12,6 +12,14 @@
 
     <!-- NOT requested: READ_CALL_LOG, READ_CONTACTS, RECORD_AUDIO -->
 
+    <!-- Package visibility: required on API 30+ for resolving implicit intents -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.SENDTO" />
+            <data android:scheme="smsto" />
+        </intent>
+    </queries>
+
     <application
         android:name=".CallShieldApp"
         android:allowBackup="false"
