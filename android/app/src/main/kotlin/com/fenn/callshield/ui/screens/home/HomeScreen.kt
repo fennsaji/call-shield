@@ -21,10 +21,13 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.outlined.Block
 import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.DoNotDisturb
 import androidx.compose.material.icons.outlined.FilterList
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
@@ -51,6 +54,7 @@ import com.fenn.callshield.domain.repository.CallStats
 import com.fenn.callshield.ui.components.ScamDigestCard
 import com.fenn.callshield.ui.theme.LocalDangerColor
 import com.fenn.callshield.ui.theme.LocalSuccessColor
+import com.fenn.callshield.ui.theme.LocalWarningColor
 
 @Composable
 fun HomeScreen(
@@ -61,6 +65,7 @@ fun HomeScreen(
     onNavigateToPrivacy: () -> Unit,
     onNavigateToSettings: () -> Unit = {},
     onNavigateToPaywall: () -> Unit,
+    onNavigateToDndManagement: () -> Unit = {},
     onNavigateToReport: (hash: String, label: String) -> Unit,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
@@ -116,6 +121,11 @@ fun HomeScreen(
             StatusHeroCard(isActive = state.isScreeningActive, stats = state.stats)
         }
 
+        // ── DND banner ────────────────────────────────────────────────────────
+        item {
+            DndBannerCard(onClick = onNavigateToDndManagement)
+        }
+
         // ── Quick access ──────────────────────────────────────────────────────
         item {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -134,6 +144,75 @@ fun HomeScreen(
                 ScamDigestCard(
                     entry = digest,
                     onDismiss = { viewModel.dismissScamDigest(digest.id) },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun DndBannerCard(onClick: () -> Unit) {
+    val warningColor = LocalWarningColor.current
+    ElevatedCard(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(20.dp),
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp),
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    Brush.horizontalGradient(
+                        listOf(
+                            warningColor.copy(alpha = 0.15f),
+                            warningColor.copy(alpha = 0.04f),
+                        )
+                    )
+                )
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 18.dp, vertical = 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(14.dp),
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(46.dp)
+                        .clip(CircleShape)
+                        .background(warningColor.copy(alpha = 0.15f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        Icons.Outlined.DoNotDisturb,
+                        contentDescription = null,
+                        modifier = Modifier.size(24.dp),
+                        tint = warningColor,
+                    )
+                }
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(3.dp),
+                ) {
+                    Text(
+                        text = stringResource(R.string.dnd_title),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Text(
+                        text = stringResource(R.string.dnd_home_desc),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                    )
+                }
+                Icon(
+                    Icons.AutoMirrored.Outlined.KeyboardArrowRight,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f),
                 )
             }
         }

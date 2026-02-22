@@ -4,9 +4,11 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
-import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.fenn.callshield.util.DndOperator
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -27,8 +29,9 @@ class ScreeningPreferences @Inject constructor(
         val NOTIFY_ON_FLAG = booleanPreferencesKey("notify_on_flag")
         val ONBOARDING_COMPLETE = booleanPreferencesKey("onboarding_complete")
         val TRIAL_TRIGGERED = booleanPreferencesKey("trial_triggered")
-        val FAMILY_WAITLIST_EMAIL = androidx.datastore.preferences.core.stringPreferencesKey("family_waitlist_email")
+        val FAMILY_WAITLIST_EMAIL = stringPreferencesKey("family_waitlist_email")
         val TRAI_REPORTS_COUNT = intPreferencesKey("trai_reports_count")
+        val DND_OPERATOR = stringPreferencesKey("dnd_operator")
     }
 
     suspend fun autoBlockHighConfidence(): Boolean =
@@ -90,5 +93,12 @@ class ScreeningPreferences @Inject constructor(
         context.dataStore.edit {
             it[Keys.TRAI_REPORTS_COUNT] = (it[Keys.TRAI_REPORTS_COUNT] ?: 0) + 1
         }
+    }
+
+    fun observeDndOperator(): Flow<DndOperator?> =
+        context.dataStore.data.map { it[Keys.DND_OPERATOR]?.let { name -> DndOperator.fromName(name) } }
+
+    suspend fun setDndOperator(operator: DndOperator) {
+        context.dataStore.edit { it[Keys.DND_OPERATOR] = operator.name }
     }
 }

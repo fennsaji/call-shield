@@ -8,6 +8,7 @@ import com.fenn.callshield.data.local.CallShieldDatabase
 import com.fenn.callshield.data.local.dao.BlocklistDao
 import com.fenn.callshield.data.local.dao.CallerEventDao
 import com.fenn.callshield.data.local.dao.CallHistoryDao
+import com.fenn.callshield.data.local.dao.DndCommandDao
 import com.fenn.callshield.data.local.dao.PrefixRuleDao
 import com.fenn.callshield.data.local.dao.ScamDigestDao
 import com.fenn.callshield.data.local.dao.SeedDbDao
@@ -29,6 +30,24 @@ private val MIGRATION_3_4 = object : Migration(3, 4) {
                 `numberHash` TEXT NOT NULL,
                 `displayLabel` TEXT NOT NULL,
                 `preparedAt` INTEGER NOT NULL
+            )
+            """.trimIndent()
+        )
+    }
+}
+
+private val MIGRATION_4_5 = object : Migration(4, 5) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS `dnd_commands` (
+                `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                `command` TEXT NOT NULL,
+                `smsBody` TEXT NOT NULL,
+                `categories` TEXT,
+                `sentAt` INTEGER NOT NULL,
+                `confirmedByUser` INTEGER NOT NULL DEFAULT 0,
+                `confirmedAt` INTEGER
             )
             """.trimIndent()
         )
@@ -64,7 +83,7 @@ object DatabaseModule {
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): CallShieldDatabase =
         Room.databaseBuilder(context, CallShieldDatabase::class.java, "callshield.db")
-            .addMigrations(MIGRATION_2_3, MIGRATION_3_4)
+            .addMigrations(MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
             .build()
 
     @Provides fun provideBlocklistDao(db: CallShieldDatabase): BlocklistDao = db.blocklistDao()
@@ -75,4 +94,5 @@ object DatabaseModule {
     @Provides fun provideScamDigestDao(db: CallShieldDatabase): ScamDigestDao = db.scamDigestDao()
     @Provides fun provideCallerEventDao(db: CallShieldDatabase): CallerEventDao = db.callerEventDao()
     @Provides fun provideTraiReportDao(db: CallShieldDatabase): TraiReportDao = db.traiReportDao()
+    @Provides fun provideDndCommandDao(db: CallShieldDatabase): DndCommandDao = db.dndCommandDao()
 }

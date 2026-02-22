@@ -33,6 +33,7 @@ fun MainScreen(
     onNavigateToPrefixRules: () -> Unit,
     onNavigateToPrivacy: () -> Unit,
     onNavigateToTraiReported: () -> Unit,
+    onNavigateToDndManagement: () -> Unit,
     onNavigateToPaywall: () -> Unit,
     onNavigateToPermissions: () -> Unit,
     onNavigateToReport: (hash: String, label: String) -> Unit,
@@ -88,6 +89,7 @@ fun MainScreen(
                 onNavigateToPrefixRules = onNavigateToPrefixRules,
                 onNavigateToPrivacy = onNavigateToPrivacy,
                 onNavigateToPaywall = onNavigateToPaywall,
+                onNavigateToDndManagement = onNavigateToDndManagement,
                 onNavigateToReport = onNavigateToReport,
             )
             1 -> ActivityScreen(
@@ -105,6 +107,7 @@ fun MainScreen(
                 onNavigateToPrefixRules = onNavigateToPrefixRules,
                 onNavigateToPrivacy = onNavigateToPrivacy,
                 onNavigateToTraiReported = onNavigateToTraiReported,
+                onNavigateToDndManagement = onNavigateToDndManagement,
                 onNavigateToPaywall = onNavigateToPaywall,
                 onNavigateToPermissions = onNavigateToPermissions,
             )
