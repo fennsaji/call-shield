@@ -28,7 +28,10 @@ import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.outlined.Block
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.DoNotDisturb
+import androidx.compose.material.icons.outlined.FamilyRestroom
 import androidx.compose.material.icons.outlined.FilterList
+import androidx.compose.material.icons.outlined.PrivacyTip
+import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.HorizontalDivider
@@ -63,9 +66,9 @@ fun HomeScreen(
     onNavigateToWhitelist: () -> Unit,
     onNavigateToPrefixRules: () -> Unit,
     onNavigateToPrivacy: () -> Unit,
-    onNavigateToSettings: () -> Unit = {},
     onNavigateToPaywall: () -> Unit,
     onNavigateToDndManagement: () -> Unit = {},
+    onNavigateToFamilyProtection: () -> Unit = {},
     onNavigateToReport: (hash: String, label: String) -> Unit,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
@@ -138,6 +141,34 @@ fun HomeScreen(
             }
         }
 
+        // ── Features ──────────────────────────────────────────────────────────
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                SectionLabel("Features")
+                FeatureBannerCard(
+                    icon = Icons.Outlined.PrivacyTip,
+                    title = "Privacy Dashboard",
+                    description = "Review what data is processed on your device",
+                    color = MaterialTheme.colorScheme.tertiary,
+                    onClick = onNavigateToPrivacy,
+                )
+                FeatureBannerCard(
+                    icon = Icons.Outlined.FamilyRestroom,
+                    title = "Family Protection",
+                    description = "Shield up to 2 family members with one plan",
+                    color = MaterialTheme.colorScheme.secondary,
+                    onClick = onNavigateToFamilyProtection,
+                )
+                FeatureBannerCard(
+                    icon = Icons.Outlined.Star,
+                    title = "Upgrade to Pro",
+                    description = "Auto-block high-confidence spam before it rings",
+                    color = MaterialTheme.colorScheme.primary,
+                    onClick = onNavigateToPaywall,
+                )
+            }
+        }
+
         // ── Scam digest ───────────────────────────────────────────────────────
         state.scamDigest?.let { digest ->
             item {
@@ -204,6 +235,80 @@ private fun DndBannerCard(onClick: () -> Unit) {
                     )
                     Text(
                         text = stringResource(R.string.dnd_home_desc),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                    )
+                }
+                Icon(
+                    Icons.AutoMirrored.Outlined.KeyboardArrowRight,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun FeatureBannerCard(
+    icon: ImageVector,
+    title: String,
+    description: String,
+    color: Color,
+    onClick: () -> Unit,
+) {
+    ElevatedCard(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(20.dp),
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp),
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    Brush.horizontalGradient(
+                        listOf(
+                            color.copy(alpha = 0.12f),
+                            color.copy(alpha = 0.03f),
+                        )
+                    )
+                )
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 18.dp, vertical = 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(14.dp),
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(46.dp)
+                        .clip(CircleShape)
+                        .background(color.copy(alpha = 0.15f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        icon,
+                        contentDescription = null,
+                        modifier = Modifier.size(24.dp),
+                        tint = color,
+                    )
+                }
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(3.dp),
+                ) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Text(
+                        text = description,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                     )

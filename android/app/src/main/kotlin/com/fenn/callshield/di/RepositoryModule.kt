@@ -10,6 +10,8 @@ import com.fenn.callshield.domain.repository.CallHistoryRepository
 import com.fenn.callshield.domain.repository.PrefixRuleRepository
 import com.fenn.callshield.domain.repository.ReputationRepository
 import com.fenn.callshield.domain.repository.WhitelistRepository
+import com.fenn.callshield.family.FamilySyncRepository
+import com.fenn.callshield.family.FamilySyncRepositoryImpl
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -24,4 +26,5 @@ abstract class RepositoryModule {
     @Binds @Singleton abstract fun bindPrefixRule(impl: PrefixRuleRepositoryImpl): PrefixRuleRepository
     @Binds @Singleton abstract fun bindReputation(impl: ReputationRepositoryImpl): ReputationRepository
     @Binds @Singleton abstract fun bindCallHistory(impl: CallHistoryRepositoryImpl): CallHistoryRepository
+    @Binds @Singleton abstract fun bindFamilySync(impl: FamilySyncRepositoryImpl): FamilySyncRepository
 }

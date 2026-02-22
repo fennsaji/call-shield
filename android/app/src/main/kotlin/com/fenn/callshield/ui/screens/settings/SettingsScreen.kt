@@ -22,6 +22,7 @@ import androidx.compose.material.icons.outlined.GppBad
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.PrivacyTip
+import androidx.compose.material.icons.outlined.SaveAlt
 import androidx.compose.material.icons.outlined.Security
 import androidx.compose.material.icons.outlined.Shield
 import androidx.compose.material.icons.outlined.Star
@@ -59,6 +60,7 @@ fun SettingsScreen(
     onNavigateToDndManagement: () -> Unit = {},
     onNavigateToPaywall: () -> Unit = {},
     onNavigateToPermissions: () -> Unit = {},
+    onNavigateToBackup: () -> Unit = {},
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -184,6 +186,17 @@ fun SettingsScreen(
             icon = Icons.Outlined.Star,
             title = "Upgrade to Pro",
             onClick = onNavigateToPaywall,
+            trailing = { ChevronIcon() },
+        )
+
+        Spacer(Modifier.height(16.dp))
+
+        // ── Data (Phase 3) ────────────────────────────────────────────────────
+        SectionHeader("Data")
+        SettingRow(
+            icon = Icons.Outlined.SaveAlt,
+            title = "Backup & Restore",
+            onClick = onNavigateToBackup,
             trailing = { ChevronIcon() },
         )
 

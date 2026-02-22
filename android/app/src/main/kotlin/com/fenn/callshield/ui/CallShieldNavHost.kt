@@ -19,7 +19,9 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.fenn.callshield.data.preferences.ScreeningPreferences
 import com.fenn.callshield.screening.PaywallTriggerManager
+import com.fenn.callshield.ui.screens.backup.BackupScreen
 import com.fenn.callshield.ui.screens.blocklist.BlocklistScreen
+import com.fenn.callshield.ui.screens.family.FamilyProtectionScreen
 import com.fenn.callshield.ui.screens.main.MainScreen
 import com.fenn.callshield.ui.screens.onboarding.OnboardingScreen
 import com.fenn.callshield.ui.screens.paywall.PaywallScreen
@@ -43,6 +45,8 @@ object Destinations {
     const val PRIVACY_DASHBOARD = "privacy_dashboard"
     const val TRAI_REPORTED_NUMBERS = "trai_reported_numbers"
     const val DND_MANAGEMENT = "dnd_management"
+    const val BACKUP = "backup"
+    const val FAMILY_PROTECTION = "family_protection"
     const val PAYWALL = "paywall?trigger={trigger}"
 
     fun reportSpam(numberHash: String, displayLabel: String) =
@@ -122,6 +126,8 @@ fun CallShieldNavHost(
                 onNavigateToDndManagement = { navController.navigate(Destinations.DND_MANAGEMENT) },
                 onNavigateToPaywall = { navController.navigate(Destinations.paywallRoute()) },
                 onNavigateToPermissions = { navController.navigate(Destinations.PERMISSIONS_SETTINGS) },
+                onNavigateToBackup = { navController.navigate(Destinations.BACKUP) },
+                onNavigateToFamilyProtection = { navController.navigate(Destinations.FAMILY_PROTECTION) },
                 onNavigateToReport = { hash, label ->
                     navController.navigate(Destinations.reportSpam(hash, label))
                 },
@@ -175,6 +181,14 @@ fun CallShieldNavHost(
 
         composable(Destinations.DND_MANAGEMENT) {
             DndManagementScreen(onBack = { navController.popBackStack() })
+        }
+
+        composable(Destinations.BACKUP) {
+            BackupScreen(onBack = { navController.popBackStack() })
+        }
+
+        composable(Destinations.FAMILY_PROTECTION) {
+            FamilyProtectionScreen(onBack = { navController.popBackStack() })
         }
 
         composable(

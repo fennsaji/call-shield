@@ -25,16 +25,20 @@ import javax.inject.Singleton
 import kotlin.coroutines.resume
 
 // Product IDs — must match Play Console configuration
-const val PRODUCT_PRO_ANNUAL = "callshield_pro_annual"
-const val PRODUCT_PRO_MONTHLY = "callshield_pro_monthly"
+const val PRODUCT_PRO_ANNUAL    = "callshield_pro_annual"
+const val PRODUCT_PRO_MONTHLY   = "callshield_pro_monthly"
+const val PRODUCT_FAMILY_ANNUAL = "callshield_family_annual"  // Phase 3 — ₹699/year
 
 @Singleton
 class BillingManager @Inject constructor(
     @ApplicationContext private val context: Context,
 ) : PurchasesUpdatedListener {
 
-    private val _isPro = MutableStateFlow(false)
-    val isPro: StateFlow<Boolean> = _isPro.asStateFlow()
+    private val _isPro    = MutableStateFlow(false)
+    private val _isFamily = MutableStateFlow(false)
+    val isPro:    StateFlow<Boolean> = _isPro.asStateFlow()
+    /** True when the user has an active Family Plan (superset of Pro). */
+    val isFamily: StateFlow<Boolean> = _isFamily.asStateFlow()
 
     private val billingClient: BillingClient = BillingClient.newBuilder(context)
         .setListener(this)
@@ -78,6 +82,10 @@ class BillingManager @Inject constructor(
                         .setProductId(PRODUCT_PRO_MONTHLY)
                         .setProductType(BillingClient.ProductType.SUBS)
                         .build(),
+                    QueryProductDetailsParams.Product.newBuilder()
+                        .setProductId(PRODUCT_FAMILY_ANNUAL)
+                        .setProductType(BillingClient.ProductType.SUBS)
+                        .build(),
                 )
             )
             .build()
@@ -92,12 +100,17 @@ class BillingManager @Inject constructor(
             .setProductType(BillingClient.ProductType.SUBS)
             .build()
         val result = billingClient.queryPurchasesAsync(params)
-        val hasActiveSub = result.purchasesList.any { purchase ->
-            purchase.purchaseState == Purchase.PurchaseState.PURCHASED &&
-                (purchase.products.contains(PRODUCT_PRO_ANNUAL) ||
-                    purchase.products.contains(PRODUCT_PRO_MONTHLY))
+        val purchases = result.purchasesList
+        val hasFamily = purchases.any { p ->
+            p.purchaseState == Purchase.PurchaseState.PURCHASED &&
+                p.products.contains(PRODUCT_FAMILY_ANNUAL)
         }
-        _isPro.value = hasActiveSub
+        val hasPro = hasFamily || purchases.any { p ->
+            p.purchaseState == Purchase.PurchaseState.PURCHASED &&
+                (p.products.contains(PRODUCT_PRO_ANNUAL) || p.products.contains(PRODUCT_PRO_MONTHLY))
+        }
+        _isFamily.value = hasFamily
+        _isPro.value = hasPro
     }
 
     fun launchBillingFlow(activity: Activity, productDetails: ProductDetails): BillingResult {
@@ -127,12 +140,16 @@ class BillingManager @Inject constructor(
                     acknowledgePurchase(purchase)
                 }
             }
-            val hasActiveSub = purchases.any { p ->
+            val hasFamily = purchases.any { p ->
                 p.purchaseState == Purchase.PurchaseState.PURCHASED &&
-                    (p.products.contains(PRODUCT_PRO_ANNUAL) ||
-                        p.products.contains(PRODUCT_PRO_MONTHLY))
+                    p.products.contains(PRODUCT_FAMILY_ANNUAL)
             }
-            if (hasActiveSub) _isPro.value = true
+            val hasPro = hasFamily || purchases.any { p ->
+                p.purchaseState == Purchase.PurchaseState.PURCHASED &&
+                    (p.products.contains(PRODUCT_PRO_ANNUAL) || p.products.contains(PRODUCT_PRO_MONTHLY))
+            }
+            if (hasFamily) _isFamily.value = true
+            if (hasPro) _isPro.value = true
         }
     }
 
