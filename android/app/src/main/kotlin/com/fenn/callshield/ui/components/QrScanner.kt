@@ -107,7 +107,7 @@ fun QrScanner(
             .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
             .build()
 
-        analyzer.setAnalyzer(cameraExecutor) { imageProxy ->
+        analyzer.setAnalyzer(cameraExecutor) @androidx.camera.core.ExperimentalGetImage { imageProxy ->
             if (scannedFlag) {
                 imageProxy.close()
                 return@setAnalyzer
