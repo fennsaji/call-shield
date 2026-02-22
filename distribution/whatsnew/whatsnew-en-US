@@ -1,13 +1,13 @@
 What's new in v1.1
 
-Smarter protection, even without the internet:
-• Behavioral detection — app now flags callers who hang up repeatedly, call in bursts, or ring briefly and hang up (short-ring bait tactics)
-• All behavioral checks run fully on-device, no network needed
+Smarter offline protection:
+• Behavioral detection — flags repeat hang-ups, burst callers, and short-ring bait tactics
+• All checks run on-device, no network needed
 
 TRAI DND 1909 Quick Report:
-• Tap "Report to TRAI" on any flagged call to instantly prepare a DND complaint SMS to 1909
-• View all prepared complaints under Settings → Reports → Reported Numbers
+• Tap "Report to TRAI" on any flagged call to prepare a complaint SMS to 1909
+• View all complaints: Settings → Reports → Reported Numbers
 
 Community reporting improvements:
-• Surge protection — coordinated mass-reporting can no longer artificially inflate a number's score
-• More stable spam category labels (requires clear consensus before changing)
+• Surge protection against coordinated mass-reporting
+• More stable spam category labels
