@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Privacy Policy — CallShield</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --primary: #4F6AF5;
+      --surface: #F7F8FC;
+      --border: #E4E7EF;
+      --text: #1A1D2E;
+      --muted: #6B7280;
+      --danger: #EF4444;
+      --radius: 12px;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--surface);
+      color: var(--text);
+      line-height: 1.7;
+      font-size: 16px;
+    }
+
+    header {
+      background: #fff;
+      border-bottom: 1px solid var(--border);
+      padding: 20px 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo {
+      width: 36px;
+      height: 36px;
+      background: var(--primary);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .logo svg { width: 20px; height: 20px; fill: #fff; }
+
+    header h1 {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    header span {
+      font-size: 14px;
+      color: var(--muted);
+      margin-left: 4px;
+      font-weight: 400;
+    }
+
+    main {
+      max-width: 760px;
+      margin: 40px auto;
+      padding: 0 24px 80px;
+    }
+
+    .hero {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 32px;
+      margin-bottom: 32px;
+    }
+
+    .hero h2 {
+      font-size: 26px;
+      font-weight: 800;
+      margin-bottom: 8px;
+    }
+
+    .hero p {
+      color: var(--muted);
+      font-size: 15px;
+    }
+
+    .hero .updated {
+      margin-top: 16px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .pledge-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+      margin-bottom: 32px;
+    }
+
+    .pledge-card {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .pledge-icon {
+      font-size: 22px;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .pledge-card p {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1.4;
+    }
+
+    section {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px 32px;
+      margin-bottom: 16px;
+    }
+
+    section h3 {
+      font-size: 17px;
+      font-weight: 700;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    section h3 .num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 26px;
+      height: 26px;
+      background: var(--primary);
+      color: #fff;
+      border-radius: 50%;
+      font-size: 12px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    p { margin-bottom: 12px; }
+    p:last-child { margin-bottom: 0; }
+
+    ul, ol {
+      padding-left: 20px;
+      margin-bottom: 12px;
+    }
+
+    li { margin-bottom: 6px; }
+
+    .table-wrap { overflow-x: auto; margin: 16px 0; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+
+    th {
+      background: var(--surface);
+      text-align: left;
+      padding: 10px 14px;
+      font-weight: 600;
+      border: 1px solid var(--border);
+    }
+
+    td {
+      padding: 10px 14px;
+      border: 1px solid var(--border);
+      vertical-align: top;
+    }
+
+    tr:nth-child(even) td { background: #fafafa; }
+
+    .pill {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 99px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .pill-green  { background: #D1FAE5; color: #065F46; }
+    .pill-red    { background: #FEE2E2; color: #991B1B; }
+    .pill-blue   { background: #DBEAFE; color: #1E40AF; }
+    .pill-yellow { background: #FEF3C7; color: #92400E; }
+
+    .highlight {
+      background: #EEF2FF;
+      border-left: 3px solid var(--primary);
+      border-radius: 0 8px 8px 0;
+      padding: 14px 18px;
+      margin: 14px 0;
+      font-size: 14px;
+    }
+
+    .highlight strong { display: block; margin-bottom: 4px; }
+
+    code {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1px 6px;
+      font-family: "SF Mono", "Fira Code", Consolas, monospace;
+      font-size: 13px;
+    }
+
+    footer {
+      text-align: center;
+      font-size: 13px;
+      color: var(--muted);
+      padding: 24px;
+      border-top: 1px solid var(--border);
+    }
+
+    @media (max-width: 600px) {
+      main { padding: 0 16px 60px; margin-top: 24px; }
+      section { padding: 20px; }
+      .hero { padding: 22px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 2L4 6v6c0 5.25 3.4 10.15 8 11.35C16.6 22.15 20 17.25 20 12V6l-8-4z"/>
+    </svg>
+  </div>
+  <h1>CallShield <span>— Privacy Policy</span></h1>
+</header>
+
+<main>
+
+  <div class="hero">
+    <h2>Your privacy is non-negotiable.</h2>
+    <p>
+      CallShield is built on a single principle: protect you from spam without learning anything about you.
+      We never see your contacts, your call history, or who called you. Numbers are hashed on your device
+      before any network request — we only ever see a one-way fingerprint, never a real phone number.
+    </p>
+    <p class="updated">Last updated: 23 February 2026 &nbsp;·&nbsp; Effective: 23 February 2026</p>
+  </div>
+
+  <div class="pledge-grid">
+    <div class="pledge-card">
+      <div class="pledge-icon">🔒</div>
+      <p>No contacts accessed — ever</p>
+    </div>
+    <div class="pledge-card">
+      <div class="pledge-icon">📵</div>
+      <p>No raw phone numbers leave your device</p>
+    </div>
+    <div class="pledge-card">
+      <div class="pledge-icon">🚫</div>
+      <p>No ads, no data selling</p>
+    </div>
+    <div class="pledge-card">
+      <div class="pledge-icon">📱</div>
+      <p>No call log access</p>
+    </div>
+  </div>
+
+  <!-- 1 -->
+  <section>
+    <h3><span class="num">1</span> Who we are</h3>
+    <p>
+      CallShield is an Android application that screens incoming calls against a crowdsourced database of
+      known spam and scam numbers. The app is developed and published by Fenn ("we", "us", "our") and
+      distributed via Google Play.
+    </p>
+    <p>
+      Questions about this policy can be sent to:
+      <a href="mailto:privacy@callshield.app">privacy@callshield.app</a>
+    </p>
+  </section>
+
+  <!-- 2 -->
+  <section>
+    <h3><span class="num">2</span> What permissions we request and why</h3>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Permission</th>
+            <th>Why it's needed</th>
+            <th>When used</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>ROLE_CALL_SCREENING</code></td>
+            <td>Intercept incoming calls before your phone rings and apply block/allow decisions</td>
+            <td>Every incoming call, on-device only</td>
+          </tr>
+          <tr>
+            <td><code>POST_NOTIFICATIONS</code></td>
+            <td>Send an alert when a call is blocked or flagged as high-risk</td>
+            <td>On block/flag event, user-toggleable</td>
+          </tr>
+          <tr>
+            <td><code>INTERNET</code></td>
+            <td>Check the hashed number against our reputation server (anonymous hash only)</td>
+            <td>Per call, hash only — never the real number</td>
+          </tr>
+          <tr>
+            <td><code>RECEIVE_BOOT_COMPLETED</code></td>
+            <td>Re-register the call screening service after a device reboot</td>
+            <td>On device reboot only</td>
+          </tr>
+          <tr>
+            <td><code>CAMERA</code></td>
+            <td>Scan a QR code to pair a second device under the Family Protection plan</td>
+            <td>Only when user explicitly opens the Family Protection QR scanner</td>
+          </tr>
+          <tr>
+            <td><code>REQUEST_IGNORE_BATTERY_OPTIMIZATIONS</code></td>
+            <td>Prevent aggressive OEM battery management from killing the screening service</td>
+            <td>Prompted once during setup — user can deny</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="highlight">
+      <strong>Camera is optional.</strong>
+      The camera is only ever activated when you open the Family Protection screen and tap
+      "Scan QR Code." It is never accessed passively. The app functions fully without camera access —
+      the Family Protection pairing is the only feature that requires it.
+    </div>
+  </section>
+
+  <!-- 3 -->
+  <section>
+    <h3><span class="num">3</span> What data is collected and how it is protected</h3>
+
+    <p>
+      We operate a <strong>hash-first, no-plaintext</strong> architecture. Before any data leaves your
+      device, phone numbers are transformed into an irreversible fingerprint using
+      <strong>HMAC-SHA256</strong> with a static salt bundled inside the app binary. This means:
+    </p>
+    <ul>
+      <li>The original phone number is never transmitted.</li>
+      <li>The hash cannot be reversed to obtain the original number.</li>
+      <li>The salt is bundled in the app — hashing works offline on first launch.</li>
+    </ul>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Data item</th>
+            <th>Where it lives</th>
+            <th>Sent to server?</th>
+            <th>Contains real number?</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Incoming call number (for screening)</td>
+            <td>RAM only (discarded after decision)</td>
+            <td><span class="pill pill-green">Hash only</span></td>
+            <td><span class="pill pill-red">Never</span></td>
+          </tr>
+          <tr>
+            <td>Personal blocklist &amp; whitelist</td>
+            <td>On-device SQLite (Room)</td>
+            <td><span class="pill pill-red">No</span></td>
+            <td>Yes — stored locally only</td>
+          </tr>
+          <tr>
+            <td>Spam report (category + number)</td>
+            <td>Supabase backend</td>
+            <td><span class="pill pill-green">Hash only</span></td>
+            <td><span class="pill pill-red">Never</span></td>
+          </tr>
+          <tr>
+            <td>Device token (for rate-limiting)</td>
+            <td>Android Keystore (on-device)</td>
+            <td><span class="pill pill-green">Hash only</span></td>
+            <td><span class="pill pill-red">Never</span></td>
+          </tr>
+          <tr>
+            <td>Call decision audit log</td>
+            <td>On-device SQLite only</td>
+            <td><span class="pill pill-red">No</span></td>
+            <td>Hashed numbers only, local</td>
+          </tr>
+          <tr>
+            <td>Family pairing token</td>
+            <td>Android DataStore (on-device)</td>
+            <td><span class="pill pill-green">Hash only</span></td>
+            <td><span class="pill pill-red">Never</span></td>
+          </tr>
+          <tr>
+            <td>Local spam seed database</td>
+            <td>Bundled asset, delta-updated via HTTPS</td>
+            <td><span class="pill pill-red">No</span></td>
+            <td>Hashed entries only</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 4 -->
+  <section>
+    <h3><span class="num">4</span> What we store on our servers</h3>
+    <p>
+      Our backend (Supabase, hosted in the EU) holds only the following:
+    </p>
+    <ul>
+      <li>
+        <strong>Reputation records:</strong> keyed by the HMAC-SHA256 hash of a number — report count,
+        unique reporter count, confidence score, spam category, and timestamps. No real number is stored.
+      </li>
+      <li>
+        <strong>Report events:</strong> an append-only log of spam reports — hash, device token hash,
+        category, timestamp. Used to compute confidence scores and detect abuse.
+      </li>
+      <li>
+        <strong>Reporter deduplication table:</strong> (number hash, device token hash) pairs that ensure
+        one device contributes one report per number. No real number or personal data.
+      </li>
+      <li>
+        <strong>Family pairing records:</strong> a hashed pairing token and an expiry timestamp.
+        Automatically deleted 10 minutes after creation or when you unpair.
+      </li>
+    </ul>
+    <p>
+      Records with zero reports for 12 months are automatically purged. We do not store IP addresses
+      in association with any number hash.
+    </p>
+  </section>
+
+  <!-- 5 -->
+  <section>
+    <h3><span class="num">5</span> How we use the data</h3>
+    <p>We use the data collected for the following purposes only:</p>
+    <ul>
+      <li>
+        <strong>Spam detection:</strong> look up a number hash against the reputation database to
+        compute a spam confidence score and decide whether to block, silence, or allow a call.
+      </li>
+      <li>
+        <strong>Reputation improvement:</strong> aggregate anonymous spam reports to improve confidence
+        scores for all users.
+      </li>
+      <li>
+        <strong>Abuse prevention:</strong> use device token hashes to rate-limit reports and prevent
+        coordinated manipulation of the reputation database.
+      </li>
+      <li>
+        <strong>Family Protection sync:</strong> relay blocking rules between a guardian device and up
+        to one dependent device using hashed pairing tokens.
+      </li>
+    </ul>
+    <p>
+      We do not use your data for advertising, profiling, or any purpose beyond operating and
+      improving the call-screening service described above.
+    </p>
+  </section>
+
+  <!-- 6 -->
+  <section>
+    <h3><span class="num">6</span> What we never do</h3>
+    <ul>
+      <li>We do not access your contacts list.</li>
+      <li>We do not read your call log.</li>
+      <li>We do not record or listen to call audio.</li>
+      <li>We do not transmit real phone numbers to any server.</li>
+      <li>We do not sell, rent, or share your data with advertisers or data brokers.</li>
+      <li>We do not use third-party analytics SDKs (no Firebase Analytics, no Crashlytics, no Mixpanel).</li>
+      <li>We do not display ads.</li>
+      <li>We do not track your location.</li>
+    </ul>
+  </section>
+
+  <!-- 7 -->
+  <section>
+    <h3><span class="num">7</span> Third-party services</h3>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Service</th>
+            <th>Purpose</th>
+            <th>Data shared</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Supabase (EU region)</td>
+            <td>Backend database and API for reputation lookups and spam reports</td>
+            <td>Number hashes, device token hashes, spam categories</td>
+          </tr>
+          <tr>
+            <td>Google Play Billing</td>
+            <td>Process Pro and Family Plan subscriptions</td>
+            <td>Handled entirely by Google — we receive only subscription status</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>
+      We do not integrate any advertising networks, crash reporting services, or behavioural analytics
+      platforms.
+    </p>
+  </section>
+
+  <!-- 8 -->
+  <section>
+    <h3><span class="num">8</span> Data retention</h3>
+    <ul>
+      <li>
+        <strong>On-device data</strong> (blocklist, whitelist, call history, seed database) — retained
+        until you delete it via <em>Privacy Dashboard → Delete all local data</em> or uninstall the app.
+      </li>
+      <li>
+        <strong>Server reputation records</strong> — auto-purged 12 months after the last report for
+        that number hash.
+      </li>
+      <li>
+        <strong>Family pairing tokens</strong> — deleted from the server within 10 minutes of creation
+        (if pairing is not completed) or immediately when you unpair.
+      </li>
+      <li>
+        <strong>Spam report events</strong> — retained for 12 months then purged alongside their
+        associated reputation record.
+      </li>
+    </ul>
+  </section>
+
+  <!-- 9 -->
+  <section>
+    <h3><span class="num">9</span> Your rights and controls</h3>
+    <p>You can exercise the following controls at any time from within the app:</p>
+    <ul>
+      <li>
+        <strong>Delete all local data</strong> — Settings → Privacy Dashboard →
+        <em>Delete all local data</em>. Clears your blocklist, whitelist, prefix rules, call history,
+        and the local spam seed database instantly.
+      </li>
+      <li>
+        <strong>Revoke camera access</strong> — Android Settings → Apps → CallShield → Permissions →
+        Camera. The app continues to work fully; only Family Protection QR scanning is disabled.
+      </li>
+      <li>
+        <strong>Revoke call screening</strong> — Android Settings → Apps → Default apps →
+        Caller ID &amp; spam. Disabling this also disables the screening service completely.
+      </li>
+      <li>
+        <strong>Cancel subscription</strong> — Google Play → Subscriptions → CallShield.
+      </li>
+      <li>
+        <strong>Unpair Family Protection</strong> — Home → Family Protection → Unpair.
+        Immediately deletes the pairing token from our server.
+      </li>
+    </ul>
+    <p>
+      If you wish to request deletion of data stored on our servers (reputation records associated
+      with your device token hash), contact us at
+      <a href="mailto:privacy@callshield.app">privacy@callshield.app</a>.
+    </p>
+  </section>
+
+  <!-- 10 -->
+  <section>
+    <h3><span class="num">10</span> Children's privacy</h3>
+    <p>
+      CallShield is not directed to children under the age of 13. We do not knowingly collect
+      personal data from children. If you believe a child has used the app and data has been
+      collected, contact us at <a href="mailto:privacy@callshield.app">privacy@callshield.app</a>
+      and we will delete it.
+    </p>
+  </section>
+
+  <!-- 11 -->
+  <section>
+    <h3><span class="num">11</span> Changes to this policy</h3>
+    <p>
+      If we make material changes to this policy, we will update the "Last updated" date above and,
+      where required by applicable law, notify you in-app before the changes take effect. Continued
+      use of CallShield after the effective date constitutes acceptance of the updated policy.
+    </p>
+  </section>
+
+  <!-- 12 -->
+  <section>
+    <h3><span class="num">12</span> Contact</h3>
+    <p>
+      For privacy questions, data deletion requests, or concerns about this policy:
+    </p>
+    <ul>
+      <li>Email: <a href="mailto:privacy@callshield.app">privacy@callshield.app</a></li>
+    </ul>
+    <p>We aim to respond to all privacy-related requests within 7 business days.</p>
+  </section>
+
+</main>
+
+<footer>
+  &copy; 2026 CallShield · <a href="mailto:privacy@callshield.app">privacy@callshield.app</a>
+</footer>
+
+</body>
+</html>
