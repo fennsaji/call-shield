@@ -4,10 +4,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.fenn.callshield.billing.BillingManager
 import com.fenn.callshield.data.preferences.ScreeningPreferences
+import com.fenn.callshield.ui.theme.ThemeMode
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -25,6 +28,9 @@ class SettingsViewModel @Inject constructor(
 ) : ViewModel() {
 
     val isPro: StateFlow<Boolean> = billingManager.isPro
+
+    val themeMode: StateFlow<ThemeMode> = prefs.observeTheme()
+        .stateIn(viewModelScope, SharingStarted.Eagerly, ThemeMode.SYSTEM)
 
     private val _state = MutableStateFlow(SettingsState())
     val state: StateFlow<SettingsState> = _state.asStateFlow()
@@ -44,4 +50,5 @@ class SettingsViewModel @Inject constructor(
     suspend fun setBlockHidden(v: Boolean) { prefs.setBlockHiddenNumbers(v); _state.value = _state.value.copy(blockHidden = v) }
     suspend fun setNotifyOnBlock(v: Boolean) { prefs.setNotifyOnBlock(v); _state.value = _state.value.copy(notifyOnBlock = v) }
     suspend fun setNotifyOnFlag(v: Boolean) { prefs.setNotifyOnFlag(v); _state.value = _state.value.copy(notifyOnFlag = v) }
+    fun setTheme(mode: ThemeMode) { viewModelScope.launch { prefs.setTheme(mode) } }
 }

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Debug-only: allows cleartext HTTP so you can point SUPABASE_URL at a local
+    Supabase CLI instance via LAN IP or emulator loopback (10.0.2.2).
+    <domain> tags only match hostnames, not IP addresses — use base-config instead.
+    This file lives in src/debug/ and is NOT included in release builds.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>

@@ -2,6 +2,7 @@ package com.fenn.callshield.ui.screens.report
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.fenn.callshield.BuildConfig
 import com.fenn.callshield.domain.repository.ReputationRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -31,7 +32,11 @@ class ReportSpamViewModel @Inject constructor(
             _state.value = if (result.isSuccess) {
                 ReportSpamState(submitted = true)
             } else {
-                ReportSpamState(error = "Could not submit report. Try again.")
+                val msg = if (BuildConfig.DEBUG)
+                    result.exceptionOrNull()?.message ?: "Unknown error"
+                else
+                    "Could not submit report. Try again."
+                ReportSpamState(error = msg)
             }
         }
     }

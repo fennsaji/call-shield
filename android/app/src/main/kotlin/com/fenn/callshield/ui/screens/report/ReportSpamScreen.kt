@@ -28,7 +28,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -38,7 +37,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.fenn.callshield.R
 import com.fenn.callshield.domain.model.SpamCategory
-import kotlinx.coroutines.launch
 
 private val categoryDescriptions = mapOf(
     SpamCategory.TELEMARKETING to "Promotional or sales calls you didn't request",
@@ -60,13 +58,17 @@ fun ReportSpamScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
     var selectedCategory by remember { mutableStateOf<SpamCategory?>(null) }
 
     LaunchedEffect(state.submitted) {
         if (state.submitted) {
+            snackbarHostState.showSnackbar("Report submitted successfully")
             onDismiss()
         }
+    }
+
+    LaunchedEffect(state.error) {
+        state.error?.let { snackbarHostState.showSnackbar(it) }
     }
 
     Scaffold(
@@ -145,14 +147,6 @@ fun ReportSpamScreen(
             }
 
             Spacer(Modifier.weight(1f))
-
-            if (state.error != null) {
-                Text(
-                    text = state.error!!,
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
 
             Button(
                 onClick = {

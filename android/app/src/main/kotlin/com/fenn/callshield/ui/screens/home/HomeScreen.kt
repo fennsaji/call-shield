@@ -22,6 +22,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.clickable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Shield
@@ -30,13 +35,16 @@ import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.DoNotDisturb
 import androidx.compose.material.icons.outlined.FamilyRestroom
 import androidx.compose.material.icons.outlined.FilterList
+import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.PrivacyTip
 import androidx.compose.material.icons.outlined.Star
+import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -73,7 +81,19 @@ fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val isPro by viewModel.isPro.collectAsStateWithLifecycle()
     val successColor = LocalSuccessColor.current
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    DisposableEffect(lifecycleOwner) {
+        viewModel.refreshScreeningRole(context)
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) viewModel.refreshScreeningRole(context)
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     LazyColumn(
         modifier = modifier,
@@ -124,11 +144,6 @@ fun HomeScreen(
             StatusHeroCard(isActive = state.isScreeningActive, stats = state.stats)
         }
 
-        // ── DND banner ────────────────────────────────────────────────────────
-        item {
-            DndBannerCard(onClick = onNavigateToDndManagement)
-        }
-
         // ── Quick access ──────────────────────────────────────────────────────
         item {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -143,8 +158,10 @@ fun HomeScreen(
 
         // ── Features ──────────────────────────────────────────────────────────
         item {
+            val dangerColor = LocalDangerColor.current
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 SectionLabel("Features")
+                DndBannerCard(onClick = onNavigateToDndManagement)
                 FeatureBannerCard(
                     icon = Icons.Outlined.PrivacyTip,
                     title = "Privacy Dashboard",
@@ -153,18 +170,40 @@ fun HomeScreen(
                     onClick = onNavigateToPrivacy,
                 )
                 FeatureBannerCard(
-                    icon = Icons.Outlined.FamilyRestroom,
-                    title = "Family Protection",
-                    description = "Shield up to 2 family members with one plan",
-                    color = MaterialTheme.colorScheme.secondary,
-                    onClick = onNavigateToFamilyProtection,
-                )
-                FeatureBannerCard(
                     icon = Icons.Outlined.Star,
                     title = "Upgrade to Pro",
                     description = "Auto-block high-confidence spam before it rings",
                     color = MaterialTheme.colorScheme.primary,
                     onClick = onNavigateToPaywall,
+                )
+                ProtectionToggleCard(
+                    icon = Icons.Filled.Shield,
+                    title = "Auto-block high-confidence spam",
+                    description = "Silences high-confidence spam calls before they ring",
+                    color = dangerColor,
+                    checked = state.autoBlock,
+                    isPro = isPro,
+                    onCheckedChange = { viewModel.setAutoBlock(it) },
+                    onLockedClick = onNavigateToPaywall,
+                )
+                ProtectionToggleCard(
+                    icon = Icons.Outlined.VisibilityOff,
+                    title = "Block hidden numbers",
+                    description = "Reject calls from private or hidden number callers",
+                    color = MaterialTheme.colorScheme.primary,
+                    checked = state.blockHidden,
+                    isPro = isPro,
+                    onCheckedChange = { viewModel.setBlockHidden(it) },
+                    onLockedClick = onNavigateToPaywall,
+                )
+                FeatureBannerCard(
+                    icon = Icons.Outlined.FamilyRestroom,
+                    title = "Family Protection",
+                    description = "Shield up to 2 family members with one plan",
+                    color = MaterialTheme.colorScheme.secondary,
+                    onClick = onNavigateToFamilyProtection,
+                    isLocked = !isPro,
+                    onLockedClick = onNavigateToPaywall,
                 )
             }
         }
@@ -257,11 +296,14 @@ private fun FeatureBannerCard(
     description: String,
     color: Color,
     onClick: () -> Unit,
+    isLocked: Boolean = false,
+    onLockedClick: () -> Unit = {},
 ) {
+    val effectiveOnClick = if (isLocked) onLockedClick else onClick
     ElevatedCard(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
+            .clickable(onClick = effectiveOnClick),
         shape = RoundedCornerShape(20.dp),
         elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp),
     ) {
@@ -313,12 +355,31 @@ private fun FeatureBannerCard(
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                     )
                 }
-                Icon(
-                    Icons.AutoMirrored.Outlined.KeyboardArrowRight,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp),
-                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f),
-                )
+                if (isLocked) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        Icon(
+                            Icons.Outlined.Lock,
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp),
+                            tint = MaterialTheme.colorScheme.primary,
+                        )
+                        Text(
+                            "Pro",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                } else {
+                    Icon(
+                        Icons.AutoMirrored.Outlined.KeyboardArrowRight,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f),
+                    )
+                }
             }
         }
     }
@@ -479,6 +540,97 @@ private fun InlineStat(value: String, label: String, color: Color) {
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
         )
+    }
+}
+
+@Composable
+private fun ProtectionToggleCard(
+    icon: ImageVector,
+    title: String,
+    description: String,
+    color: Color,
+    checked: Boolean,
+    isPro: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    onLockedClick: () -> Unit,
+) {
+    ElevatedCard(
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(if (!isPro) Modifier.clickable(onClick = onLockedClick) else Modifier),
+        shape = RoundedCornerShape(20.dp),
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp),
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    Brush.horizontalGradient(
+                        listOf(
+                            color.copy(alpha = 0.12f),
+                            color.copy(alpha = 0.03f),
+                        )
+                    )
+                )
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 18.dp, vertical = 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(14.dp),
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(46.dp)
+                        .clip(CircleShape)
+                        .background(color.copy(alpha = 0.15f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        icon,
+                        contentDescription = null,
+                        modifier = Modifier.size(24.dp),
+                        tint = color,
+                    )
+                }
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(3.dp),
+                ) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Text(
+                        text = description,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                    )
+                }
+                if (isPro) {
+                    Switch(checked = checked, onCheckedChange = onCheckedChange)
+                } else {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        Icon(
+                            Icons.Outlined.Lock,
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp),
+                            tint = MaterialTheme.colorScheme.primary,
+                        )
+                        Text(
+                            "Pro",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 

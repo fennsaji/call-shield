@@ -14,22 +14,21 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
-import androidx.compose.material.icons.outlined.Block
-import androidx.compose.material.icons.outlined.CheckCircle
-import androidx.compose.material.icons.outlined.FilterList
-import androidx.compose.material.icons.outlined.DoNotDisturb
+import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.GppBad
-import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.LightMode
 import androidx.compose.material.icons.outlined.Notifications
-import androidx.compose.material.icons.outlined.PrivacyTip
+import androidx.compose.material.icons.outlined.PhoneAndroid
+import androidx.compose.material.icons.outlined.Shield
 import androidx.compose.material.icons.outlined.SaveAlt
 import androidx.compose.material.icons.outlined.Security
-import androidx.compose.material.icons.outlined.Shield
-import androidx.compose.material.icons.outlined.Star
-import androidx.compose.material.icons.outlined.VisibilityOff
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -40,31 +39,25 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.fenn.callshield.BuildConfig
 import com.fenn.callshield.R
+import com.fenn.callshield.ui.theme.ThemeMode
 import kotlinx.coroutines.launch
 
 @Composable
 fun SettingsScreen(
     modifier: Modifier = Modifier,
     onBack: () -> Unit = {},
-    onNavigateToBlocklist: () -> Unit = {},
-    onNavigateToWhitelist: () -> Unit = {},
-    onNavigateToPrefixRules: () -> Unit = {},
-    onNavigateToPrivacy: () -> Unit = {},
     onNavigateToTraiReported: () -> Unit = {},
-    onNavigateToDndManagement: () -> Unit = {},
-    onNavigateToPaywall: () -> Unit = {},
     onNavigateToPermissions: () -> Unit = {},
     onNavigateToBackup: () -> Unit = {},
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    val isPro by viewModel.isPro.collectAsStateWithLifecycle()
+    val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
 
     Column(
@@ -78,38 +71,11 @@ fun SettingsScreen(
             modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
         )
 
-        // ── Protection ────────────────────────────────────────────────────────
-        SectionHeader("Protection")
-        SettingRow(
-            icon = Icons.Outlined.Shield,
-            title = stringResource(R.string.settings_auto_block),
-            onClick = if (!isPro) onNavigateToPaywall else null,
-            trailing = {
-                if (isPro) {
-                    Switch(
-                        checked = state.autoBlock,
-                        onCheckedChange = { scope.launch { viewModel.setAutoBlock(it) } },
-                    )
-                } else {
-                    ProLockBadge()
-                }
-            },
-        )
-        HorizontalDivider(modifier = Modifier.padding(start = 56.dp))
-        SettingRow(
-            icon = Icons.Outlined.VisibilityOff,
-            title = "Block hidden numbers",
-            onClick = if (!isPro) onNavigateToPaywall else null,
-            trailing = {
-                if (isPro) {
-                    Switch(
-                        checked = state.blockHidden,
-                        onCheckedChange = { scope.launch { viewModel.setBlockHidden(it) } },
-                    )
-                } else {
-                    ProLockBadge()
-                }
-            },
+        // ── Appearance ────────────────────────────────────────────────────────
+        SectionHeader("Appearance")
+        ThemeSegmentedRow(
+            current = themeMode,
+            onSelect = { viewModel.setTheme(it) },
         )
 
         Spacer(Modifier.height(16.dp))
@@ -151,41 +117,12 @@ fun SettingsScreen(
 
         Spacer(Modifier.height(16.dp))
 
-        // ── Privacy ───────────────────────────────────────────────────────────
-        SectionHeader("Privacy")
-        SettingRow(
-            icon = Icons.Outlined.PrivacyTip,
-            title = stringResource(R.string.privacy_title),
-            onClick = onNavigateToPrivacy,
-            trailing = { ChevronIcon() },
-        )
-
-        Spacer(Modifier.height(16.dp))
-
         // ── Reports ───────────────────────────────────────────────────────────
         SectionHeader("Reports")
         SettingRow(
             icon = Icons.Outlined.GppBad,
             title = stringResource(R.string.trai_reported_numbers_title),
             onClick = onNavigateToTraiReported,
-            trailing = { ChevronIcon() },
-        )
-        HorizontalDivider(modifier = Modifier.padding(start = 56.dp))
-        SettingRow(
-            icon = Icons.Outlined.DoNotDisturb,
-            title = stringResource(R.string.dnd_title),
-            onClick = onNavigateToDndManagement,
-            trailing = { ChevronIcon() },
-        )
-
-        Spacer(Modifier.height(16.dp))
-
-        // ── Account ───────────────────────────────────────────────────────────
-        SectionHeader("Account")
-        SettingRow(
-            icon = Icons.Outlined.Star,
-            title = "Upgrade to Pro",
-            onClick = onNavigateToPaywall,
             trailing = { ChevronIcon() },
         )
 
@@ -239,7 +176,8 @@ private fun SettingRow(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 14.dp),
+                .height(56.dp)
+                .padding(horizontal = 20.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
@@ -259,6 +197,43 @@ private fun SettingRow(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ThemeSegmentedRow(
+    current: ThemeMode,
+    onSelect: (ThemeMode) -> Unit,
+) {
+    val options = listOf(
+        Triple(ThemeMode.SYSTEM, "Default", Icons.Outlined.PhoneAndroid),
+        Triple(ThemeMode.LIGHT,  "Light",   Icons.Outlined.LightMode),
+        Triple(ThemeMode.DARK,   "Dark",    Icons.Outlined.DarkMode),
+    )
+    Surface(
+        tonalElevation = 1.dp,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        SingleChoiceSegmentedButtonRow(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 12.dp),
+        ) {
+            options.forEachIndexed { index, (mode, label, icon) ->
+                SegmentedButton(
+                    selected = current == mode,
+                    onClick = { onSelect(mode) },
+                    shape = SegmentedButtonDefaults.itemShape(index = index, count = options.size),
+                    icon = {
+                        SegmentedButtonDefaults.ActiveIcon()
+                        Icon(icon, contentDescription = null, modifier = Modifier.size(16.dp))
+                    },
+                ) {
+                    Text(label, style = MaterialTheme.typography.labelMedium)
+                }
+            }
+        }
+    }
+}
+
 @Composable
 private fun ChevronIcon() {
     Icon(
@@ -269,23 +244,3 @@ private fun ChevronIcon() {
     )
 }
 
-@Composable
-private fun ProLockBadge() {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        Icon(
-            Icons.Outlined.Lock,
-            contentDescription = null,
-            modifier = Modifier.size(14.dp),
-            tint = MaterialTheme.colorScheme.primary,
-        )
-        Text(
-            "Pro",
-            style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.primary,
-        )
-    }
-}

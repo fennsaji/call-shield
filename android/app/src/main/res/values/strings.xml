@@ -90,6 +90,9 @@
     <string name="pro_feature_prefix">Custom prefix rules</string>
     <string name="pro_price_annual">₹399 / year</string>
     <string name="pro_price_monthly">₹49 / month</string>
+    <string name="pro_price_lifetime">₹699</string>
+    <string name="pro_lifetime_label">Lifetime Access</string>
+    <string name="pro_lifetime_subtitle">One-time payment. All Pro features, no recurring charges. Best value for long-term users.</string>
     <string name="pro_subscribe">Subscribe</string>
     <string name="pro_restore">Restore purchase</string>
     <string name="pro_terms">Terms &amp; Privacy</string>
@@ -173,7 +176,7 @@
     <string name="dnd_call_1909">Call 1909 to Check Status</string>
     <string name="dnd_ivr_info">To check your current DND status, call 1909 (toll-free) and follow the IVR — STATUS via SMS is not supported by operators.</string>
     <string name="dnd_mark_confirmed">Mark as Confirmed</string>
-    <string name="dnd_info">DND only covers registered telemarketers. Scam calls from random or VoIP numbers bypass it — CallGuard handles those separately.</string>
+    <string name="dnd_info">DND only covers registered telemarketers. Scam calls from random or VoIP numbers bypass it — CallShield handles those separately.</string>
     <string name="dnd_disclaimer">Tapping opens your SMS app with the command pre-filled. Send it to apply. TRAI confirms within 24 hours via SMS.</string>
     <string name="dnd_cat_banking">Banking / Insurance / Financial</string>
     <string name="dnd_cat_realestate">Real Estate</string>

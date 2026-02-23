@@ -46,21 +46,6 @@ If Phase 2 behavioral detection + a well-maintained seed DB achieves acceptable 
 
 ---
 
-## 4. Carrier & Regulatory Partnerships (Business Development, Not Engineering)
-
-Carrier integrations (Airtel, Jio, Vi, TRAI) require business development relationships, regulatory approvals, and legal agreements that take years to establish and are outside the engineering team's control. This is not scoped as an engineering deliverable.
-
-If carrier partnerships become commercially viable, they will be pursued as a business development effort with dedicated resources. Engineering work (e.g., an API integration) would follow only after a signed agreement and API specification are in hand.
-
-**Phase 4 action:** evaluate carrier partnership opportunities; engage in exploratory conversations with regulatory bodies. Do not build integration code without a confirmed partner.
-
----
-
-## 5. Enterprise Offering (Out of Scope — Evaluate as Separate Product)
-
-An enterprise anti-scam product (bulk dashboard, centralized policy, SLAs) is a different product requiring a different sales motion, support model, infrastructure (multi-tenancy, SSO, audit logs), and pricing. It cannot be built as a Phase 4 extension of the consumer app without effectively starting a second product line.
-
-If enterprise protection is strategically pursued after Phase 2 validation, it should be scoped, resourced, and evaluated as a standalone product — not as a feature of the consumer app.
 
 ---
 

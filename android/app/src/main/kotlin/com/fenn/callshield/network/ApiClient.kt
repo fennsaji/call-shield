@@ -44,10 +44,17 @@ class ApiClient @Inject constructor() {
 
     private val baseUrl = "${BuildConfig.SUPABASE_URL}/functions/v1"
 
+    private fun checkConfigured() {
+        check(BuildConfig.SUPABASE_URL.isNotBlank()) {
+            "SUPABASE_URL is not configured. Add it to local.properties."
+        }
+    }
+
     suspend fun getReputation(
         numberHash: String,
         deviceTokenHash: String,
     ): ReputationResponse {
+        checkConfigured()
         val response = http.get("$baseUrl/reputation") {
             url {
                 parameters.append("number_hash", numberHash)
@@ -65,24 +72,30 @@ class ApiClient @Inject constructor() {
         deviceTokenHash: String,
         category: String,
     ): Boolean {
+        checkConfigured()
         val response = http.post("$baseUrl/report") {
             contentType(ContentType.Application.Json)
-            header("x-device-token", deviceTokenHash)
-            setBody(ReportRequest(number_hash = numberHash, category = category))
+            setBody(ReportRequest(number_hash = numberHash, device_token_hash = deviceTokenHash, category = category))
         }
-        return response.status == HttpStatusCode.OK
+        if (response.status != HttpStatusCode.OK) {
+            throw ApiException(response.status.value, response.bodyAsText())
+        }
+        return true
     }
 
     suspend fun postCorrect(
         numberHash: String,
         deviceTokenHash: String,
     ): Boolean {
+        checkConfigured()
         val response = http.post("$baseUrl/correct") {
             contentType(ContentType.Application.Json)
-            header("x-device-token", deviceTokenHash)
-            setBody(CorrectRequest(number_hash = numberHash))
+            setBody(CorrectRequest(number_hash = numberHash, device_token_hash = deviceTokenHash))
         }
-        return response.status == HttpStatusCode.OK
+        if (response.status != HttpStatusCode.OK) {
+            throw ApiException(response.status.value, response.bodyAsText())
+        }
+        return true
     }
 
     suspend fun getSeedDbManifest(deviceTokenHash: String): SeedDbManifestResponse {
@@ -109,12 +122,14 @@ data class ReputationResponse(
 @Serializable
 data class ReportRequest(
     val number_hash: String,
+    val device_token_hash: String,
     val category: String,
 )
 
 @Serializable
 data class CorrectRequest(
     val number_hash: String,
+    val device_token_hash: String,
 )
 
 @Serializable

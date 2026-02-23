@@ -28,6 +28,7 @@ import kotlin.coroutines.resume
 const val PRODUCT_PRO_ANNUAL    = "callshield_pro_annual"
 const val PRODUCT_PRO_MONTHLY   = "callshield_pro_monthly"
 const val PRODUCT_FAMILY_ANNUAL = "callshield_family_annual"  // Phase 3 — ₹699/year
+const val PRODUCT_PRO_LIFETIME  = "callshield_pro_lifetime"   // Phase 4 — ₹599–799 one-time
 
 @Singleton
 class BillingManager @Inject constructor(
@@ -71,7 +72,7 @@ class BillingManager @Inject constructor(
     }
 
     suspend fun queryProducts(): List<ProductDetails> {
-        val params = QueryProductDetailsParams.newBuilder()
+        val subsParams = QueryProductDetailsParams.newBuilder()
             .setProductList(
                 listOf(
                     QueryProductDetailsParams.Product.newBuilder()
@@ -90,22 +91,44 @@ class BillingManager @Inject constructor(
             )
             .build()
 
-        val result = billingClient.queryProductDetails(params)
-        productDetails = result.productDetailsList ?: emptyList()
+        val inAppParams = QueryProductDetailsParams.newBuilder()
+            .setProductList(
+                listOf(
+                    QueryProductDetailsParams.Product.newBuilder()
+                        .setProductId(PRODUCT_PRO_LIFETIME)
+                        .setProductType(BillingClient.ProductType.INAPP)
+                        .build(),
+                )
+            )
+            .build()
+
+        val subsResult = billingClient.queryProductDetails(subsParams)
+        val inAppResult = billingClient.queryProductDetails(inAppParams)
+        productDetails = (subsResult.productDetailsList ?: emptyList()) +
+            (inAppResult.productDetailsList ?: emptyList())
         return productDetails
     }
 
     suspend fun refreshSubscriptionStatus() {
-        val params = QueryPurchasesParams.newBuilder()
+        val subsParams = QueryPurchasesParams.newBuilder()
             .setProductType(BillingClient.ProductType.SUBS)
             .build()
-        val result = billingClient.queryPurchasesAsync(params)
-        val purchases = result.purchasesList
-        val hasFamily = purchases.any { p ->
+        val inAppParams = QueryPurchasesParams.newBuilder()
+            .setProductType(BillingClient.ProductType.INAPP)
+            .build()
+
+        val subsPurchases = billingClient.queryPurchasesAsync(subsParams).purchasesList
+        val inAppPurchases = billingClient.queryPurchasesAsync(inAppParams).purchasesList
+
+        val hasFamily = subsPurchases.any { p ->
             p.purchaseState == Purchase.PurchaseState.PURCHASED &&
                 p.products.contains(PRODUCT_FAMILY_ANNUAL)
         }
-        val hasPro = hasFamily || purchases.any { p ->
+        val hasLifetime = inAppPurchases.any { p ->
+            p.purchaseState == Purchase.PurchaseState.PURCHASED &&
+                p.products.contains(PRODUCT_PRO_LIFETIME)
+        }
+        val hasPro = hasFamily || hasLifetime || subsPurchases.any { p ->
             p.purchaseState == Purchase.PurchaseState.PURCHASED &&
                 (p.products.contains(PRODUCT_PRO_ANNUAL) || p.products.contains(PRODUCT_PRO_MONTHLY))
         }
@@ -113,6 +136,7 @@ class BillingManager @Inject constructor(
         _isPro.value = hasPro
     }
 
+    /** Launch billing flow for subscription products (annual/monthly/family). */
     fun launchBillingFlow(activity: Activity, productDetails: ProductDetails): BillingResult {
         val offerToken = productDetails.subscriptionOfferDetails?.firstOrNull()?.offerToken
             ?: return BillingResult.newBuilder()
@@ -122,6 +146,19 @@ class BillingManager @Inject constructor(
         val productDetailsParams = BillingFlowParams.ProductDetailsParams.newBuilder()
             .setProductDetails(productDetails)
             .setOfferToken(offerToken)
+            .build()
+
+        val flowParams = BillingFlowParams.newBuilder()
+            .setProductDetailsParamsList(listOf(productDetailsParams))
+            .build()
+
+        return billingClient.launchBillingFlow(activity, flowParams)
+    }
+
+    /** Launch billing flow for one-time IN_APP products (lifetime plan). */
+    fun launchInAppBillingFlow(activity: Activity, productDetails: ProductDetails): BillingResult {
+        val productDetailsParams = BillingFlowParams.ProductDetailsParams.newBuilder()
+            .setProductDetails(productDetails)
             .build()
 
         val flowParams = BillingFlowParams.newBuilder()
@@ -144,7 +181,11 @@ class BillingManager @Inject constructor(
                 p.purchaseState == Purchase.PurchaseState.PURCHASED &&
                     p.products.contains(PRODUCT_FAMILY_ANNUAL)
             }
-            val hasPro = hasFamily || purchases.any { p ->
+            val hasLifetime = purchases.any { p ->
+                p.purchaseState == Purchase.PurchaseState.PURCHASED &&
+                    p.products.contains(PRODUCT_PRO_LIFETIME)
+            }
+            val hasPro = hasFamily || hasLifetime || purchases.any { p ->
                 p.purchaseState == Purchase.PurchaseState.PURCHASED &&
                     (p.products.contains(PRODUCT_PRO_ANNUAL) || p.products.contains(PRODUCT_PRO_MONTHLY))
             }
