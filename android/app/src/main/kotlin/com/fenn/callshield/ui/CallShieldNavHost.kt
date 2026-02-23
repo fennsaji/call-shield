@@ -38,7 +38,7 @@ object Destinations {
     const val PERMISSIONS = "permissions"
     const val PERMISSIONS_SETTINGS = "permissions_settings"
     const val HOME = "home"
-    const val REPORT_SPAM = "report_spam/{numberHash}/{displayLabel}"
+    const val REPORT_SPAM = "report_spam/{numberHash}/{displayLabel}?screenedAt={screenedAt}"
     const val BLOCKLIST = "blocklist"
     const val WHITELIST = "whitelist"
     const val PREFIX_RULES = "prefix_rules"
@@ -49,8 +49,8 @@ object Destinations {
     const val FAMILY_PROTECTION = "family_protection"
     const val PAYWALL = "paywall?trigger={trigger}"
 
-    fun reportSpam(numberHash: String, displayLabel: String) =
-        "report_spam/${Uri.encode(numberHash)}/${Uri.encode(displayLabel)}"
+    fun reportSpam(numberHash: String, displayLabel: String, screenedAt: Long = 0L) =
+        "report_spam/${Uri.encode(numberHash)}/${Uri.encode(displayLabel)}?screenedAt=$screenedAt"
 
     /** Concrete paywall route with the trigger value substituted. */
     fun paywallRoute(trigger: Boolean = false) = "paywall?trigger=$trigger"
@@ -128,8 +128,8 @@ fun CallShieldNavHost(
                 onNavigateToPermissions = { navController.navigate(Destinations.PERMISSIONS_SETTINGS) },
                 onNavigateToBackup = { navController.navigate(Destinations.BACKUP) },
                 onNavigateToFamilyProtection = { navController.navigate(Destinations.FAMILY_PROTECTION) },
-                onNavigateToReport = { hash, label ->
-                    navController.navigate(Destinations.reportSpam(hash, label))
+                onNavigateToReport = { hash, label, screenedAt ->
+                    navController.navigate(Destinations.reportSpam(hash, label, screenedAt))
                 },
             )
         }
@@ -139,6 +139,7 @@ fun CallShieldNavHost(
             arguments = listOf(
                 navArgument("numberHash") { type = NavType.StringType },
                 navArgument("displayLabel") { type = NavType.StringType },
+                navArgument("screenedAt") { type = NavType.LongType; defaultValue = 0L },
             ),
             enterTransition = { slideInVertically(initialOffsetY = { it }) + fadeIn() },
             exitTransition = { slideOutVertically(targetOffsetY = { it }) + fadeOut() },
@@ -148,6 +149,7 @@ fun CallShieldNavHost(
             ReportSpamScreen(
                 numberHash = backStackEntry.arguments?.getString("numberHash") ?: "",
                 displayLabel = backStackEntry.arguments?.getString("displayLabel") ?: "",
+                screenedAt = backStackEntry.arguments?.getLong("screenedAt") ?: 0L,
                 onDismiss = { navController.popBackStack() },
             )
         }

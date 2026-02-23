@@ -361,7 +361,22 @@ start_logcat
 printf "${CYAN}Press 'r' to rebuild · 'q' to quit${NC}\n"
 printf "${BLUE}──────────────────────────────────────────────${NC}\n"
 
-trap "kill \$LOGCAT_PID 2>/dev/null; printf '\n${YELLOW}👋 Exiting.${NC}\n'; exit 0" INT
+# Switch terminal to single-char mode so each keypress is delivered immediately
+# without waiting for Enter. Save current settings and restore on exit.
+# min=1 (wait for 1 char) + bash -t timeout = reliable non-blocking read.
+# min=0 is NOT used — it makes read() return instantly even with no input,
+# causing bash's read -t to always time out before the keypress is seen.
+SAVED_TTY=""
+if [ -t 0 ]; then
+    SAVED_TTY=$(stty -g 2>/dev/null)
+    stty -echo -icanon min 1 time 0 2>/dev/null
+fi
+
+restore_tty() {
+    [ -n "$SAVED_TTY" ] && stty "$SAVED_TTY" 2>/dev/null
+}
+
+trap "restore_tty; kill \$LOGCAT_PID 2>/dev/null; printf '\n${YELLOW}👋 Exiting.${NC}\n'; exit 0" INT TERM
 
 while true; do
     # Exit loop if logcat died unexpectedly
@@ -369,12 +384,12 @@ while true; do
         printf "${YELLOW}⚠️  Logcat process ended.${NC}\n"
         break
     fi
-    # read -n 1 reads one character; -s hides it; -t 0.5 times out so the loop
-    # keeps checking whether logcat is still alive
-    if read -r -n 1 -s -t 0.5 key 2>/dev/null; then
+    # Read directly from /dev/tty to avoid any stdin-redirection issues
+    if IFS= read -r -n 1 -t 0.5 key </dev/tty 2>/dev/null; then
         case "$key" in
             r|R) rebuild_and_reinstall ;;
             q|Q)
+                restore_tty
                 kill $LOGCAT_PID 2>/dev/null
                 printf "\n${YELLOW}👋 Exiting.${NC}\n"
                 exit 0
@@ -382,3 +397,5 @@ while true; do
         esac
     fi
 done
+
+restore_tty

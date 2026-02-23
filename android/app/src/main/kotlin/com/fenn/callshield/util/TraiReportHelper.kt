@@ -30,15 +30,24 @@ object TraiReportHelper {
     private val DATE_FORMAT = SimpleDateFormat("dd/MM/yy", Locale("en", "IN"))
 
     /**
-     * Creates an SMS complaint to 1909 in the TRAI-confirmed format:
-     * "Received unsolicited spam call, <displayLabel>, <dd/mm/yy>"
+     * Creates an SMS complaint to 1909.
      *
-     * @param displayLabel The caller's number or label. User edits if needed.
+     * If [body] is a complete pre-built message, it is used as-is.
+     * Otherwise the TRAI-confirmed format is applied:
+     * "Received unsolicited spam call, <body>, <dd/mm/yy>"
+     *
+     * @param body Full SMS body OR caller label (auto-wrapped if it looks like a label).
      */
-    fun createSmsIntent(displayLabel: String): Intent {
-        val today = DATE_FORMAT.format(Date())
-        val body = "Received unsolicited spam call, $displayLabel, $today"
-        return smsIntent(body)
+    fun createSmsIntent(body: String): Intent {
+        val smsBody = if (body.contains(' ') || body.length > 30) {
+            // Already a full description — use as-is
+            body
+        } else {
+            // Short label (e.g. "+91****3210") — wrap in standard format
+            val today = DATE_FORMAT.format(Date())
+            "Received unsolicited spam call, $body, $today"
+        }
+        return smsIntent(smsBody)
     }
 
     /** SMS "FULLY BLOCK" — blocks all promotional calls and SMS. */

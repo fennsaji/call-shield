@@ -77,7 +77,7 @@ fun HomeScreen(
     onNavigateToPaywall: () -> Unit,
     onNavigateToDndManagement: () -> Unit = {},
     onNavigateToFamilyProtection: () -> Unit = {},
-    onNavigateToReport: (hash: String, label: String) -> Unit,
+    onNavigateToReport: (hash: String, label: String, screenedAt: Long) -> Unit,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()

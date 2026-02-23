@@ -41,7 +41,7 @@ fun MainScreen(
     onNavigateToPermissions: () -> Unit,
     onNavigateToBackup: () -> Unit,
     onNavigateToFamilyProtection: () -> Unit,
-    onNavigateToReport: (hash: String, label: String) -> Unit,
+    onNavigateToReport: (hash: String, label: String, screenedAt: Long) -> Unit,
 ) {
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
     val snackbarHostState = remember { SnackbarHostState() }

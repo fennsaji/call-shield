@@ -1,7 +1,5 @@
 package com.fenn.callshield.ui.screens.reason
 
-import android.content.ActivityNotFoundException
-import android.content.Context
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -37,17 +35,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.fenn.callshield.Phase2Flags
 import com.fenn.callshield.R
 import com.fenn.callshield.data.local.entity.CallHistoryEntry
 import com.fenn.callshield.domain.model.DecisionSource
 import com.fenn.callshield.ui.theme.LocalDangerColor
 import com.fenn.callshield.ui.theme.LocalWarningColor
-import com.fenn.callshield.util.TraiReportHelper
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
@@ -68,7 +63,6 @@ fun ReasonTransparencySheet(
     val scope = rememberCoroutineScope()
     val dangerColor = LocalDangerColor.current
     val warningColor = LocalWarningColor.current
-    val context = LocalContext.current
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -250,32 +244,10 @@ fun ReasonTransparencySheet(
                 Text(stringResource(R.string.report_title))
             }
 
-            if (Phase2Flags.TRAI_REPORT) {
-                OutlinedButton(
-                    onClick = {
-                        scope.launch {
-                            sheetState.hide()
-                            launchTraiReport(context, entry.displayLabel)
-                            onTraiReported()
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text(stringResource(R.string.trai_report_button))
-                }
-            }
         }
     }
 }
 
-private fun launchTraiReport(context: Context, maskedLabel: String) {
-    try {
-        context.startActivity(TraiReportHelper.createSmsIntent(maskedLabel))
-    } catch (e: ActivityNotFoundException) {
-        // No SMS app — fall back to dialer
-        context.startActivity(TraiReportHelper.createCallIntent())
-    }
-}
 
 @Composable
 private fun ReasonRow(
