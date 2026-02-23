@@ -21,6 +21,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.WorkspacePremium
 import androidx.compose.material.icons.outlined.FilterList
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -261,6 +262,14 @@ fun PaywallScreen(
                         }
                     }
 
+                    // ── Lifetime plan card (one-time purchase) ─────────────────
+                    state.lifetimeProduct?.let { lifetime ->
+                        LifetimePlanCard(
+                            product = lifetime,
+                            onClick = { viewModel.purchase(context, lifetime) },
+                        )
+                    }
+
                     TextButton(
                         onClick = { viewModel.restorePurchase() },
                         modifier = Modifier.fillMaxWidth(),
@@ -302,6 +311,75 @@ fun PaywallScreen(
                         .padding(bottom = 24.dp),
                     textAlign = TextAlign.Center,
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun LifetimePlanCard(
+    product: ProductDetails,
+    onClick: () -> Unit,
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Icon(
+                Icons.Filled.WorkspacePremium,
+                contentDescription = null,
+                modifier = Modifier.size(20.dp),
+                tint = MaterialTheme.colorScheme.tertiary,
+            )
+            Text(
+                stringResource(R.string.pro_lifetime_label),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
+        }
+        Text(
+            stringResource(R.string.pro_lifetime_subtitle),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+        )
+        OutlinedCard(
+            onClick = onClick,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Box(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                Column {
+                    Text(
+                        product.oneTimePurchaseOfferDetails?.formattedPrice
+                            ?: stringResource(R.string.pro_price_lifetime),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Medium,
+                    )
+                    Text(
+                        "Pay once, protected forever",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                    )
+                }
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .background(
+                            color = MaterialTheme.colorScheme.tertiary,
+                            shape = RoundedCornerShape(6.dp),
+                        )
+                        .padding(horizontal = 8.dp, vertical = 3.dp),
+                ) {
+                    Text(
+                        "One-time",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onTertiary,
+                    )
+                }
             }
         }
     }

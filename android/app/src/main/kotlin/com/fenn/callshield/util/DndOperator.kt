@@ -5,13 +5,13 @@ package com.fenn.callshield.util
  *
  * Operators use different command syntax to interact with TRAI's 1909 DND service.
  *
- * Key differences (confirmed by user testing on Jio + Airtel, research for others):
- *   - Jio uses 2025 TRAI amendment syntax: FULLY BLOCK / BLOCK 1,4 / UNBLOCK ALL
- *   - Airtel uses legacy TRAI syntax: START 0 / START 1,4 / UNBLOCK ALL
- *   - Vi appears to follow Jio/2025 syntax for full block, legacy START for categories
- *   - BSNL uses legacy START syntax and has its own STOP DND deactivation command
- *
- * BLOCK PROMO is a 2025 TRAI standard command and is used universally (not operator-specific).
+ * Key differences (confirmed by user testing on Jio + Airtel):
+ *   - Jio full block: START 0 (FULLY BLOCK does NOT work on Jio)
+ *   - Jio partial block: BLOCK 1,4 or START 1,4 both work; BLOCK PROMO works
+ *   - Jio deactivate: UNBLOCK ALL confirmed working
+ *   - Airtel full block: FULLY BLOCK confirmed working
+ *   - Vi full block: FULLY BLOCK confirmed working
+ *   - BSNL: legacy START syntax; STOP DND to deactivate
  */
 enum class DndOperator(val displayName: String) {
     JIO("Jio"),
@@ -22,8 +22,8 @@ enum class DndOperator(val displayName: String) {
 
     /** SMS command to activate Full DND (blocks all promotional). */
     fun fullBlockCommand(): String = when (this) {
-        JIO, VI, OTHER -> "FULLY BLOCK"
-        AIRTEL, BSNL -> "START 0"
+        AIRTEL, VI, OTHER -> "FULLY BLOCK"
+        JIO, BSNL -> "START 0"
     }
 
     /**
@@ -33,8 +33,8 @@ enum class DndOperator(val displayName: String) {
     fun partialBlockCommand(categories: List<Int>): String {
         val sorted = categories.sorted().joinToString(",")
         return when (this) {
-            JIO, OTHER -> "BLOCK $sorted"
-            AIRTEL, VI, BSNL -> "START $sorted"
+            JIO, AIRTEL, VI, OTHER -> "BLOCK $sorted"
+            BSNL -> "START $sorted"
         }
     }
 

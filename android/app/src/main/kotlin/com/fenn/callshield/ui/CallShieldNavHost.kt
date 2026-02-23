@@ -19,6 +19,12 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.fenn.callshield.data.preferences.ScreeningPreferences
 import com.fenn.callshield.screening.PaywallTriggerManager
+import com.fenn.callshield.ui.screens.advancedblocker.AdvancedBlockingScreen
+import com.fenn.callshield.ui.screens.advancedblocker.ContactPoliciesScreen
+import com.fenn.callshield.ui.screens.advancedblocker.DecisionOrderScreen
+import com.fenn.callshield.ui.screens.advancedblocker.NumberRulesScreen
+import com.fenn.callshield.ui.screens.advancedblocker.RegionPoliciesScreen
+import com.fenn.callshield.ui.screens.advancedblocker.TimePoliciesScreen
 import com.fenn.callshield.ui.screens.backup.BackupScreen
 import com.fenn.callshield.ui.screens.blocklist.BlocklistScreen
 import com.fenn.callshield.ui.screens.family.FamilyProtectionScreen
@@ -38,7 +44,7 @@ object Destinations {
     const val PERMISSIONS = "permissions"
     const val PERMISSIONS_SETTINGS = "permissions_settings"
     const val HOME = "home"
-    const val REPORT_SPAM = "report_spam/{numberHash}/{displayLabel}"
+    const val REPORT_SPAM = "report_spam/{numberHash}/{displayLabel}?screenedAt={screenedAt}"
     const val BLOCKLIST = "blocklist"
     const val WHITELIST = "whitelist"
     const val PREFIX_RULES = "prefix_rules"
@@ -48,9 +54,16 @@ object Destinations {
     const val BACKUP = "backup"
     const val FAMILY_PROTECTION = "family_protection"
     const val PAYWALL = "paywall?trigger={trigger}"
+    // Advanced Blocking
+    const val ADVANCED_BLOCKING = "advanced_blocking"
+    const val CONTACT_POLICIES = "contact_policies"
+    const val TIME_POLICIES = "time_policies"
+    const val REGION_POLICIES = "region_policies"
+    const val NUMBER_RULES = "number_rules"
+    const val DECISION_ORDER = "decision_order"
 
-    fun reportSpam(numberHash: String, displayLabel: String) =
-        "report_spam/${Uri.encode(numberHash)}/${Uri.encode(displayLabel)}"
+    fun reportSpam(numberHash: String, displayLabel: String, screenedAt: Long = 0L) =
+        "report_spam/${Uri.encode(numberHash)}/${Uri.encode(displayLabel)}?screenedAt=$screenedAt"
 
     /** Concrete paywall route with the trigger value substituted. */
     fun paywallRoute(trigger: Boolean = false) = "paywall?trigger=$trigger"
@@ -128,8 +141,9 @@ fun CallShieldNavHost(
                 onNavigateToPermissions = { navController.navigate(Destinations.PERMISSIONS_SETTINGS) },
                 onNavigateToBackup = { navController.navigate(Destinations.BACKUP) },
                 onNavigateToFamilyProtection = { navController.navigate(Destinations.FAMILY_PROTECTION) },
-                onNavigateToReport = { hash, label ->
-                    navController.navigate(Destinations.reportSpam(hash, label))
+                onNavigateToAdvancedBlocking = { navController.navigate(Destinations.ADVANCED_BLOCKING) },
+                onNavigateToReport = { hash, label, screenedAt ->
+                    navController.navigate(Destinations.reportSpam(hash, label, screenedAt))
                 },
             )
         }
@@ -139,6 +153,7 @@ fun CallShieldNavHost(
             arguments = listOf(
                 navArgument("numberHash") { type = NavType.StringType },
                 navArgument("displayLabel") { type = NavType.StringType },
+                navArgument("screenedAt") { type = NavType.LongType; defaultValue = 0L },
             ),
             enterTransition = { slideInVertically(initialOffsetY = { it }) + fadeIn() },
             exitTransition = { slideOutVertically(targetOffsetY = { it }) + fadeOut() },
@@ -148,6 +163,7 @@ fun CallShieldNavHost(
             ReportSpamScreen(
                 numberHash = backStackEntry.arguments?.getString("numberHash") ?: "",
                 displayLabel = backStackEntry.arguments?.getString("displayLabel") ?: "",
+                screenedAt = backStackEntry.arguments?.getLong("screenedAt") ?: 0L,
                 onDismiss = { navController.popBackStack() },
             )
         }
@@ -168,7 +184,10 @@ fun CallShieldNavHost(
         }
 
         composable(Destinations.PREFIX_RULES) {
-            PrefixRulesScreen(onBack = { navController.popBackStack() })
+            PrefixRulesScreen(
+                onBack = { navController.popBackStack() },
+                onNavigateToPaywall = { navController.navigate(Destinations.paywallRoute()) },
+            )
         }
 
         composable(Destinations.PRIVACY_DASHBOARD) {
@@ -206,6 +225,46 @@ fun CallShieldNavHost(
                 onDismiss = { navController.popBackStack() },
                 fromTrigger = backStackEntry.arguments?.getBoolean("trigger") ?: false,
             )
+        }
+
+        // ── Advanced Blocking ─────────────────────────────────────────────────
+
+        composable(Destinations.ADVANCED_BLOCKING) {
+            AdvancedBlockingScreen(
+                onBack = { navController.popBackStack() },
+                onNavigateToContactPolicies = { navController.navigate(Destinations.CONTACT_POLICIES) },
+                onNavigateToTimePolicies = { navController.navigate(Destinations.TIME_POLICIES) },
+                onNavigateToRegionPolicies = { navController.navigate(Destinations.REGION_POLICIES) },
+                onNavigateToNumberRules = { navController.navigate(Destinations.NUMBER_RULES) },
+                onNavigateToDecisionOrder = { navController.navigate(Destinations.DECISION_ORDER) },
+            )
+        }
+
+        composable(Destinations.CONTACT_POLICIES) {
+            ContactPoliciesScreen(onBack = { navController.popBackStack() })
+        }
+
+        composable(Destinations.TIME_POLICIES) {
+            TimePoliciesScreen(
+                onBack = { navController.popBackStack() },
+                onNavigateToPaywall = { navController.navigate(Destinations.paywallRoute()) },
+            )
+        }
+
+        composable(Destinations.REGION_POLICIES) {
+            RegionPoliciesScreen(onBack = { navController.popBackStack() })
+        }
+
+        composable(Destinations.NUMBER_RULES) {
+            NumberRulesScreen(
+                onBack = { navController.popBackStack() },
+                onNavigateToBlocklist = { navController.navigate(Destinations.BLOCKLIST) },
+                onNavigateToWhitelist = { navController.navigate(Destinations.WHITELIST) },
+            )
+        }
+
+        composable(Destinations.DECISION_ORDER) {
+            DecisionOrderScreen(onBack = { navController.popBackStack() })
         }
     }
 }

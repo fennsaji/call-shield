@@ -36,6 +36,11 @@ android {
 
         // HMAC static salt — bundled in binary, not a secret
         buildConfigField("String", "HMAC_SALT", "\"${project.findProperty("HMAC_SALT") ?: "callshield-v1-salt-2024"}\"")
+
+        // Promo code — store only the SHA-256 hash; the raw code is never compiled into the APK
+        // Generate: echo -n "YOUR_CODE" | shasum -a 256
+        buildConfigField("String", "PROMO_CODE_HASH", "\"${project.findProperty("PROMO_CODE_HASH") ?: ""}\"")
+
     }
 
     signingConfigs {

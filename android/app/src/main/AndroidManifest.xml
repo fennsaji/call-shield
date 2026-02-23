@@ -13,7 +13,9 @@
     <!-- Call Screening role — not a permission, requested via RoleManager -->
     <!-- android.app.role.CALL_SCREENING is declared in the service below -->
 
-    <!-- NOT requested: READ_CALL_LOG, READ_CONTACTS, RECORD_AUDIO -->
+    <!-- READ_CONTACTS — used only for Contacts Only blocking mode (Advanced Blocking Policy).
+         Numbers are never uploaded; lookup is on-device only. -->
+    <uses-permission android:name="android.permission.READ_CONTACTS" />
 
     <!-- Package visibility: required on API 30+ for resolving implicit intents -->
     <queries>

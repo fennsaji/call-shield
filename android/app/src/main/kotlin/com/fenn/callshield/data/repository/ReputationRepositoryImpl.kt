@@ -61,12 +61,13 @@ class ReputationRepositoryImpl @Inject constructor(
 
     override suspend fun submitReport(numberHash: String, category: String): Result<Unit> {
         return try {
-            apiClient.postReport(
+            val ok = apiClient.postReport(
                 numberHash = numberHash,
                 deviceTokenHash = deviceTokenManager.deviceTokenHash,
                 category = category,
             )
-            Result.success(Unit)
+            if (ok) Result.success(Unit)
+            else Result.failure(Exception("Server rejected the report"))
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -74,11 +75,12 @@ class ReputationRepositoryImpl @Inject constructor(
 
     override suspend fun submitCorrection(numberHash: String): Result<Unit> {
         return try {
-            apiClient.postCorrect(
+            val ok = apiClient.postCorrect(
                 numberHash = numberHash,
                 deviceTokenHash = deviceTokenManager.deviceTokenHash,
             )
-            Result.success(Unit)
+            if (ok) Result.success(Unit)
+            else Result.failure(Exception("Server rejected the correction"))
         } catch (e: Exception) {
             Result.failure(e)
         }

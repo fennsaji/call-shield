@@ -265,7 +265,9 @@ fun DndManagementScreen(
             }
 
             // ── Send CTA ─────────────────────────────────────────────────────
-            val sendEnabled = state.displayedMode != null &&
+            val operatorSelected = state.operator != null
+            val sendEnabled = operatorSelected &&
+                state.displayedMode != null &&
                 (state.displayedMode != DndMode.CUSTOM || state.displayedCategories.isNotEmpty())
             Button(
                 onClick = {
@@ -331,8 +333,11 @@ fun DndManagementScreen(
                 )
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    text = if (sendEnabled) stringResource(R.string.dnd_send_button)
-                    else stringResource(R.string.dnd_up_to_date),
+                    text = when {
+                        !operatorSelected -> "Select your operator first"
+                        sendEnabled -> stringResource(R.string.dnd_send_button)
+                        else -> stringResource(R.string.dnd_up_to_date)
+                    },
                     style = MaterialTheme.typography.labelLarge,
                 )
             }
@@ -347,6 +352,7 @@ fun DndManagementScreen(
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 OutlinedButton(
+                    enabled = operatorSelected,
                     onClick = {
                         val cmd = (state.operator ?: DndOperator.OTHER).deactivateCommand()
                         pendingAction = PendingAction(
