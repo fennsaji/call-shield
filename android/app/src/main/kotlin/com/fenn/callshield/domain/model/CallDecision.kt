@@ -47,6 +47,7 @@ enum class DecisionSource(val displayLabel: String) {
     BLOCKLIST("In your blocklist"),
     PREFIX("Matched prefix rule"),
     HIDDEN("Hidden / private number"),
+    ADVANCED_BLOCKING("Blocked by protection policy"),
     SEED_DB("Found in local spam database"),
     REMOTE("Reported by community"),
     BEHAVIORAL("Suspicious call pattern"),

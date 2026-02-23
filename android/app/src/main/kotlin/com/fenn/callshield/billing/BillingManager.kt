@@ -33,6 +33,8 @@ const val PRODUCT_PRO_LIFETIME  = "callshield_pro_lifetime"   // Phase 4 — ₹
 @Singleton
 class BillingManager @Inject constructor(
     @ApplicationContext private val context: Context,
+    private val promoGrantManager: PromoGrantManager,
+    private val deviceTokenManager: com.fenn.callshield.util.DeviceTokenManager,
 ) : PurchasesUpdatedListener {
 
     private val _isPro    = MutableStateFlow(false)
@@ -128,12 +130,23 @@ class BillingManager @Inject constructor(
             p.purchaseState == Purchase.PurchaseState.PURCHASED &&
                 p.products.contains(PRODUCT_PRO_LIFETIME)
         }
-        val hasPro = hasFamily || hasLifetime || subsPurchases.any { p ->
+        val hasBillingPro = hasFamily || hasLifetime || subsPurchases.any { p ->
             p.purchaseState == Purchase.PurchaseState.PURCHASED &&
                 (p.products.contains(PRODUCT_PRO_ANNUAL) || p.products.contains(PRODUCT_PRO_MONTHLY))
         }
+        val hasPromoGrant = promoGrantManager.isGrantActive(deviceTokenManager.deviceTokenHash)
         _isFamily.value = hasFamily
-        _isPro.value = hasPro
+        _isPro.value = hasBillingPro || hasPromoGrant
+    }
+
+    /**
+     * Validates [code] against the configured promo code hash and grants Pro if correct.
+     * @return true on success, false if the code is wrong or no hash is configured.
+     */
+    fun redeemPromoCode(code: String): Boolean {
+        val granted = promoGrantManager.redeem(code, deviceTokenManager.deviceTokenHash)
+        if (granted) _isPro.value = true
+        return granted
     }
 
     /** Launch billing flow for subscription products (annual/monthly/family). */
@@ -185,12 +198,14 @@ class BillingManager @Inject constructor(
                 p.purchaseState == Purchase.PurchaseState.PURCHASED &&
                     p.products.contains(PRODUCT_PRO_LIFETIME)
             }
-            val hasPro = hasFamily || hasLifetime || purchases.any { p ->
+            val hasBillingPro = hasFamily || hasLifetime || purchases.any { p ->
                 p.purchaseState == Purchase.PurchaseState.PURCHASED &&
                     (p.products.contains(PRODUCT_PRO_ANNUAL) || p.products.contains(PRODUCT_PRO_MONTHLY))
             }
             if (hasFamily) _isFamily.value = true
-            if (hasPro) _isPro.value = true
+            if (hasBillingPro || promoGrantManager.isGrantActive(deviceTokenManager.deviceTokenHash)) {
+                _isPro.value = true
+            }
         }
     }
 

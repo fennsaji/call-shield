@@ -2,9 +2,12 @@ package com.fenn.callshield.domain.usecase
 
 import com.fenn.callshield.Phase2Flags
 import com.fenn.callshield.billing.BillingManager
+import com.fenn.callshield.data.local.ContactsLookupHelper
+import com.fenn.callshield.data.preferences.ScreeningPreferences
 import com.fenn.callshield.domain.model.CONFIDENCE_BLOCK_THRESHOLD
 import com.fenn.callshield.domain.model.CONFIDENCE_FLAG_THRESHOLD
 import com.fenn.callshield.domain.model.BehavioralSignals
+import com.fenn.callshield.domain.model.BlockingPreset
 import com.fenn.callshield.domain.model.CallDecision
 import com.fenn.callshield.domain.model.DecisionSource
 import com.fenn.callshield.domain.model.MIN_REPORTERS_TO_ACT
@@ -35,6 +38,9 @@ class ScreenCallUseCase @Inject constructor(
     private val settingsUseCase: GetScreeningSettingsUseCase,
     private val billingManager: BillingManager,
     private val frequencyAnalyzer: CallFrequencyAnalyzer,
+    private val screeningPreferences: ScreeningPreferences,
+    private val contactsLookupHelper: ContactsLookupHelper,
+    private val evaluateAdvancedBlocking: EvaluateAdvancedBlockingUseCase,
 ) {
 
     suspend fun execute(rawNumber: String?): CallDecision {
@@ -61,6 +67,14 @@ class ScreenCallUseCase @Inject constructor(
         // ── 3. Blocklist ──────────────────────────────────────────────────────
         if (hash != null && blocklistRepo.contains(hash)) {
             return CallDecision.Reject(DecisionSource.BLOCKLIST)
+        }
+
+        // ── 3b. Advanced Blocking Policies ───────────────────────────────────
+        val advPolicy = screeningPreferences.getAdvancedBlockingPolicy()
+        if (advPolicy.preset != BlockingPreset.BALANCED || advPolicy.isCustomized()) {
+            val isContact = if (e164 != null) contactsLookupHelper.isInContacts(e164) else false
+            evaluateAdvancedBlocking.evaluate(e164, hash, isContact, advPolicy, isPro)
+                ?.let { return it }
         }
 
         // ── 4. Prefix rules ───────────────────────────────────────────────────

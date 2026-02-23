@@ -6,8 +6,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.History
+import androidx.compose.material.icons.outlined.Security
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -27,6 +29,7 @@ import androidx.compose.ui.res.stringResource
 import com.fenn.callshield.R
 import com.fenn.callshield.ui.screens.activity.ActivityScreen
 import com.fenn.callshield.ui.screens.home.HomeScreen
+import com.fenn.callshield.ui.screens.protect.ProtectScreen
 import com.fenn.callshield.ui.screens.settings.SettingsScreen
 
 @Composable
@@ -41,6 +44,7 @@ fun MainScreen(
     onNavigateToPermissions: () -> Unit,
     onNavigateToBackup: () -> Unit,
     onNavigateToFamilyProtection: () -> Unit,
+    onNavigateToAdvancedBlocking: () -> Unit,
     onNavigateToReport: (hash: String, label: String, screenedAt: Long) -> Unit,
 ) {
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
@@ -66,18 +70,29 @@ fun MainScreen(
                     onClick = { selectedTab = 1 },
                     icon = {
                         Icon(
-                            if (selectedTab == 1) Icons.Filled.History else Icons.Outlined.History,
+                            if (selectedTab == 1) Icons.Filled.Security else Icons.Outlined.Security,
                             contentDescription = null,
                         )
                     },
-                    label = { Text(stringResource(R.string.nav_activity)) },
+                    label = { Text(stringResource(R.string.nav_protect)) },
                 )
                 NavigationBarItem(
                     selected = selectedTab == 2,
                     onClick = { selectedTab = 2 },
                     icon = {
                         Icon(
-                            if (selectedTab == 2) Icons.Filled.Settings else Icons.Outlined.Settings,
+                            if (selectedTab == 2) Icons.Filled.History else Icons.Outlined.History,
+                            contentDescription = null,
+                        )
+                    },
+                    label = { Text(stringResource(R.string.nav_activity)) },
+                )
+                NavigationBarItem(
+                    selected = selectedTab == 3,
+                    onClick = { selectedTab = 3 },
+                    icon = {
+                        Icon(
+                            if (selectedTab == 3) Icons.Filled.Settings else Icons.Outlined.Settings,
                             contentDescription = null,
                         )
                     },
@@ -91,29 +106,38 @@ fun MainScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding),
+                onNavigateToPrivacy = onNavigateToPrivacy,
+                onNavigateToReport = onNavigateToReport,
+                onNavigateToProtect = { selectedTab = 1 },
+                onNavigateToActivity = { selectedTab = 2 },
+            )
+            1 -> ProtectScreen(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
+                onNavigateToAdvancedBlocking = onNavigateToAdvancedBlocking,
                 onNavigateToBlocklist = onNavigateToBlocklist,
                 onNavigateToWhitelist = onNavigateToWhitelist,
                 onNavigateToPrefixRules = onNavigateToPrefixRules,
-                onNavigateToPrivacy = onNavigateToPrivacy,
-                onNavigateToPaywall = onNavigateToPaywall,
                 onNavigateToDndManagement = onNavigateToDndManagement,
                 onNavigateToFamilyProtection = onNavigateToFamilyProtection,
-                onNavigateToReport = onNavigateToReport,
+                onNavigateToPaywall = onNavigateToPaywall,
             )
-            1 -> ActivityScreen(
+            2 -> ActivityScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding),
                 snackbarHostState = snackbarHostState,
                 onNavigateToReport = onNavigateToReport,
             )
-            2 -> SettingsScreen(
+            3 -> SettingsScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding),
                 onNavigateToTraiReported = onNavigateToTraiReported,
                 onNavigateToPermissions = onNavigateToPermissions,
                 onNavigateToBackup = onNavigateToBackup,
+                onNavigateToPaywall = onNavigateToPaywall,
             )
         }
     }

@@ -8,6 +8,9 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.fenn.callshield.domain.model.AdvancedBlockingPolicy
+import com.fenn.callshield.domain.model.BlockingPreset
+import com.fenn.callshield.domain.model.UnknownCallAction
 import com.fenn.callshield.ui.theme.ThemeMode
 import com.fenn.callshield.util.DndOperator
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -34,6 +37,17 @@ class ScreeningPreferences @Inject constructor(
         val TRAI_REPORTS_COUNT = intPreferencesKey("trai_reports_count")
         val DND_OPERATOR = stringPreferencesKey("dnd_operator")
         val THEME = stringPreferencesKey("theme_mode")
+        // Advanced Blocking Policy
+        val ABP_PRESET = stringPreferencesKey("abp_preset")
+        val ABP_ALLOW_CONTACTS_ONLY = booleanPreferencesKey("abp_allow_contacts_only")
+        val ABP_SILENCE_UNKNOWN = booleanPreferencesKey("abp_silence_unknown")
+        val ABP_NIGHT_GUARD_ENABLED = booleanPreferencesKey("abp_night_guard_enabled")
+        val ABP_NIGHT_GUARD_START = intPreferencesKey("abp_night_guard_start")
+        val ABP_NIGHT_GUARD_END = intPreferencesKey("abp_night_guard_end")
+        val ABP_NIGHT_GUARD_ACTION = stringPreferencesKey("abp_night_guard_action")
+        val ABP_BLOCK_INTERNATIONAL = booleanPreferencesKey("abp_block_international")
+        val ABP_AUTO_ESCALATE = booleanPreferencesKey("abp_auto_escalate")
+        val ABP_AUTO_ESCALATE_THRESHOLD = intPreferencesKey("abp_auto_escalate_threshold")
     }
 
     suspend fun autoBlockHighConfidence(): Boolean =
@@ -112,5 +126,44 @@ class ScreeningPreferences @Inject constructor(
 
     suspend fun setDndOperator(operator: DndOperator) {
         context.dataStore.edit { it[Keys.DND_OPERATOR] = operator.name }
+    }
+
+    fun observeAdvancedBlockingPolicy(): Flow<AdvancedBlockingPolicy> =
+        context.dataStore.data.map { prefs ->
+            val preset = prefs[Keys.ABP_PRESET]
+                ?.let { runCatching { BlockingPreset.valueOf(it) }.getOrNull() }
+                ?: BlockingPreset.BALANCED
+            AdvancedBlockingPolicy(
+                preset = preset,
+                allowContactsOnly = prefs[Keys.ABP_ALLOW_CONTACTS_ONLY] ?: false,
+                silenceUnknownNumbers = prefs[Keys.ABP_SILENCE_UNKNOWN] ?: false,
+                nightGuardEnabled = prefs[Keys.ABP_NIGHT_GUARD_ENABLED] ?: false,
+                nightGuardStartHour = prefs[Keys.ABP_NIGHT_GUARD_START] ?: 22,
+                nightGuardEndHour = prefs[Keys.ABP_NIGHT_GUARD_END] ?: 7,
+                nightGuardAction = prefs[Keys.ABP_NIGHT_GUARD_ACTION]
+                    ?.let { runCatching { UnknownCallAction.valueOf(it) }.getOrNull() }
+                    ?: UnknownCallAction.SILENCE,
+                blockInternational = prefs[Keys.ABP_BLOCK_INTERNATIONAL] ?: false,
+                autoEscalateEnabled = prefs[Keys.ABP_AUTO_ESCALATE] ?: false,
+                autoEscalateThreshold = prefs[Keys.ABP_AUTO_ESCALATE_THRESHOLD] ?: 3,
+            )
+        }
+
+    suspend fun getAdvancedBlockingPolicy(): AdvancedBlockingPolicy =
+        observeAdvancedBlockingPolicy().first()
+
+    suspend fun setAdvancedBlockingPolicy(policy: AdvancedBlockingPolicy) {
+        context.dataStore.edit { prefs ->
+            prefs[Keys.ABP_PRESET] = policy.preset.name
+            prefs[Keys.ABP_ALLOW_CONTACTS_ONLY] = policy.allowContactsOnly
+            prefs[Keys.ABP_SILENCE_UNKNOWN] = policy.silenceUnknownNumbers
+            prefs[Keys.ABP_NIGHT_GUARD_ENABLED] = policy.nightGuardEnabled
+            prefs[Keys.ABP_NIGHT_GUARD_START] = policy.nightGuardStartHour
+            prefs[Keys.ABP_NIGHT_GUARD_END] = policy.nightGuardEndHour
+            prefs[Keys.ABP_NIGHT_GUARD_ACTION] = policy.nightGuardAction.name
+            prefs[Keys.ABP_BLOCK_INTERNATIONAL] = policy.blockInternational
+            prefs[Keys.ABP_AUTO_ESCALATE] = policy.autoEscalateEnabled
+            prefs[Keys.ABP_AUTO_ESCALATE_THRESHOLD] = policy.autoEscalateThreshold
+        }
     }
 }

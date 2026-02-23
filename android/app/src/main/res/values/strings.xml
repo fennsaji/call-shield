@@ -145,6 +145,7 @@
     <!-- Bottom navigation labels -->
     <string name="nav_home">Home</string>
     <string name="nav_activity">Activity</string>
+    <string name="nav_protect">Protect</string>
     <string name="nav_settings">Settings</string>
 
     <!-- Content descriptions -->

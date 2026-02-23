@@ -61,13 +61,18 @@ import kotlinx.coroutines.launch
 @Composable
 fun PrefixRulesScreen(
     onBack: () -> Unit,
+    onNavigateToPaywall: () -> Unit = {},
     viewModel: PrefixRulesViewModel = hiltViewModel(),
 ) {
     val rules by viewModel.rules.collectAsStateWithLifecycle(emptyList())
+    val isPro by viewModel.isPro.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
     var showAddDialog by remember { mutableStateOf(false) }
+    var showLimitDialog by remember { mutableStateOf(false) }
     val dangerColor = LocalDangerColor.current
     val successColor = LocalSuccessColor.current
+
+    val atFreeLimit = !isPro && rules.size >= FREE_PREFIX_RULE_LIMIT
 
     Scaffold(
         topBar = {
@@ -81,7 +86,9 @@ fun PrefixRulesScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = { showAddDialog = true }) {
+            FloatingActionButton(onClick = {
+                if (atFreeLimit) showLimitDialog = true else showAddDialog = true
+            }) {
                 Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.add_prefix))
             }
         },
@@ -222,6 +229,23 @@ fun PrefixRulesScreen(
                 showAddDialog = false
             },
             onDismiss = { showAddDialog = false },
+        )
+    }
+
+    if (showLimitDialog) {
+        AlertDialog(
+            onDismissRequest = { showLimitDialog = false },
+            title = { Text("Rule limit reached") },
+            text = { Text("Free plan supports up to $FREE_PREFIX_RULE_LIMIT prefix rules. Upgrade to Pro for unlimited rules.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showLimitDialog = false
+                    onNavigateToPaywall()
+                }) { Text("Upgrade to Pro") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showLimitDialog = false }) { Text(stringResource(R.string.cancel)) }
+            },
         )
     }
 }

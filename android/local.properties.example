@@ -11,3 +11,9 @@ SUPABASE_ANON_KEY=your_anon_key_here
 # HMAC salt — bundled in binary, NOT a secret, but keep consistent across builds
 # Default is used if not set: "callshield-v1-salt-2024"
 # HMAC_SALT=callshield-v1-salt-2024
+
+# Promo code — store ONLY the SHA-256 hash of your chosen promo code, never the raw code
+# Generate the hash: echo -n "YOUR_PROMO_CODE" | shasum -a 256
+# Example: if your promo code is "SHIELD2024" → run the command above and paste the hash here
+# Leave empty to disable promo code redemption
+# PROMO_CODE_HASH=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855

@@ -1,7 +1,9 @@
 package com.fenn.callshield.ui.screens.settings
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -22,7 +24,16 @@ import androidx.compose.material.icons.outlined.PhoneAndroid
 import androidx.compose.material.icons.outlined.Shield
 import androidx.compose.material.icons.outlined.SaveAlt
 import androidx.compose.material.icons.outlined.Security
+import androidx.compose.material.icons.outlined.CardGiftcard
+import androidx.compose.material.icons.outlined.WorkspacePremium
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.TextButton
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -32,13 +43,18 @@ import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -54,11 +70,14 @@ fun SettingsScreen(
     onNavigateToTraiReported: () -> Unit = {},
     onNavigateToPermissions: () -> Unit = {},
     onNavigateToBackup: () -> Unit = {},
+    onNavigateToPaywall: () -> Unit = {},
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
+    val isPro by viewModel.isPro.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
+    var showPromoDialog by remember { mutableStateOf(false) }
 
     Column(
         modifier = modifier
@@ -70,6 +89,24 @@ fun SettingsScreen(
             style = MaterialTheme.typography.headlineMedium,
             modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
         )
+
+        // ── Upgrade to Pro ────────────────────────────────────────────────────
+        if (!isPro) {
+            UpgradeToProCard(onClick = onNavigateToPaywall)
+            Spacer(Modifier.height(4.dp))
+        }
+
+        // ── Account ───────────────────────────────────────────────────────────
+        if (!isPro) {
+            SectionHeader("Account")
+            SettingRow(
+                icon = Icons.Outlined.CardGiftcard,
+                title = "Redeem Promo Code",
+                onClick = { showPromoDialog = true },
+                trailing = { ChevronIcon() },
+            )
+            Spacer(Modifier.height(16.dp))
+        }
 
         // ── Appearance ────────────────────────────────────────────────────────
         SectionHeader("Appearance")
@@ -147,6 +184,120 @@ fun SettingsScreen(
                 .align(Alignment.CenterHorizontally)
                 .padding(bottom = 24.dp),
         )
+    }
+
+    if (showPromoDialog) {
+        PromoCodeDialog(
+            onDismiss = { showPromoDialog = false },
+            onRedeem = { code ->
+                val success = viewModel.redeemPromoCode(code)
+                if (success) showPromoDialog = false
+                success
+            },
+        )
+    }
+}
+
+@Composable
+private fun PromoCodeDialog(
+    onDismiss: () -> Unit,
+    onRedeem: (String) -> Boolean,
+) {
+    var code by remember { mutableStateOf("") }
+    var error by remember { mutableStateOf(false) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Redeem Promo Code") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    "Enter your tester promo code to unlock Pro features.",
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                OutlinedTextField(
+                    value = code,
+                    onValueChange = { code = it; error = false },
+                    placeholder = { Text("Promo code") },
+                    singleLine = true,
+                    isError = error,
+                    supportingText = if (error) {
+                        { Text("Invalid promo code", color = MaterialTheme.colorScheme.error) }
+                    } else null,
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    val success = onRedeem(code)
+                    if (!success) error = true
+                },
+                enabled = code.isNotBlank(),
+            ) {
+                Text("Redeem")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        },
+    )
+}
+
+@Composable
+private fun UpgradeToProCard(onClick: () -> Unit) {
+    val primary = MaterialTheme.colorScheme.primary
+    ElevatedCard(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(20.dp),
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 4.dp),
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    Brush.horizontalGradient(
+                        listOf(primary.copy(alpha = 0.18f), primary.copy(alpha = 0.05f))
+                    )
+                )
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 18.dp, vertical = 18.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(14.dp),
+            ) {
+                Icon(
+                    Icons.Outlined.WorkspacePremium,
+                    contentDescription = null,
+                    modifier = Modifier.size(28.dp),
+                    tint = primary,
+                )
+                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(
+                        "Upgrade to Pro",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = primary,
+                    )
+                    Text(
+                        "Auto-block spam, advanced blocking & more",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
+                    )
+                }
+                Icon(
+                    Icons.AutoMirrored.Outlined.KeyboardArrowRight,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                    tint = primary,
+                )
+            }
+        }
     }
 }
 
