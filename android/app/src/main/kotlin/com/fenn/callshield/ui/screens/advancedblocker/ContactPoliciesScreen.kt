@@ -111,7 +111,7 @@ fun ContactPoliciesScreen(
                 UnknownCallerOptionCard(
                     icon = Icons.Outlined.VolumeOff,
                     title = "Silence unknown numbers",
-                    description = "Unknown callers ring silently on your end and show as missed calls. You can see who called and choose to call back.",
+                    description = "Their phone keeps ringing but you are not disturbed. The call appears in your history so you can choose to call back.",
                     selected = currentMode == UnknownCallerMode.SILENCE,
                     onClick = {
                         viewModel.updatePolicy(
@@ -129,7 +129,7 @@ fun ContactPoliciesScreen(
                 UnknownCallerOptionCard(
                     icon = Icons.Outlined.ContactPhone,
                     title = "Contacts only",
-                    description = "Only saved contacts ring through. Unknown callers are rejected immediately — the call never reaches you and no missed call is logged.",
+                    description = "Only saved contacts ring through. Unknown callers get an immediate busy signal — the call is rejected before it reaches you.",
                     selected = currentMode == UnknownCallerMode.CONTACTS_ONLY,
                     onClick = {
                         viewModel.updatePolicy(

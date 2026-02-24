@@ -360,49 +360,46 @@ private fun BlockingPreset.displayName(): String = when (this) {
 }
 
 private fun BlockingPreset.description(): String = when (this) {
-    BlockingPreset.BALANCED -> "Default — spam detection only, no extra rules"
-    BlockingPreset.AGGRESSIVE -> "Silence unknowns + auto-block repeat callers"
-    BlockingPreset.CONTACTS_ONLY -> "Reject all non-contacts — no missed calls shown"
-    BlockingPreset.NIGHT_GUARD -> "Silence unknown calls from 10 PM to 7 AM"
-    BlockingPreset.INTERNATIONAL_LOCK -> "Silence all international numbers (home country only)"
-    BlockingPreset.CUSTOM -> "Mix and match individual policies"
+    BlockingPreset.BALANCED -> "Detects known spam. Unknown numbers ring normally."
+    BlockingPreset.AGGRESSIVE -> "Silences unknown callers and learns to block repeat ones"
+    BlockingPreset.CONTACTS_ONLY -> "Only your saved contacts can reach you"
+    BlockingPreset.NIGHT_GUARD -> "No unknown calls during your sleep hours"
+    BlockingPreset.INTERNATIONAL_LOCK -> "Blocks calls from outside your country"
+    BlockingPreset.CUSTOM -> "Build your own rules from scratch"
 }
 
 private fun BlockingPreset.details(): List<String> = when (this) {
     BlockingPreset.BALANCED -> listOf(
-        "Spam detection via community reports and local seed database",
-        "High-confidence spam numbers are silenced before ringing",
-        "No extra contact, time, or region filters",
-        "Best for general use with minimal interruptions",
+        "Known spam numbers are silenced based on community reports",
+        "All other calls ring normally — nothing extra is blocked",
+        "Good starting point for most users",
     )
     BlockingPreset.AGGRESSIVE -> listOf(
-        "Unknown callers are silenced and logged as blocked in your call history",
-        "Reject the same number 2 times and it's permanently added to your blocklist",
-        "Unlike Contacts Only, you can see who tried to call and call them back",
-        "Builds your blocklist automatically over time without manual effort",
+        "Unknown callers are silenced — you won't hear the phone ring",
+        "You can still see who called and call them back if needed",
+        "If the same number calls twice, it gets added to your blocklist automatically",
+        "Over time, your blocklist grows with no manual work from you",
     )
     BlockingPreset.CONTACTS_ONLY -> listOf(
-        "Only calls from your saved contacts ring through",
-        "Unknown callers are rejected immediately — no missed call, no notification",
-        "Contact lookup happens on-device — no data is uploaded",
-        "Strictest mode; use Aggressive if you still want to see missed calls",
+        "Only people saved in your contacts can call you",
+        "Everyone else gets a busy signal immediately — they can't even make it ring",
+        "Great if you only want calls from people you know",
     )
     BlockingPreset.NIGHT_GUARD -> listOf(
-        "Unknown calls are silenced between 10 PM and 7 AM",
-        "Contacts can still reach you at any time",
-        "Custom quiet hours and Reject action available with Pro",
-        "Calls appear as missed — no permanent blocking",
+        "Unknown callers are silenced between 10 PM and 7 AM",
+        "Your contacts can still reach you at any hour",
+        "Calls are not blocked permanently — just silenced during quiet hours",
+        "Custom sleep hours available with Pro",
     )
     BlockingPreset.INTERNATIONAL_LOCK -> listOf(
-        "Calls from international numbers are silenced",
-        "Contacts with international numbers are still allowed",
-        "Country-specific whitelist / blacklist available with Pro",
-        "Ideal if you never expect calls from outside your home country",
+        "Calls from outside your country are silenced automatically",
+        "International numbers saved in your contacts are still allowed through",
+        "Ideal if you rarely or never expect calls from abroad",
     )
     BlockingPreset.CUSTOM -> listOf(
-        "Contact policies: allow contacts only or silence unknowns",
-        "Time policies: Night Guard with custom quiet hours (Pro)",
-        "Region policies: block international calls",
-        "Number rules: auto-escalate repeated callers to blocklist",
+        "Choose who can call you: contacts only, silence unknowns, or allow all",
+        "Set quiet hours to silence unknown calls at night",
+        "Block international numbers",
+        "Auto-block numbers that keep calling after being rejected",
     )
 }
