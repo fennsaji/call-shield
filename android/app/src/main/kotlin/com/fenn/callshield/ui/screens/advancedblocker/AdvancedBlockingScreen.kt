@@ -37,13 +37,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.Button
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -67,8 +63,6 @@ fun AdvancedBlockingScreen(
     viewModel: AdvancedBlockingViewModel = hiltViewModel(),
 ) {
     val policy by viewModel.policy.collectAsStateWithLifecycle()
-    var pendingPreset by remember { mutableStateOf(policy.preset) }
-    val hasUnsavedChange = pendingPreset != policy.preset
 
     Scaffold(
         topBar = {
@@ -94,13 +88,13 @@ fun AdvancedBlockingScreen(
                 SectionHeader("Blocking Preset")
                 Spacer(Modifier.height(10.dp))
                 PresetGrid(
-                    currentPreset = pendingPreset,
-                    onSelect = { pendingPreset = it },
+                    currentPreset = policy.preset,
+                    onSelect = { viewModel.setPreset(it) },
                 )
             }
 
             // ── Custom policy sections (only when CUSTOM) ─────────────────────
-            if (pendingPreset == BlockingPreset.CUSTOM) {
+            if (policy.preset == BlockingPreset.CUSTOM) {
                 item {
                     HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
                     SectionHeader("Custom Policy Groups")
@@ -121,7 +115,7 @@ fun AdvancedBlockingScreen(
                         PolicyGroupCard(
                             icon = Icons.Filled.Language,
                             title = "Region Policies",
-                            description = "Block international callers (non-+91)",
+                            description = "Block international callers",
                             onClick = onNavigateToRegionPolicies,
                         )
                         PolicyGroupCard(
@@ -134,32 +128,20 @@ fun AdvancedBlockingScreen(
                 }
             }
 
-            // ── Save / Decision order ─────────────────────────────────────────
+            // ── Decision order ────────────────────────────────────────────────
             item {
                 Spacer(Modifier.height(4.dp))
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    if (hasUnsavedChange) {
-                        Button(
-                            onClick = {
-                                viewModel.setPreset(pendingPreset)
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            Text("Apply — ${pendingPreset.displayName()}")
-                        }
-                    }
-                    OutlinedButton(
-                        onClick = onNavigateToDecisionOrder,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Icon(
-                            Icons.Outlined.Info,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp),
-                        )
-                        Spacer(Modifier.size(8.dp))
-                        Text("View Decision Order")
-                    }
+                OutlinedButton(
+                    onClick = onNavigateToDecisionOrder,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Icon(
+                        Icons.Outlined.Info,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                    )
+                    Spacer(Modifier.size(8.dp))
+                    Text("View Decision Order")
                 }
             }
         }
@@ -236,7 +218,7 @@ private fun PresetCard(
                         .size(40.dp)
                         .clip(CircleShape)
                         .background(
-                            if (isSelected) primary.copy(alpha = 0.15f)
+                            if (isSelected) primary.copy(alpha = 0.08f)
                             else MaterialTheme.colorScheme.surfaceVariant
                         ),
                     contentAlignment = Alignment.Center,
@@ -379,10 +361,10 @@ private fun BlockingPreset.displayName(): String = when (this) {
 
 private fun BlockingPreset.description(): String = when (this) {
     BlockingPreset.BALANCED -> "Default — spam detection only, no extra rules"
-    BlockingPreset.AGGRESSIVE -> "Silence unknown callers + auto-escalate repeat callers"
-    BlockingPreset.CONTACTS_ONLY -> "Only allow calls from saved contacts"
+    BlockingPreset.AGGRESSIVE -> "Silence unknowns + auto-block repeat callers"
+    BlockingPreset.CONTACTS_ONLY -> "Reject all non-contacts — no missed calls shown"
     BlockingPreset.NIGHT_GUARD -> "Silence unknown calls from 10 PM to 7 AM"
-    BlockingPreset.INTERNATIONAL_LOCK -> "Silence all non-Indian numbers (+91 only)"
+    BlockingPreset.INTERNATIONAL_LOCK -> "Silence all international numbers (home country only)"
     BlockingPreset.CUSTOM -> "Mix and match individual policies"
 }
 
@@ -394,16 +376,16 @@ private fun BlockingPreset.details(): List<String> = when (this) {
         "Best for general use with minimal interruptions",
     )
     BlockingPreset.AGGRESSIVE -> listOf(
-        "Unknown callers (not in contacts) are silenced",
-        "Numbers rejected 2+ times are automatically added to your blocklist",
-        "Contacts and whitelisted numbers always ring through",
-        "Recommended if you receive frequent spam calls",
+        "Unknown callers are silenced and logged as blocked in your call history",
+        "Reject the same number 2 times and it's permanently added to your blocklist",
+        "Unlike Contacts Only, you can see who tried to call and call them back",
+        "Builds your blocklist automatically over time without manual effort",
     )
     BlockingPreset.CONTACTS_ONLY -> listOf(
-        "Only calls from your saved contacts are allowed",
-        "All unknown callers are silenced (appear as missed calls)",
+        "Only calls from your saved contacts ring through",
+        "Unknown callers are rejected immediately — no missed call, no notification",
         "Contact lookup happens on-device — no data is uploaded",
-        "Useful when you only expect calls from known people",
+        "Strictest mode; use Aggressive if you still want to see missed calls",
     )
     BlockingPreset.NIGHT_GUARD -> listOf(
         "Unknown calls are silenced between 10 PM and 7 AM",
@@ -412,10 +394,10 @@ private fun BlockingPreset.details(): List<String> = when (this) {
         "Calls appear as missed — no permanent blocking",
     )
     BlockingPreset.INTERNATIONAL_LOCK -> listOf(
-        "Calls from non-+91 numbers are silenced",
+        "Calls from international numbers are silenced",
         "Contacts with international numbers are still allowed",
         "Country-specific whitelist / blacklist available with Pro",
-        "Ideal if you never expect calls from outside India",
+        "Ideal if you never expect calls from outside your home country",
     )
     BlockingPreset.CUSTOM -> listOf(
         "Contact policies: allow contacts only or silence unknowns",

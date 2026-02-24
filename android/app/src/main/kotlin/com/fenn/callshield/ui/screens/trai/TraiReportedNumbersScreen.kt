@@ -117,7 +117,7 @@ private fun TraiReportRow(entry: TraiReportEntry) {
                 modifier = Modifier
                     .size(40.dp)
                     .clip(MaterialTheme.shapes.medium)
-                    .background(successColor.copy(alpha = 0.15f)),
+                    .background(successColor.copy(alpha = 0.08f)),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(

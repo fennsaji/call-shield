@@ -19,7 +19,6 @@ import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.CloudDownload
 import androidx.compose.material.icons.outlined.CloudUpload
 import androidx.compose.material.icons.outlined.Lock
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -33,7 +32,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -49,6 +47,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.fenn.callshield.ui.components.AppDialog
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -143,32 +142,31 @@ fun BackupScreen(
     // Import confirmation dialog
     if (state.showImportConfirm) {
         state.pendingPayload?.let { payload ->
-            AlertDialog(
+            AppDialog(
                 onDismissRequest = viewModel::onImportCancelled,
-                icon    = { Icon(Icons.Outlined.Lock, contentDescription = null) },
-                title   = { Text("Restore Backup?") },
-                text    = {
-                    Column {
-                        Text("This will replace all existing rules with the backup contents:")
-                        Spacer(Modifier.height(8.dp))
-                        Text("• ${payload.blocklist.size} blocked numbers")
-                        Text("• ${payload.whitelist.size} whitelisted numbers")
-                        Text("• ${payload.prefixRules.size} prefix rules")
-                        Spacer(Modifier.height(8.dp))
-                        Text(
-                            "Your current rules will be permanently overwritten.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.error,
-                        )
-                    }
-                },
-                confirmButton = {
-                    Button(onClick = viewModel::onImportConfirmed) { Text("Restore") }
-                },
-                dismissButton = {
-                    TextButton(onClick = viewModel::onImportCancelled) { Text("Cancel") }
-                },
-            )
+                icon = Icons.Outlined.CloudDownload,
+                title = "Restore Backup?",
+                confirmLabel = "Restore",
+                isDestructive = true,
+                onConfirm = viewModel::onImportConfirmed,
+                onDismiss = viewModel::onImportCancelled,
+            ) {
+                Text(
+                    "This will replace all existing rules with the backup contents:",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                )
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text("• ${payload.blocklist.size} blocked numbers")
+                    Text("• ${payload.whitelist.size} whitelisted numbers")
+                    Text("• ${payload.prefixRules.size} prefix rules")
+                }
+                Text(
+                    "Your current rules will be permanently overwritten.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
         }
     }
 }
@@ -231,28 +229,28 @@ private fun PinEntryDialog(
     onDismiss: () -> Unit,
 ) {
     var pin by remember { mutableStateOf("") }
-    AlertDialog(
+    AppDialog(
         onDismissRequest = onDismiss,
-        title = { Text(title) },
-        text  = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(hint, style = MaterialTheme.typography.bodySmall)
-                OutlinedTextField(
-                    value = pin,
-                    onValueChange = { pin = it.filter { c -> c.isDigit() }.take(8) },
-                    label = { Text("PIN (4–8 digits)") },
-                    visualTransformation = PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-        },
-        confirmButton = {
-            Button(onClick = { onConfirm(pin) }, enabled = pin.length >= 4) { Text("Confirm") }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
-        },
-    )
+        icon = Icons.Outlined.Lock,
+        title = title,
+        confirmLabel = "Confirm",
+        confirmEnabled = pin.length >= 4,
+        onConfirm = { onConfirm(pin) },
+        onDismiss = onDismiss,
+    ) {
+        Text(
+            hint,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+        )
+        OutlinedTextField(
+            value = pin,
+            onValueChange = { pin = it.filter { c -> c.isDigit() }.take(8) },
+            label = { Text("PIN (4–8 digits)") },
+            visualTransformation = PasswordVisualTransformation(),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
 }

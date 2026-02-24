@@ -29,7 +29,6 @@ import androidx.compose.material.icons.outlined.QrCodeScanner
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Shield
 import androidx.compose.material.icons.outlined.Sync
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -65,6 +64,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.fenn.callshield.family.FamilyRole
+import com.fenn.callshield.ui.components.AppDialog
 import com.fenn.callshield.ui.components.QrScanner
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -151,21 +151,22 @@ fun FamilyProtectionScreen(
     }
 
     if (showUnpairConfirm) {
-        AlertDialog(
+        AppDialog(
             onDismissRequest = { showUnpairConfirm = false },
-            icon  = { Icon(Icons.Outlined.LinkOff, contentDescription = null) },
-            title = { Text("Remove Pairing?") },
-            text  = { Text("This will stop rule sync between the paired devices. No call data or contacts are shared.") },
-            confirmButton = {
-                Button(
-                    onClick = { showUnpairConfirm = false; viewModel.unpair() },
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
-                ) { Text("Remove") }
-            },
-            dismissButton = {
-                TextButton(onClick = { showUnpairConfirm = false }) { Text("Cancel") }
-            },
-        )
+            icon = Icons.Outlined.LinkOff,
+            iconTint = MaterialTheme.colorScheme.error,
+            title = "Remove Pairing?",
+            confirmLabel = "Remove",
+            isDestructive = true,
+            onConfirm = { showUnpairConfirm = false; viewModel.unpair() },
+            onDismiss = { showUnpairConfirm = false },
+        ) {
+            Text(
+                "This will stop rule sync between the paired devices. No call data or contacts are shared.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+            )
+        }
     }
 }
 

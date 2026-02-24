@@ -194,6 +194,7 @@ if [ -z "$ADB_DEVICES" ]; then
 
     printf "${YELLOW}📱 Starting emulator: ${EMULATOR_ARRAY[$selection]}${NC}\n"
     emulator -avd "${EMULATOR_ARRAY[$selection]}" -no-snapshot-load >/dev/null 2>&1 &
+    disown  # detach from script — emulator keeps running after script exits or Ctrl+C
 
     printf "${BLUE}⏳ Waiting for emulator to boot...${NC}\n"
     adb wait-for-device

@@ -59,6 +59,7 @@ jobs:
         sdk.dir=$ANDROID_HOME
         SUPABASE_URL=https://stub.supabase.co
         SUPABASE_ANON_KEY=stub_anon_key
+        PROMO_CODE_HASH=
         EOF
 
     - name: 🔍 Run Android Lint

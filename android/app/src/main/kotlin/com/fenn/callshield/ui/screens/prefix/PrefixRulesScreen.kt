@@ -21,7 +21,6 @@ import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.FilterList
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.ElevatedCard
@@ -36,7 +35,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
@@ -53,6 +51,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.fenn.callshield.R
+import com.fenn.callshield.ui.components.AppDialog
 import com.fenn.callshield.ui.theme.LocalDangerColor
 import com.fenn.callshield.ui.theme.LocalSuccessColor
 import kotlinx.coroutines.launch
@@ -148,7 +147,7 @@ fun PrefixRulesScreen(
                                 modifier = Modifier
                                     .fillMaxSize()
                                     .background(
-                                        color = dangerColor.copy(alpha = 0.15f),
+                                        color = dangerColor.copy(alpha = 0.08f),
                                         shape = MaterialTheme.shapes.medium,
                                     )
                                     .padding(end = 20.dp),
@@ -200,7 +199,7 @@ fun PrefixRulesScreen(
                                         )
                                     },
                                     colors = AssistChipDefaults.assistChipColors(
-                                        containerColor = accentColor.copy(alpha = 0.12f),
+                                        containerColor = accentColor.copy(alpha = 0.07f),
                                         labelColor = accentColor,
                                     ),
                                     border = null,
@@ -233,20 +232,23 @@ fun PrefixRulesScreen(
     }
 
     if (showLimitDialog) {
-        AlertDialog(
+        AppDialog(
             onDismissRequest = { showLimitDialog = false },
-            title = { Text("Rule limit reached") },
-            text = { Text("Free plan supports up to $FREE_PREFIX_RULE_LIMIT prefix rules. Upgrade to Pro for unlimited rules.") },
-            confirmButton = {
-                TextButton(onClick = {
-                    showLimitDialog = false
-                    onNavigateToPaywall()
-                }) { Text("Upgrade to Pro") }
+            icon = Icons.Filled.FilterList,
+            title = "Rule limit reached",
+            confirmLabel = "Upgrade to Pro",
+            onConfirm = {
+                showLimitDialog = false
+                onNavigateToPaywall()
             },
-            dismissButton = {
-                TextButton(onClick = { showLimitDialog = false }) { Text(stringResource(R.string.cancel)) }
-            },
-        )
+            onDismiss = { showLimitDialog = false },
+        ) {
+            Text(
+                "Free plan supports up to $FREE_PREFIX_RULE_LIMIT prefix rules. Upgrade to Pro for unlimited rules.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+            )
+        }
     }
 }
 
@@ -259,46 +261,40 @@ private fun AddPrefixDialog(
     var label by remember { mutableStateOf("") }
     var action by remember { mutableStateOf("block") }
 
-    AlertDialog(
+    AppDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.add_prefix)) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(
-                    value = prefix,
-                    onValueChange = { prefix = it },
-                    label = { Text("Prefix (e.g. +91140)") },
-                    singleLine = true,
-                )
-                OutlinedTextField(
-                    value = label,
-                    onValueChange = { label = it },
-                    label = { Text("Label (optional)") },
-                    singleLine = true,
-                )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilterChip(
-                        selected = action == "block",
-                        onClick = { action = "block" },
-                        label = { Text("Block") },
-                    )
-                    FilterChip(
-                        selected = action == "allow",
-                        onClick = { action = "allow" },
-                        label = { Text("Allow") },
-                    )
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = {
-                if (prefix.isNotBlank()) onConfirm(prefix.trim(), action, label.trim())
-            }) {
-                Text(stringResource(R.string.done))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
-        },
-    )
+        icon = Icons.Filled.FilterList,
+        title = stringResource(R.string.add_prefix),
+        confirmLabel = stringResource(R.string.done),
+        confirmEnabled = prefix.isNotBlank(),
+        onConfirm = { if (prefix.isNotBlank()) onConfirm(prefix.trim(), action, label.trim()) },
+        onDismiss = onDismiss,
+    ) {
+        OutlinedTextField(
+            value = prefix,
+            onValueChange = { prefix = it },
+            label = { Text("Prefix (e.g. +91140)") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        OutlinedTextField(
+            value = label,
+            onValueChange = { label = it },
+            label = { Text("Label (optional)") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FilterChip(
+                selected = action == "block",
+                onClick = { action = "block" },
+                label = { Text("Block") },
+            )
+            FilterChip(
+                selected = action == "allow",
+                onClick = { action = "allow" },
+                label = { Text("Allow") },
+            )
+        }
+    }
 }

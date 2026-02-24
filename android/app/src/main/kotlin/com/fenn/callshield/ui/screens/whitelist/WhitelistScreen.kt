@@ -130,7 +130,7 @@ fun WhitelistScreen(
                                 modifier = Modifier
                                     .fillMaxSize()
                                     .background(
-                                        color = MaterialTheme.colorScheme.error.copy(alpha = 0.15f),
+                                        color = MaterialTheme.colorScheme.error.copy(alpha = 0.08f),
                                         shape = MaterialTheme.shapes.medium,
                                     )
                                     .padding(end = 20.dp),
@@ -157,7 +157,7 @@ fun WhitelistScreen(
                                     modifier = Modifier
                                         .size(40.dp)
                                         .background(
-                                            color = successColor.copy(alpha = 0.15f),
+                                            color = successColor.copy(alpha = 0.08f),
                                             shape = CircleShape,
                                         ),
                                     contentAlignment = Alignment.Center,

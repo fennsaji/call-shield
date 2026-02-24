@@ -6,6 +6,7 @@ import android.os.Build
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.fenn.callshield.billing.BillingManager
+import com.fenn.callshield.data.local.dao.DndCommandDao
 import com.fenn.callshield.data.local.dao.ScamDigestDao
 import com.fenn.callshield.data.local.dao.TraiReportDao
 import com.fenn.callshield.data.local.entity.CallHistoryEntry
@@ -15,6 +16,7 @@ import com.fenn.callshield.data.preferences.ScreeningPreferences
 import com.fenn.callshield.domain.repository.CallHistoryRepository
 import com.fenn.callshield.domain.repository.CallStats
 import com.fenn.callshield.domain.usecase.MarkNotSpamUseCase
+import com.fenn.callshield.util.DndOperator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -35,6 +37,9 @@ data class HomeUiState(
     val scamDigest: ScamDigestEntry? = null,
     val autoBlock: Boolean = false,
     val blockHidden: Boolean = false,
+    val dndOperator: DndOperator? = null,
+    val dndCommand: String? = null,       // "FULL", "PROMO", "PARTIAL", or null
+    val dndConfirmed: Boolean = false,    // false = sent but awaiting TRAI reply
 )
 
 @HiltViewModel
@@ -45,6 +50,7 @@ class HomeViewModel @Inject constructor(
     private val screeningPreferences: ScreeningPreferences,
     private val traiReportDao: TraiReportDao,
     private val billingManager: BillingManager,
+    private val dndCommandDao: DndCommandDao,
 ) : ViewModel() {
 
     val isPro: StateFlow<Boolean> = billingManager.isPro
@@ -80,7 +86,17 @@ class HomeViewModel @Inject constructor(
         callHistoryRepo.observeStats(),
         _protectionState,
         _isScreeningActive,
-    ) { calls, digest, stats, protection, isActive ->
+        screeningPreferences.observeDndOperator(),
+        dndCommandDao.observeLatestActive(),
+    ) { args ->
+        @Suppress("UNCHECKED_CAST")
+        val calls = args[0] as List<CallHistoryEntry>
+        val digest = args[1] as ScamDigestEntry?
+        val stats = args[2] as CallStats
+        val protection = args[3] as Pair<Boolean, Boolean>
+        val isActive = args[4] as Boolean
+        val dndOperator = args[5] as DndOperator?
+        val dndEntry = args[6] as com.fenn.callshield.data.local.entity.DndCommandEntry?
         HomeUiState(
             recentCalls = calls,
             stats = stats,
@@ -88,6 +104,9 @@ class HomeViewModel @Inject constructor(
             scamDigest = digest,
             autoBlock = protection.first,
             blockHidden = protection.second,
+            dndOperator = dndOperator,
+            dndCommand = dndEntry?.command?.takeIf { it != "DEACTIVATE" },
+            dndConfirmed = dndEntry?.confirmedByUser ?: false,
         )
     }.stateIn(
         scope = viewModelScope,

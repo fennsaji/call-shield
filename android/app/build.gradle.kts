@@ -16,6 +16,15 @@ val keystoreProperties = Properties().apply {
     if (keystorePropertiesFile.exists()) load(keystorePropertiesFile.inputStream())
 }
 
+// Read local.properties for dev secrets (gitignored).
+// CI injects the same keys via -P flags or environment, picked up by project.findProperty().
+val localPropertiesFile = rootProject.file("local.properties")
+val localProperties = Properties().apply {
+    if (localPropertiesFile.exists()) load(localPropertiesFile.inputStream())
+}
+fun localOrProject(key: String, default: String = ""): String =
+    localProperties.getProperty(key) ?: project.findProperty(key) as String? ?: default
+
 android {
     namespace = "com.fenn.callshield"
     compileSdk = 35
@@ -31,15 +40,15 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         // Supabase config — values injected from local.properties or CI secrets
-        buildConfigField("String", "SUPABASE_URL", "\"${project.findProperty("SUPABASE_URL") ?: ""}\"")
-        buildConfigField("String", "SUPABASE_ANON_KEY", "\"${project.findProperty("SUPABASE_ANON_KEY") ?: ""}\"")
+        buildConfigField("String", "SUPABASE_URL", "\"${localOrProject("SUPABASE_URL")}\"")
+        buildConfigField("String", "SUPABASE_ANON_KEY", "\"${localOrProject("SUPABASE_ANON_KEY")}\"")
 
         // HMAC static salt — bundled in binary, not a secret
-        buildConfigField("String", "HMAC_SALT", "\"${project.findProperty("HMAC_SALT") ?: "callshield-v1-salt-2024"}\"")
+        buildConfigField("String", "HMAC_SALT", "\"${localOrProject("HMAC_SALT", "callshield-v1-salt-2024")}\"")
 
         // Promo code — store only the SHA-256 hash; the raw code is never compiled into the APK
         // Generate: echo -n "YOUR_CODE" | shasum -a 256
-        buildConfigField("String", "PROMO_CODE_HASH", "\"${project.findProperty("PROMO_CODE_HASH") ?: ""}\"")
+        buildConfigField("String", "PROMO_CODE_HASH", "\"${localOrProject("PROMO_CODE_HASH")}\"")
 
     }
 

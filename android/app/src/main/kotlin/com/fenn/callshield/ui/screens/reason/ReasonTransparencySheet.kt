@@ -99,7 +99,7 @@ fun ReasonTransparencySheet(
             }
 
             Surface(
-                color = riskColor.copy(alpha = 0.15f),
+                color = riskColor.copy(alpha = 0.08f),
                 shape = RoundedCornerShape(8.dp),
             ) {
                 Text(
