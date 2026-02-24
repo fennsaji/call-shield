@@ -29,7 +29,6 @@ import androidx.compose.material.icons.outlined.Storage
 import androidx.compose.material.icons.outlined.Sync
 import androidx.compose.material.icons.outlined.Upload
 import androidx.compose.material.icons.outlined.VerifiedUser
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
@@ -60,6 +59,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.fenn.callshield.R
+import com.fenn.callshield.ui.components.AppDialog
 import com.fenn.callshield.ui.theme.LocalDangerColor
 import com.fenn.callshield.ui.theme.LocalSuccessColor
 
@@ -118,7 +118,7 @@ fun PrivacyDashboardScreen(
                             modifier = Modifier
                                 .size(64.dp)
                                 .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
+                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)),
                             contentAlignment = Alignment.Center,
                         ) {
                             Icon(
@@ -341,30 +341,25 @@ fun PrivacyDashboardScreen(
     }
 
     if (showDeleteDialog) {
-        AlertDialog(
+        AppDialog(
             onDismissRequest = { showDeleteDialog = false },
-            title = { Text(stringResource(R.string.privacy_delete_confirm_title)) },
-            text = { Text(stringResource(R.string.privacy_delete_confirm_body)) },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        viewModel.deleteAllData()
-                        showDeleteDialog = false
-                    }
-                ) {
-                    Text(
-                        stringResource(R.string.privacy_delete_confirm),
-                        color = dangerColor,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                }
+            icon = Icons.Outlined.Delete,
+            iconTint = MaterialTheme.colorScheme.error,
+            title = stringResource(R.string.privacy_delete_confirm_title),
+            confirmLabel = stringResource(R.string.privacy_delete_confirm),
+            isDestructive = true,
+            onConfirm = {
+                viewModel.deleteAllData()
+                showDeleteDialog = false
             },
-            dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) {
-                    Text(stringResource(R.string.cancel))
-                }
-            },
-        )
+            onDismiss = { showDeleteDialog = false },
+        ) {
+            Text(
+                stringResource(R.string.privacy_delete_confirm_body),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+            )
+        }
     }
 }
 
@@ -395,7 +390,7 @@ private fun TrustBadge(
                 modifier = Modifier
                     .size(40.dp)
                     .clip(CircleShape)
-                    .background(tint.copy(alpha = 0.12f)),
+                    .background(tint.copy(alpha = 0.07f)),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(

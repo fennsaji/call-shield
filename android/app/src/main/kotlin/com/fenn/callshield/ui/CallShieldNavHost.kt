@@ -260,6 +260,7 @@ fun CallShieldNavHost(
                 onBack = { navController.popBackStack() },
                 onNavigateToBlocklist = { navController.navigate(Destinations.BLOCKLIST) },
                 onNavigateToWhitelist = { navController.navigate(Destinations.WHITELIST) },
+                onNavigateToPrefixRules = { navController.navigate(Destinations.PREFIX_RULES) },
             )
         }
 

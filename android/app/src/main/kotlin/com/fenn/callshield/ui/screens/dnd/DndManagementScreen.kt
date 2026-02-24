@@ -45,7 +45,6 @@ import androidx.compose.material.icons.outlined.Send
 import androidx.compose.material.icons.outlined.ShoppingBag
 import androidx.compose.material.icons.outlined.SimCard
 import androidx.compose.material.icons.outlined.Tune
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -82,6 +81,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.fenn.callshield.R
 import com.fenn.callshield.data.local.entity.DndCommandEntry
+import com.fenn.callshield.ui.components.AppDialog
+import com.fenn.callshield.ui.components.SmsCommandRow
 import com.fenn.callshield.ui.theme.LocalDangerColor
 import com.fenn.callshield.ui.theme.LocalSuccessColor
 import com.fenn.callshield.ui.theme.LocalWarningColor
@@ -147,65 +148,29 @@ fun DndManagementScreen(
 
     // Confirmation dialog
     pendingAction?.let { action ->
-        AlertDialog(
+        AppDialog(
             onDismissRequest = { pendingAction = null },
-            icon = {
-                Icon(
-                    Icons.Outlined.DoNotDisturb,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                )
+            icon = Icons.Outlined.DoNotDisturb,
+            title = action.title,
+            confirmLabel = "Open SMS App",
+            onConfirm = {
+                action.onConfirm()
+                pendingAction = null
             },
-            title = { Text(action.title) },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(
-                        text = action.explanation,
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                    Surface(
-                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                        shape = RoundedCornerShape(10.dp),
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Text(
-                                text = "SMS to 1909:",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                            )
-                            Text(
-                                text = action.smsCommand,
-                                style = MaterialTheme.typography.labelMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary,
-                            )
-                        }
-                    }
-                    Text(
-                        text = "Your SMS app will open with this message pre-filled. Just tap Send — TRAI confirms within 24 hours.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            },
-            confirmButton = {
-                Button(onClick = {
-                    action.onConfirm()
-                    pendingAction = null
-                }) {
-                    Text("Open SMS App")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { pendingAction = null }) {
-                    Text(stringResource(R.string.cancel))
-                }
-            },
-        )
+            onDismiss = { pendingAction = null },
+        ) {
+            Text(
+                text = action.explanation,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+            )
+            SmsCommandRow(label = "SMS to 1909:", command = action.smsCommand)
+            Text(
+                text = "Your SMS app will open with this message pre-filled. Just tap Send — TRAI confirms within 24 hours.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+            )
+        }
     }
 
     Scaffold(
@@ -434,7 +399,7 @@ private fun DndStatusCard(latest: DndCommandEntry?, onConfirm: () -> Unit) {
             .background(
                 Brush.horizontalGradient(
                     listOf(
-                        info.accent.copy(alpha = 0.18f),
+                        info.accent.copy(alpha = 0.09f),
                         info.accent.copy(alpha = 0.06f),
                     )
                 )
@@ -450,7 +415,7 @@ private fun DndStatusCard(latest: DndCommandEntry?, onConfirm: () -> Unit) {
                 modifier = Modifier
                     .size(48.dp)
                     .clip(CircleShape)
-                    .background(info.accent.copy(alpha = 0.15f)),
+                    .background(info.accent.copy(alpha = 0.08f)),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
@@ -482,7 +447,7 @@ private fun DndStatusCard(latest: DndCommandEntry?, onConfirm: () -> Unit) {
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(10.dp),
                         colors = ButtonDefaults.filledTonalButtonColors(
-                            containerColor = warningColor.copy(alpha = 0.15f),
+                            containerColor = warningColor.copy(alpha = 0.08f),
                             contentColor = warningColor,
                         ),
                     ) {
@@ -734,7 +699,7 @@ private fun CategoryTile(
 ) {
     val color = item.color
     val containerColor = if (isBlocked)
-        color.copy(alpha = 0.10f)
+        color.copy(alpha = 0.06f)
     else
         MaterialTheme.colorScheme.surfaceContainerLow
 
@@ -775,7 +740,7 @@ private fun CategoryTile(
                     modifier = Modifier
                         .size(18.dp)
                         .clip(CircleShape)
-                        .background(color.copy(alpha = 0.15f)),
+                        .background(color.copy(alpha = 0.08f)),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(

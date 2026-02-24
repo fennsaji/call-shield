@@ -11,8 +11,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -22,7 +24,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.automirrored.filled.VolumeOff
@@ -34,6 +35,8 @@ import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.outlined.DoNotDisturb
+import androidx.compose.material.icons.outlined.DoNotDisturbOff
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
@@ -63,10 +66,12 @@ import com.fenn.callshield.R
 import com.fenn.callshield.data.local.entity.CallHistoryEntry
 import com.fenn.callshield.domain.model.BlockingPreset
 import com.fenn.callshield.domain.repository.CallStats
+import com.fenn.callshield.util.DndOperator
 import com.fenn.callshield.ui.components.ScamDigestCard
 import com.fenn.callshield.ui.screens.advancedblocker.AdvancedBlockingViewModel
 import com.fenn.callshield.ui.theme.LocalDangerColor
 import com.fenn.callshield.ui.theme.LocalSuccessColor
+import com.fenn.callshield.ui.theme.LocalWarningColor
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -78,6 +83,7 @@ fun HomeScreen(
     onNavigateToReport: (hash: String, label: String, screenedAt: Long) -> Unit,
     onNavigateToProtect: () -> Unit = {},
     onNavigateToActivity: () -> Unit = {},
+    onNavigateToDndManagement: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel(),
     advancedBlockingViewModel: AdvancedBlockingViewModel = hiltViewModel(),
 ) {
@@ -145,14 +151,27 @@ fun HomeScreen(
             StatusHeroCard(isActive = state.isScreeningActive, stats = state.stats)
         }
 
-        // ── Protection shortcut ───────────────────────────────────────────────
+        // ── Status dashboard ──────────────────────────────────────────────────
         item {
-            ProtectionShortcutCard(
-                presetName = policy.preset.displayName(),
-                presetDescription = policy.preset.shortDescription(),
-                presetIcon = policy.preset.icon(),
-                onClick = onNavigateToProtect,
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                ProtectionModeCard(
+                    presetName = policy.preset.displayName(),
+                    presetDescription = policy.preset.shortDescription(),
+                    presetIcon = policy.preset.icon(),
+                    onClick = onNavigateToProtect,
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
+                )
+                DndStatusCard(
+                    dndOperator = state.dndOperator,
+                    dndCommand = state.dndCommand,
+                    dndConfirmed = state.dndConfirmed,
+                    onClick = onNavigateToDndManagement,
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
+                )
+            }
         }
 
         // ── Scam digest ───────────────────────────────────────────────────────
@@ -218,7 +237,7 @@ private fun RecentCallRow(
     onClick: () -> Unit,
 ) {
     val dangerColor = LocalDangerColor.current
-    val warningColor = com.fenn.callshield.ui.theme.LocalWarningColor.current
+    val warningColor = LocalWarningColor.current
 
     val (icon, tint) = when (entry.outcome) {
         "rejected" -> Icons.Filled.Block to dangerColor
@@ -242,7 +261,7 @@ private fun RecentCallRow(
             modifier = Modifier
                 .size(40.dp)
                 .clip(CircleShape)
-                .background(tint.copy(alpha = 0.12f)),
+                .background(tint.copy(alpha = 0.07f)),
             contentAlignment = Alignment.Center,
         ) {
             Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp), tint = tint)
@@ -309,7 +328,7 @@ private fun StatusHeroCard(isActive: Boolean, stats: CallStats) {
                         listOf(
                             if (isActive) primaryContainer else errorContainer,
                             if (isActive) primary.copy(alpha = 0.2f)
-                            else error.copy(alpha = 0.12f),
+                            else error.copy(alpha = 0.07f),
                             MaterialTheme.colorScheme.surface,
                         )
                     )
@@ -424,17 +443,16 @@ private fun InlineStat(value: String, label: String, color: Color) {
 }
 
 @Composable
-private fun ProtectionShortcutCard(
+private fun ProtectionModeCard(
     presetName: String,
     presetDescription: String,
     presetIcon: ImageVector,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val primary = MaterialTheme.colorScheme.primary
     ElevatedCard(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
+        modifier = modifier.clickable(onClick = onClick),
         shape = RoundedCornerShape(20.dp),
         elevation = CardDefaults.elevatedCardElevation(defaultElevation = 3.dp),
     ) {
@@ -442,77 +460,164 @@ private fun ProtectionShortcutCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(
-                    Brush.horizontalGradient(
-                        listOf(primary.copy(alpha = 0.14f), primary.copy(alpha = 0.03f))
+                    Brush.verticalGradient(
+                        listOf(primary.copy(alpha = 0.07f), primary.copy(alpha = 0.03f))
                     )
                 )
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 18.dp, vertical = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                // ── Top row: section label + configure link ────────────────────
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                Text(
+                    "PROTECTION MODE",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f),
+                )
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(primary.copy(alpha = 0.09f)),
+                    contentAlignment = Alignment.Center,
                 ) {
-                    Text(
-                        "PROTECTION MODE",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f),
+                    Icon(
+                        presetIcon,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                        tint = primary,
                     )
+                }
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(
+                        presetName,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = primary,
+                    )
+                    Text(
+                        presetDescription,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                        maxLines = 2,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DndStatusCard(
+    dndOperator: DndOperator?,
+    dndCommand: String?,
+    dndConfirmed: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val warningColor = LocalWarningColor.current
+    val successColor = LocalSuccessColor.current
+
+    // Three states: no operator set / sent but awaiting TRAI reply / confirmed active
+    val isPending = dndOperator != null && dndCommand != null && !dndConfirmed
+    val isConfirmed = dndOperator != null && dndCommand != null && dndConfirmed
+    val accentColor = when {
+        isConfirmed -> successColor
+        isPending   -> warningColor
+        else        -> warningColor
+    }
+
+    val modeLabel = when {
+        isPending -> "Awaiting TRAI reply"
+        isConfirmed -> when (dndCommand) {
+            "FULL"    -> "Full DND active"
+            "PROMO"   -> "Promo DND active"
+            "PARTIAL" -> "Custom DND active"
+            else      -> "DND active"
+        }
+        else -> "Tap Protect to configure"
+    }
+
+    val icon = when {
+        isPending   -> Icons.Outlined.DoNotDisturb
+        isConfirmed -> Icons.Outlined.DoNotDisturb
+        else        -> Icons.Outlined.DoNotDisturbOff
+    }
+
+    ElevatedCard(
+        modifier = modifier.clickable(onClick = onClick),
+        shape = RoundedCornerShape(20.dp),
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 3.dp),
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    Brush.verticalGradient(
+                        listOf(accentColor.copy(alpha = 0.07f), accentColor.copy(alpha = 0.03f))
+                    )
+                )
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                Text(
+                    "DND STATUS",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f),
+                )
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(accentColor.copy(alpha = 0.09f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        icon,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                        tint = accentColor,
+                    )
+                }
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(2.dp),
+                        horizontalArrangement = Arrangement.spacedBy(5.dp),
                     ) {
                         Text(
-                            "Configure",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = primary,
-                        )
-                        Icon(
-                            Icons.AutoMirrored.Outlined.KeyboardArrowRight,
-                            contentDescription = null,
-                            modifier = Modifier.size(14.dp),
-                            tint = primary,
-                        )
-                    }
-                }
-                // ── Bottom row: icon + preset name + description ───────────────
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(14.dp),
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(46.dp)
-                            .clip(CircleShape)
-                            .background(primary.copy(alpha = 0.18f)),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(
-                            presetIcon,
-                            contentDescription = null,
-                            modifier = Modifier.size(22.dp),
-                            tint = primary,
-                        )
-                    }
-                    Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                        Text(
-                            presetName,
-                            style = MaterialTheme.typography.titleMedium,
+                            if (dndOperator != null) dndOperator.displayName else "Not set up",
+                            style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.Bold,
-                            color = primary,
+                            color = accentColor,
                         )
-                        Text(
-                            presetDescription,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
-                        )
+                        if (isPending) {
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(warningColor.copy(alpha = 0.09f))
+                                    .padding(horizontal = 4.dp, vertical = 1.dp),
+                            ) {
+                                Text(
+                                    "PENDING",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = warningColor,
+                                    fontWeight = FontWeight.Bold,
+                                )
+                            }
+                        }
                     }
+                    Text(
+                        modeLabel,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                        maxLines = 2,
+                    )
                 }
             }
         }
@@ -530,10 +635,10 @@ private fun BlockingPreset.displayName(): String = when (this) {
 
 private fun BlockingPreset.shortDescription(): String = when (this) {
     BlockingPreset.BALANCED -> "Spam detection only, no extra rules"
-    BlockingPreset.AGGRESSIVE -> "Silencing unknowns + auto-escalating repeat callers"
+    BlockingPreset.AGGRESSIVE -> "Unknowns silenced as missed calls, repeats auto-blocked"
     BlockingPreset.CONTACTS_ONLY -> "Only saved contacts can ring through"
     BlockingPreset.NIGHT_GUARD -> "Unknown calls silenced 10 PM – 7 AM"
-    BlockingPreset.INTERNATIONAL_LOCK -> "Non-+91 numbers are silenced"
+    BlockingPreset.INTERNATIONAL_LOCK -> "International numbers are silenced"
     BlockingPreset.CUSTOM -> "Custom rules active"
 }
 

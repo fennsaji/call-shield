@@ -40,7 +40,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -195,67 +194,57 @@ private fun AdvancedBlockingCard(
         shape = RoundedCornerShape(20.dp),
         elevation = CardDefaults.elevatedCardElevation(defaultElevation = 4.dp),
     ) {
-        Box(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(
-                    Brush.horizontalGradient(
-                        listOf(primary.copy(alpha = 0.15f), primary.copy(alpha = 0.04f))
-                    )
-                )
+                .padding(horizontal = 18.dp, vertical = 18.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            Row(
+            Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 18.dp, vertical = 18.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(14.dp),
+                    .size(50.dp)
+                    .clip(CircleShape)
+                    .background(primary.copy(alpha = 0.08f)),
+                contentAlignment = Alignment.Center,
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(50.dp)
-                        .clip(CircleShape)
-                        .background(primary.copy(alpha = 0.15f)),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        presetIcon,
-                        contentDescription = null,
-                        modifier = Modifier.size(26.dp),
-                        tint = primary,
-                    )
-                }
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(3.dp),
-                ) {
-                    Text(
-                        "Advanced Blocking",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                    Text(
-                        "Current: $presetName",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
-                    )
-                }
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                ) {
-                    Text(
-                        "Configure",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = primary,
-                    )
-                    Icon(
-                        Icons.AutoMirrored.Outlined.KeyboardArrowRight,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp),
-                        tint = primary,
-                    )
-                }
+                Icon(
+                    presetIcon,
+                    contentDescription = null,
+                    modifier = Modifier.size(26.dp),
+                    tint = primary,
+                )
+            }
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(3.dp),
+            ) {
+                Text(
+                    "Advanced Blocking",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Text(
+                    "Current: $presetName",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
+                )
+            }
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Text(
+                    "Configure",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = primary,
+                )
+                Icon(
+                    Icons.AutoMirrored.Outlined.KeyboardArrowRight,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                    tint = primary,
+                )
             }
         }
     }
@@ -279,42 +268,32 @@ private fun ProtectionToggleCard(
         shape = RoundedCornerShape(20.dp),
         elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp),
     ) {
-        Box(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(
-                    Brush.horizontalGradient(
-                        listOf(color.copy(alpha = 0.12f), color.copy(alpha = 0.03f))
-                    )
-                )
+                .padding(horizontal = 18.dp, vertical = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            Row(
+            Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 18.dp, vertical = 16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(14.dp),
+                    .size(46.dp)
+                    .clip(CircleShape)
+                    .background(color.copy(alpha = 0.08f)),
+                contentAlignment = Alignment.Center,
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(46.dp)
-                        .clip(CircleShape)
-                        .background(color.copy(alpha = 0.15f)),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(icon, contentDescription = null, modifier = Modifier.size(24.dp), tint = color)
-                }
-                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                    Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                    Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
-                }
-                if (isPro) {
-                    Switch(checked = checked, onCheckedChange = onCheckedChange)
-                } else {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Icon(Icons.Outlined.Lock, contentDescription = null, modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.primary)
-                        Text("Pro", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
-                    }
+                Icon(icon, contentDescription = null, modifier = Modifier.size(24.dp), tint = color)
+            }
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
+            }
+            if (isPro) {
+                Switch(checked = checked, onCheckedChange = onCheckedChange)
+            } else {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Icon(Icons.Outlined.Lock, contentDescription = null, modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.primary)
+                    Text("Pro", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
                 }
             }
         }
@@ -336,7 +315,7 @@ private fun QuickAccessCard(
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Box(
-                modifier = Modifier.size(46.dp).clip(CircleShape).background(iconTint.copy(alpha = 0.12f)),
+                modifier = Modifier.size(46.dp).clip(CircleShape).background(iconTint.copy(alpha = 0.07f)),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(icon, contentDescription = label, modifier = Modifier.size(22.dp), tint = iconTint)
@@ -358,7 +337,7 @@ private fun FeatureRowCard(
 ) {
     val effectiveClick = if (isLocked) onLockedClick else onClick
     val resolvedTint = if (iconTint == Color.Unspecified) MaterialTheme.colorScheme.onSurfaceVariant else iconTint
-    val iconBg = if (iconTint == Color.Unspecified) MaterialTheme.colorScheme.surfaceVariant else iconTint.copy(alpha = 0.15f)
+    val iconBg = if (iconTint == Color.Unspecified) MaterialTheme.colorScheme.surfaceVariant else iconTint.copy(alpha = 0.07f)
     ElevatedCard(
         modifier = Modifier.fillMaxWidth().clickable(onClick = effectiveClick),
         shape = RoundedCornerShape(20.dp),

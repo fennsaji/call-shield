@@ -13,45 +13,46 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
+import androidx.compose.material.icons.outlined.CardGiftcard
 import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.GppBad
 import androidx.compose.material.icons.outlined.LightMode
+import androidx.compose.material.icons.outlined.NotificationsOff
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.PhoneAndroid
-import androidx.compose.material.icons.outlined.Shield
 import androidx.compose.material.icons.outlined.SaveAlt
 import androidx.compose.material.icons.outlined.Security
-import androidx.compose.material.icons.outlined.CardGiftcard
+import androidx.compose.material.icons.outlined.Shield
+import androidx.compose.material.icons.outlined.VolumeOff
 import androidx.compose.material.icons.outlined.WorkspacePremium
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.TextButton
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -60,6 +61,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.fenn.callshield.BuildConfig
 import com.fenn.callshield.R
+import com.fenn.callshield.ui.components.AppDialog
 import com.fenn.callshield.ui.theme.ThemeMode
 import kotlinx.coroutines.launch
 
@@ -82,99 +84,129 @@ fun SettingsScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState()),
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Text(
             text = stringResource(R.string.settings_title),
             style = MaterialTheme.typography.headlineMedium,
-            modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
+            modifier = Modifier.padding(vertical = 16.dp, horizontal = 4.dp),
         )
 
         // ── Upgrade to Pro ────────────────────────────────────────────────────
         if (!isPro) {
             UpgradeToProCard(onClick = onNavigateToPaywall)
-            Spacer(Modifier.height(4.dp))
         }
 
         // ── Account ───────────────────────────────────────────────────────────
         if (!isPro) {
-            SectionHeader("Account")
-            SettingRow(
-                icon = Icons.Outlined.CardGiftcard,
-                title = "Redeem Promo Code",
-                onClick = { showPromoDialog = true },
-                trailing = { ChevronIcon() },
-            )
-            Spacer(Modifier.height(16.dp))
+            SettingsSection("Account") {
+                SettingRow(
+                    icon = Icons.Outlined.CardGiftcard,
+                    iconTint = MaterialTheme.colorScheme.primary,
+                    title = "Redeem Promo Code",
+                    onClick = { showPromoDialog = true },
+                    trailing = { ChevronIcon() },
+                )
+            }
         }
 
         // ── Appearance ────────────────────────────────────────────────────────
-        SectionHeader("Appearance")
-        ThemeSegmentedRow(
-            current = themeMode,
-            onSelect = { viewModel.setTheme(it) },
-        )
-
-        Spacer(Modifier.height(16.dp))
+        SettingsSection("Appearance") {
+            ThemeSegmentedRow(current = themeMode, onSelect = { viewModel.setTheme(it) })
+        }
 
         // ── Notifications ─────────────────────────────────────────────────────
-        SectionHeader("Notifications")
-        SettingRow(
-            icon = Icons.Outlined.Notifications,
-            title = "Notify on block",
-            trailing = {
-                Switch(
-                    checked = state.notifyOnBlock,
-                    onCheckedChange = { scope.launch { viewModel.setNotifyOnBlock(it) } },
-                )
-            },
-        )
-        HorizontalDivider(modifier = Modifier.padding(start = 56.dp))
-        SettingRow(
-            icon = Icons.Outlined.Shield,
-            title = "Notify on flag",
-            trailing = {
-                Switch(
-                    checked = state.notifyOnFlag,
-                    onCheckedChange = { scope.launch { viewModel.setNotifyOnFlag(it) } },
-                )
-            },
-        )
+        SettingsSection("Notifications") {
+            SettingRow(
+                icon = Icons.Outlined.Notifications,
+                iconTint = MaterialTheme.colorScheme.error,
+                title = "Spam blocked",
+                subtitle = "Calls rejected by your blocklist or policies",
+                trailing = {
+                    Switch(
+                        checked = state.notifyOnReject,
+                        onCheckedChange = { scope.launch { viewModel.setNotifyOnReject(it) } },
+                    )
+                },
+            )
+            RowDivider()
+            SettingRow(
+                icon = Icons.Outlined.VolumeOff,
+                iconTint = MaterialTheme.colorScheme.primary,
+                title = "Call silenced",
+                subtitle = "Unknown callers silenced before ringing",
+                trailing = {
+                    Switch(
+                        checked = state.notifyOnSilence,
+                        onCheckedChange = { scope.launch { viewModel.setNotifyOnSilence(it) } },
+                    )
+                },
+            )
+            RowDivider()
+            SettingRow(
+                icon = Icons.Outlined.Shield,
+                iconTint = MaterialTheme.colorScheme.tertiary,
+                title = "Possible spam",
+                subtitle = "Calls that rang but looked suspicious",
+                trailing = {
+                    Switch(
+                        checked = state.notifyOnFlag,
+                        onCheckedChange = { scope.launch { viewModel.setNotifyOnFlag(it) } },
+                    )
+                },
+            )
+        }
 
-        Spacer(Modifier.height(16.dp))
+        // ── Preset overrides ──────────────────────────────────────────────────
+        SettingsSection("Preset overrides") {
+            SettingRow(
+                icon = Icons.Outlined.DarkMode,
+                iconTint = MaterialTheme.colorScheme.secondary,
+                title = "Night Guard",
+                subtitle = "Notify when calls are silenced during sleep hours",
+                trailing = {
+                    Switch(
+                        checked = state.notifyOnNightGuard,
+                        onCheckedChange = { scope.launch { viewModel.setNotifyOnNightGuard(it) } },
+                    )
+                },
+            )
+        }
 
         // ── Setup ─────────────────────────────────────────────────────────────
-        SectionHeader("Setup")
-        SettingRow(
-            icon = Icons.Outlined.Security,
-            title = "App Permissions",
-            onClick = onNavigateToPermissions,
-            trailing = { ChevronIcon() },
-        )
-
-        Spacer(Modifier.height(16.dp))
+        SettingsSection("Setup") {
+            SettingRow(
+                icon = Icons.Outlined.Security,
+                iconTint = MaterialTheme.colorScheme.primary,
+                title = "App Permissions",
+                onClick = onNavigateToPermissions,
+                trailing = { ChevronIcon() },
+            )
+        }
 
         // ── Reports ───────────────────────────────────────────────────────────
-        SectionHeader("Reports")
-        SettingRow(
-            icon = Icons.Outlined.GppBad,
-            title = stringResource(R.string.trai_reported_numbers_title),
-            onClick = onNavigateToTraiReported,
-            trailing = { ChevronIcon() },
-        )
+        SettingsSection("Reports") {
+            SettingRow(
+                icon = Icons.Outlined.GppBad,
+                iconTint = MaterialTheme.colorScheme.error,
+                title = stringResource(R.string.trai_reported_numbers_title),
+                onClick = onNavigateToTraiReported,
+                trailing = { ChevronIcon() },
+            )
+        }
 
-        Spacer(Modifier.height(16.dp))
-
-        // ── Data (Phase 3) ────────────────────────────────────────────────────
-        SectionHeader("Data")
-        SettingRow(
-            icon = Icons.Outlined.SaveAlt,
-            title = "Backup & Restore",
-            onClick = onNavigateToBackup,
-            trailing = { ChevronIcon() },
-        )
-
-        Spacer(Modifier.height(24.dp))
+        // ── Data ──────────────────────────────────────────────────────────────
+        SettingsSection("Data") {
+            SettingRow(
+                icon = Icons.Outlined.SaveAlt,
+                iconTint = MaterialTheme.colorScheme.secondary,
+                title = "Backup & Restore",
+                onClick = onNavigateToBackup,
+                trailing = { ChevronIcon() },
+            )
+        }
 
         Text(
             stringResource(R.string.settings_version, BuildConfig.VERSION_NAME),
@@ -182,7 +214,7 @@ fun SettingsScreen(
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f),
             modifier = Modifier
                 .align(Alignment.CenterHorizontally)
-                .padding(bottom = 24.dp),
+                .padding(vertical = 16.dp),
         )
     }
 
@@ -198,51 +230,31 @@ fun SettingsScreen(
     }
 }
 
-@Composable
-private fun PromoCodeDialog(
-    onDismiss: () -> Unit,
-    onRedeem: (String) -> Boolean,
-) {
-    var code by remember { mutableStateOf("") }
-    var error by remember { mutableStateOf(false) }
+// ── Section card wrapper ──────────────────────────────────────────────────────
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Redeem Promo Code") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(
-                    "Enter your tester promo code to unlock Pro features.",
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-                OutlinedTextField(
-                    value = code,
-                    onValueChange = { code = it; error = false },
-                    placeholder = { Text("Promo code") },
-                    singleLine = true,
-                    isError = error,
-                    supportingText = if (error) {
-                        { Text("Invalid promo code", color = MaterialTheme.colorScheme.error) }
-                    } else null,
-                )
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    val success = onRedeem(code)
-                    if (!success) error = true
-                },
-                enabled = code.isNotBlank(),
-            ) {
-                Text("Redeem")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
-        },
-    )
+@Composable
+private fun SettingsSection(
+    label: String,
+    content: @Composable () -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text(
+            text = label.uppercase(),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+            modifier = Modifier.padding(horizontal = 4.dp),
+        )
+        ElevatedCard(
+            shape = RoundedCornerShape(16.dp),
+            elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Column(modifier = Modifier.fillMaxWidth()) { content() }
+        }
+    }
 }
+
+// ── Upgrade to Pro card ───────────────────────────────────────────────────────
 
 @Composable
 private fun UpgradeToProCard(onClick: () -> Unit) {
@@ -250,34 +262,41 @@ private fun UpgradeToProCard(onClick: () -> Unit) {
     ElevatedCard(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp)
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(20.dp),
-        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 4.dp),
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp),
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(
                     Brush.horizontalGradient(
-                        listOf(primary.copy(alpha = 0.18f), primary.copy(alpha = 0.05f))
+                        listOf(primary.copy(alpha = 0.09f), primary.copy(alpha = 0.04f))
                     )
                 )
         ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 18.dp, vertical = 18.dp),
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(14.dp),
             ) {
-                Icon(
-                    Icons.Outlined.WorkspacePremium,
-                    contentDescription = null,
-                    modifier = Modifier.size(28.dp),
-                    tint = primary,
-                )
-                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Box(
+                    modifier = Modifier
+                        .size(38.dp)
+                        .clip(CircleShape)
+                        .background(primary.copy(alpha = 0.08f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        Icons.Outlined.WorkspacePremium,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                        tint = primary,
+                    )
+                }
+                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
                     Text(
                         "Upgrade to Pro",
                         style = MaterialTheme.typography.titleSmall,
@@ -290,63 +309,68 @@ private fun UpgradeToProCard(onClick: () -> Unit) {
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
                     )
                 }
-                Icon(
-                    Icons.AutoMirrored.Outlined.KeyboardArrowRight,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp),
-                    tint = primary,
-                )
+                ChevronIcon()
             }
         }
     }
 }
 
-@Composable
-private fun SectionHeader(title: String) {
-    Text(
-        text = title.uppercase(),
-        style = MaterialTheme.typography.labelSmall,
-        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
-        modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
-    )
-}
+// ── Row ───────────────────────────────────────────────────────────────────────
 
 @Composable
 private fun SettingRow(
     icon: ImageVector,
+    iconTint: Color,
     title: String,
+    subtitle: String? = null,
     onClick: (() -> Unit)? = null,
     trailing: @Composable (() -> Unit)? = null,
 ) {
-    Surface(
-        tonalElevation = 1.dp,
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        Row(
+        Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp)
-                .padding(horizontal = 20.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                .size(34.dp)
+                .clip(CircleShape)
+                .background(iconTint.copy(alpha = 0.07f)),
+            contentAlignment = Alignment.Center,
         ) {
             Icon(
                 icon,
                 contentDescription = null,
-                modifier = Modifier.size(22.dp),
-                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                modifier = Modifier.size(18.dp),
+                tint = iconTint,
             )
-            Text(
-                title,
-                style = MaterialTheme.typography.bodyLarge,
-                modifier = Modifier.weight(1f),
-            )
-            trailing?.invoke()
         }
+        Column(modifier = Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.bodyLarge)
+            if (subtitle != null) {
+                Text(
+                    subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
+                )
+            }
+        }
+        trailing?.invoke()
     }
 }
+
+@Composable
+private fun RowDivider() {
+    HorizontalDivider(
+        modifier = Modifier.padding(start = 64.dp, end = 0.dp),
+        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f),
+    )
+}
+
+// ── Theme picker ─────────────────────────────────────────────────────────────
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -359,31 +383,74 @@ private fun ThemeSegmentedRow(
         Triple(ThemeMode.LIGHT,  "Light",   Icons.Outlined.LightMode),
         Triple(ThemeMode.DARK,   "Dark",    Icons.Outlined.DarkMode),
     )
-    Surface(
-        tonalElevation = 1.dp,
-        modifier = Modifier.fillMaxWidth(),
+    SingleChoiceSegmentedButtonRow(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 12.dp),
     ) {
-        SingleChoiceSegmentedButtonRow(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 12.dp),
-        ) {
-            options.forEachIndexed { index, (mode, label, icon) ->
-                SegmentedButton(
-                    selected = current == mode,
-                    onClick = { onSelect(mode) },
-                    shape = SegmentedButtonDefaults.itemShape(index = index, count = options.size),
-                    icon = {
-                        SegmentedButtonDefaults.ActiveIcon()
-                        Icon(icon, contentDescription = null, modifier = Modifier.size(16.dp))
-                    },
-                ) {
-                    Text(label, style = MaterialTheme.typography.labelMedium)
-                }
+        options.forEachIndexed { index, (mode, label, icon) ->
+            SegmentedButton(
+                selected = current == mode,
+                onClick = { onSelect(mode) },
+                shape = SegmentedButtonDefaults.itemShape(index = index, count = options.size),
+                colors = SegmentedButtonDefaults.colors(
+                    activeContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                    activeContentColor = MaterialTheme.colorScheme.primary,
+                    activeBorderColor = MaterialTheme.colorScheme.primary,
+                ),
+                icon = {
+                    SegmentedButtonDefaults.ActiveIcon()
+                    Icon(icon, contentDescription = null, modifier = Modifier.size(16.dp))
+                },
+            ) {
+                Text(label, style = MaterialTheme.typography.labelMedium)
             }
         }
     }
 }
+
+// ── Promo dialog ──────────────────────────────────────────────────────────────
+
+@Composable
+private fun PromoCodeDialog(
+    onDismiss: () -> Unit,
+    onRedeem: (String) -> Boolean,
+) {
+    var code by remember { mutableStateOf("") }
+    var error by remember { mutableStateOf(false) }
+
+    AppDialog(
+        onDismissRequest = onDismiss,
+        icon = Icons.Outlined.CardGiftcard,
+        title = "Redeem Promo Code",
+        confirmLabel = "Redeem",
+        confirmEnabled = code.isNotBlank(),
+        onConfirm = {
+            val success = onRedeem(code)
+            if (!success) error = true
+        },
+        onDismiss = onDismiss,
+    ) {
+        Text(
+            "Enter your tester promo code to unlock Pro features.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+        )
+        OutlinedTextField(
+            value = code,
+            onValueChange = { code = it; error = false },
+            placeholder = { Text("Promo code") },
+            singleLine = true,
+            isError = error,
+            modifier = Modifier.fillMaxWidth(),
+            supportingText = if (error) {
+                { Text("Invalid promo code", color = MaterialTheme.colorScheme.error) }
+            } else null,
+        )
+    }
+}
+
+// ── Shared ────────────────────────────────────────────────────────────────────
 
 @Composable
 private fun ChevronIcon() {
@@ -394,4 +461,3 @@ private fun ChevronIcon() {
         tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f),
     )
 }
-

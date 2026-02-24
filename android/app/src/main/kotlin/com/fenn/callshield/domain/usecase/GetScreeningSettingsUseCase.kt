@@ -6,8 +6,10 @@ import javax.inject.Inject
 data class ScreeningSettings(
     val autoBlockHighConfidence: Boolean,
     val blockHiddenNumbers: Boolean,
-    val notifyOnBlock: Boolean,
+    val notifyOnReject: Boolean,
+    val notifyOnSilence: Boolean,
     val notifyOnFlag: Boolean,
+    val notifyOnNightGuard: Boolean,
 )
 
 class GetScreeningSettingsUseCase @Inject constructor(
@@ -16,7 +18,9 @@ class GetScreeningSettingsUseCase @Inject constructor(
     suspend fun get(): ScreeningSettings = ScreeningSettings(
         autoBlockHighConfidence = prefs.autoBlockHighConfidence(),
         blockHiddenNumbers = prefs.blockHiddenNumbers(),
-        notifyOnBlock = prefs.notifyOnBlock(),
+        notifyOnReject = prefs.notifyOnReject(),
+        notifyOnSilence = prefs.notifyOnSilence(),
         notifyOnFlag = prefs.notifyOnFlag(),
+        notifyOnNightGuard = prefs.notifyOnNightGuard(),
     )
 }

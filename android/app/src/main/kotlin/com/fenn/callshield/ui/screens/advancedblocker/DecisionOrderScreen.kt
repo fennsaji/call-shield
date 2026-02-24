@@ -25,7 +25,6 @@ import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -33,7 +32,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -47,6 +45,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.fenn.callshield.ui.components.AppDialog
 
 private data class DecisionStage(
     val priority: Int,
@@ -117,24 +116,26 @@ fun DecisionOrderScreen(onBack: () -> Unit) {
     }
 
     selectedStage?.let { stage ->
-        AlertDialog(
+        AppDialog(
             onDismissRequest = { selectedStage = null },
-            title = { Text("Priority ${stage.priority}: ${stage.label}") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(stage.description)
-                    Text(
-                        stage.outcome,
-                        style = MaterialTheme.typography.titleSmall,
-                        color = stage.color,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { selectedStage = null }) { Text("OK") }
-            },
-        )
+            title = "Priority ${stage.priority}: ${stage.label}",
+            confirmLabel = "Got it",
+            onConfirm = { selectedStage = null },
+            dismissLabel = "Close",
+            onDismiss = { selectedStage = null },
+        ) {
+            Text(
+                stage.description,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+            )
+            Text(
+                stage.outcome,
+                style = MaterialTheme.typography.titleSmall,
+                color = stage.color,
+                fontWeight = FontWeight.SemiBold,
+            )
+        }
     }
 }
 
@@ -160,7 +161,7 @@ private fun DecisionStageCard(
                     modifier = Modifier
                         .size(32.dp)
                         .clip(CircleShape)
-                        .background(stage.color.copy(alpha = 0.15f)),
+                        .background(stage.color.copy(alpha = 0.08f)),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(

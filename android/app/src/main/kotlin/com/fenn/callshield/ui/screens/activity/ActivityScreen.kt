@@ -260,7 +260,7 @@ private fun ActivityCallRow(
                     modifier = Modifier
                         .size(40.dp)
                         .clip(MaterialTheme.shapes.medium)
-                        .background(style.accent.copy(alpha = 0.15f)),
+                        .background(style.accent.copy(alpha = 0.08f)),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
@@ -305,7 +305,7 @@ private fun ActivityCallRow(
                                     .height(4.dp)
                                     .clip(MaterialTheme.shapes.small),
                                 color = style.accent,
-                                trackColor = style.accent.copy(alpha = 0.15f),
+                                trackColor = style.accent.copy(alpha = 0.08f),
                             )
                             Spacer(Modifier.width(6.dp))
                             Text(
@@ -361,7 +361,7 @@ private fun ActivityCallRow(
                             .height(32.dp),
                         contentPadding = PaddingValues(horizontal = 8.dp),
                         colors = ButtonDefaults.filledTonalButtonColors(
-                            containerColor = dangerColor.copy(alpha = 0.12f),
+                            containerColor = dangerColor.copy(alpha = 0.07f),
                             contentColor = dangerColor,
                         ),
                     ) {

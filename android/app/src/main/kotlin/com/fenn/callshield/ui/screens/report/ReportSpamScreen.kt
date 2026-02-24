@@ -3,7 +3,6 @@ package com.fenn.callshield.ui.screens.report
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -27,7 +26,6 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MoneyOff
 import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material.icons.filled.Work
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -46,7 +44,6 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -67,6 +64,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.fenn.callshield.R
 import com.fenn.callshield.domain.model.SpamCategory
+import com.fenn.callshield.ui.components.AppDialog
+import com.fenn.callshield.ui.components.SmsCommandRow
 import com.fenn.callshield.util.TraiReportHelper
 import java.util.concurrent.TimeUnit
 
@@ -162,73 +161,42 @@ fun ReportSpamScreen(
     // Confirmation dialog — shown after API success when TRAI redirect is enabled
     pendingTraiReport?.let { pending ->
         val complaintLabel = if (pending.isComplaint) "Complaint" else "Report"
-        AlertDialog(
+        AppDialog(
             onDismissRequest = {
                 pendingTraiReport = null
                 onDismiss()
             },
-            icon = {
-                Icon(
-                    Icons.Filled.BugReport,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                )
+            icon = Icons.Filled.BugReport,
+            title = "Report submitted — notify TRAI?",
+            confirmLabel = "Open SMS App",
+            onConfirm = {
+                pendingTraiReport = null
+                pending.onConfirm()
             },
-            title = { Text("Report submitted — notify TRAI?") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(
-                        text = if (pending.isComplaint)
-                            "Within 7 days — TRAI will treat this as a Complaint and can take regulatory action against the sender."
-                        else
-                            "After 7 days — TRAI will record this as a Report (data only). No action is taken against the sender.",
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                    Surface(
-                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                        shape = RoundedCornerShape(10.dp),
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-                            verticalArrangement = Arrangement.spacedBy(4.dp),
-                        ) {
-                            Text(
-                                text = "SMS to 1909 ($complaintLabel):",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                            )
-                            Text(
-                                text = pending.smsBody,
-                                style = MaterialTheme.typography.labelMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary,
-                            )
-                        }
-                    }
-                    Text(
-                        text = "Your SMS app will open with this message pre-filled. Just tap Send.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+            dismissLabel = "Skip",
+            onDismiss = {
+                pendingTraiReport = null
+                onDismiss()
             },
-            confirmButton = {
-                Button(onClick = {
-                    pendingTraiReport = null
-                    pending.onConfirm()
-                }) {
-                    Text("Open SMS App")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = {
-                    pendingTraiReport = null
-                    onDismiss()
-                }) {
-                    Text("Skip")
-                }
-            },
-        )
+        ) {
+            Text(
+                text = if (pending.isComplaint)
+                    "Within 7 days — TRAI will treat this as a Complaint and can take regulatory action against the sender."
+                else
+                    "After 7 days — TRAI will record this as a Report (data only). No action is taken against the sender.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+            )
+            SmsCommandRow(
+                label = "SMS to 1909 ($complaintLabel):",
+                command = pending.smsBody,
+            )
+            Text(
+                text = "Your SMS app will open with this message pre-filled. Just tap Send.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+            )
+        }
     }
 
     Scaffold(

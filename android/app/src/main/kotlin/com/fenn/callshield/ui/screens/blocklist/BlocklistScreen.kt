@@ -20,7 +20,6 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
@@ -32,7 +31,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
@@ -49,6 +47,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.fenn.callshield.R
+import com.fenn.callshield.ui.components.AppDialog
 import com.fenn.callshield.ui.theme.LocalDangerColor
 import kotlinx.coroutines.launch
 
@@ -132,7 +131,7 @@ fun BlocklistScreen(
                                 modifier = Modifier
                                     .fillMaxSize()
                                     .background(
-                                        color = dangerColor.copy(alpha = 0.15f),
+                                        color = dangerColor.copy(alpha = 0.08f),
                                         shape = MaterialTheme.shapes.medium,
                                     )
                                     .padding(end = 20.dp),
@@ -159,7 +158,7 @@ fun BlocklistScreen(
                                     modifier = Modifier
                                         .size(40.dp)
                                         .background(
-                                            color = dangerColor.copy(alpha = 0.15f),
+                                            color = dangerColor.copy(alpha = 0.08f),
                                             shape = CircleShape,
                                         ),
                                     contentAlignment = Alignment.Center,
@@ -209,24 +208,23 @@ fun BlocklistScreen(
 @Composable
 fun AddNumberDialog(title: String, onConfirm: (String) -> Unit, onDismiss: () -> Unit) {
     var text by remember { mutableStateOf("") }
-    AlertDialog(
+    val dangerColor = LocalDangerColor.current
+    AppDialog(
         onDismissRequest = onDismiss,
-        title = { Text(title) },
-        text = {
-            OutlinedTextField(
-                value = text,
-                onValueChange = { text = it },
-                label = { Text("Phone number") },
-                singleLine = true,
-            )
-        },
-        confirmButton = {
-            TextButton(onClick = { if (text.isNotBlank()) onConfirm(text.trim()) }) {
-                Text(stringResource(R.string.done))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
-        },
-    )
+        icon = Icons.Filled.Block,
+        iconTint = dangerColor,
+        title = title,
+        confirmLabel = stringResource(R.string.done),
+        confirmEnabled = text.isNotBlank(),
+        onConfirm = { if (text.isNotBlank()) onConfirm(text.trim()) },
+        onDismiss = onDismiss,
+    ) {
+        OutlinedTextField(
+            value = text,
+            onValueChange = { text = it },
+            label = { Text("Phone number") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
 }

@@ -129,18 +129,21 @@ class CallShieldScreeningService : CallScreeningService() {
         callHistoryRepo.record(hash, label, decision, score, category, source.name)
 
         val settings = getScreeningSettings.get()
-        Log.d(TAG, "recordAndNotify: notifyOnBlock=${settings.notifyOnBlock} notifyOnFlag=${settings.notifyOnFlag}")
+        Log.d(TAG, "recordAndNotify: notifyOnReject=${settings.notifyOnReject} notifyOnSilence=${settings.notifyOnSilence} notifyOnFlag=${settings.notifyOnFlag} notifyOnNightGuard=${settings.notifyOnNightGuard}")
 
         when (decision) {
             is CallDecision.Reject -> {
-                if (settings.notifyOnBlock) notificationManager.showBlockedCallNotification(label, hash, decision.source.displayLabel)
-                else Log.d(TAG, "Blocked notification suppressed — notifyOnBlock=false")
+                if (settings.notifyOnReject) notificationManager.showBlockedCallNotification(label, hash, decision.source.displayLabel)
+                else Log.d(TAG, "Blocked notification suppressed — notifyOnReject=false")
                 paywallTrigger.onSpamCallDetected()
             }
             is CallDecision.Silence -> {
-                // PRD §3.3: silenced calls go to missed calls — warn user about callback risk
-                if (settings.notifyOnBlock) notificationManager.showMissedCallWarningNotification(label, hash, decision.category)
-                else Log.d(TAG, "Missed call warning suppressed — notifyOnBlock=false")
+                // PRD §3.3: silenced calls go to missed calls — warn user about callback risk.
+                // Night Guard silences use a separate preference (off by default — user is asleep).
+                val isNightGuard = decision.category == "night_guard"
+                val shouldNotify = if (isNightGuard) settings.notifyOnNightGuard else settings.notifyOnSilence
+                if (shouldNotify) notificationManager.showMissedCallWarningNotification(label, hash, decision.category)
+                else Log.d(TAG, "Silence notification suppressed — isNightGuard=$isNightGuard")
                 paywallTrigger.onSpamCallDetected()
             }
             is CallDecision.Flag -> {

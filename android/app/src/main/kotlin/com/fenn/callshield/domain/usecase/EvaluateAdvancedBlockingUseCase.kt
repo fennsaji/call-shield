@@ -7,6 +7,7 @@ import com.fenn.callshield.domain.model.DecisionSource
 import com.fenn.callshield.domain.model.UnknownCallAction
 import com.fenn.callshield.domain.repository.BlocklistRepository
 import com.fenn.callshield.domain.repository.CallHistoryRepository
+import com.fenn.callshield.util.HomeCountryProvider
 import java.util.Calendar
 import javax.inject.Inject
 
@@ -20,12 +21,13 @@ import javax.inject.Inject
  *   1. Night Guard — silence/reject during configured hours
  *   2. Contacts Only — reject unknown callers
  *   3. Silence Unknown — silence non-contacts
- *   4. International Lock — silence/reject non-+91 numbers
+ *   4. International Lock — silence/reject numbers outside the device's home country
  *   5. Auto-Escalate — auto-add to blocklist after N rejections
  */
 class EvaluateAdvancedBlockingUseCase @Inject constructor(
     private val callHistoryRepo: CallHistoryRepository,
     private val blocklistRepo: BlocklistRepository,
+    private val homeCountryProvider: HomeCountryProvider,
 ) {
 
     suspend fun evaluate(
@@ -52,9 +54,9 @@ class EvaluateAdvancedBlockingUseCase @Inject constructor(
             }
         }
 
-        // 2. Contacts Only
+        // 2. Contacts Only — reject immediately; caller gets busy signal, no missed call in your log
         if (policy.allowContactsOnly && !isContact) {
-            return CallDecision.Silence(1.0, "contacts_only", DecisionSource.ADVANCED_BLOCKING)
+            return CallDecision.Reject(DecisionSource.ADVANCED_BLOCKING)
         }
 
         // 3. Silence Unknown
@@ -62,8 +64,9 @@ class EvaluateAdvancedBlockingUseCase @Inject constructor(
             return CallDecision.Silence(0.5, "silence_unknown", DecisionSource.ADVANCED_BLOCKING)
         }
 
-        // 4. International Lock — non-+91 numbers
-        if (policy.blockInternational && e164Number != null && !e164Number.startsWith("+91")) {
+        // 4. International Lock — numbers outside the device's home country
+        val homePrefix = homeCountryProvider.callingCodePrefix
+        if (policy.blockInternational && e164Number != null && !e164Number.startsWith(homePrefix)) {
             return CallDecision.Silence(1.0, "international_lock", DecisionSource.ADVANCED_BLOCKING)
         }
 

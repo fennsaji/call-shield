@@ -8,41 +8,48 @@ import org.junit.Test
 /**
  * Unit tests for E.164 normalisation logic.
  * HMAC output correctness is verified via a known test vector.
+ *
+ * Tests use "+91" (India) as the home calling code to match legacy test vectors.
+ * The normalise() overload that accepts [homeCallingCode] is used directly.
  */
 class PhoneNumberHasherTest {
 
-    // Use a test-only hasher backed by a fixed salt so tests are deterministic
-    // without requiring BuildConfig (which is not available in unit tests).
     private val hasher = PhoneNumberHasherTestable("test-salt")
+    private val homeCode = "+91"
 
     @Test
-    fun `normalises 10-digit Indian number`() {
-        assertEquals("+919876543210", hasher.normalise("9876543210"))
+    fun `normalises 10-digit number with home calling code`() {
+        assertEquals("+919876543210", hasher.normalise("9876543210", homeCode))
     }
 
     @Test
     fun `normalises number with trunk prefix 0`() {
-        assertEquals("+919876543210", hasher.normalise("09876543210"))
-    }
-
-    @Test
-    fun `normalises 12-digit number starting with 91`() {
-        assertEquals("+919876543210", hasher.normalise("919876543210"))
+        assertEquals("+919876543210", hasher.normalise("09876543210", homeCode))
     }
 
     @Test
     fun `preserves existing E164 number`() {
-        assertEquals("+919876543210", hasher.normalise("+919876543210"))
+        assertEquals("+919876543210", hasher.normalise("+919876543210", homeCode))
     }
 
     @Test
     fun `normalises number with spaces and dashes`() {
-        assertEquals("+919876543210", hasher.normalise("98765 43210"))
+        assertEquals("+919876543210", hasher.normalise("98765 43210", homeCode))
     }
 
     @Test
     fun `returns null for too-short number`() {
-        assertNull(hasher.normalise("1234"))
+        assertNull(hasher.normalise("1234", homeCode))
+    }
+
+    @Test
+    fun `normalises US number with +1 home code`() {
+        assertEquals("+12125551234", hasher.normalise("2125551234", "+1"))
+    }
+
+    @Test
+    fun `normalises UK number with +44 home code`() {
+        assertEquals("+447911123456", hasher.normalise("07911123456", "+44"))
     }
 
     @Test
@@ -69,12 +76,21 @@ class PhoneNumberHasherTest {
 
     @Test
     fun `returns null for non-numeric input`() {
-        assertNull(hasher.normalise("not-a-number"))
+        assertNull(hasher.normalise("not-a-number", homeCode))
     }
 }
 
+/** Fake HomeCountryProvider for tests — no Android Context needed. */
+private class FakeHomeCountryProvider(code: String = "+91") : HomeCountryProvider(null) {
+    override val callingCodePrefix = code
+    override val isoCode = CALLING_CODES.entries.firstOrNull { it.value == code }?.key ?: "IN"
+}
+
 /** Test double — overrides salt without touching BuildConfig. */
-private class PhoneNumberHasherTestable(private val salt: String) : PhoneNumberHasher() {
+private class PhoneNumberHasherTestable(
+    private val salt: String,
+    provider: HomeCountryProvider = FakeHomeCountryProvider(),
+) : PhoneNumberHasher(provider) {
     override fun hash(rawNumber: String): String? {
         val normalised = normalise(rawNumber) ?: return null
         val mac = javax.crypto.Mac.getInstance("HmacSHA256")

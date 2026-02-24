@@ -32,6 +32,7 @@ fun RegionPoliciesScreen(
     viewModel: AdvancedBlockingViewModel = hiltViewModel(),
 ) {
     val policy by viewModel.policy.collectAsStateWithLifecycle()
+    val homeCode = viewModel.homeCallingCode
 
     Scaffold(
         topBar = {
@@ -54,7 +55,7 @@ fun RegionPoliciesScreen(
         ) {
             item {
                 Text(
-                    "Block or silence calls from outside India. Numbers that don't start with +91 will be treated as international.",
+                    "Block or silence calls from outside your home country. Numbers that don't start with $homeCode will be treated as international.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                 )
@@ -64,7 +65,7 @@ fun RegionPoliciesScreen(
             item {
                 PolicyToggleCard(
                     title = "Block international calls",
-                    description = "Calls from non-+91 numbers will be silenced. Contacts are still allowed.",
+                    description = "Calls from non-$homeCode numbers will be silenced. Contacts are still allowed.",
                     checked = policy.blockInternational,
                     onCheckedChange = {
                         viewModel.updatePolicy(

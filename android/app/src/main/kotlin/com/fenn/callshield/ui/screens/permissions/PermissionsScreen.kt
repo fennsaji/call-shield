@@ -16,8 +16,9 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.scaleIn
-import androidx.compose.foundation.border
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -27,6 +28,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BatteryChargingFull
@@ -46,8 +48,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -215,41 +219,52 @@ private fun PermissionCard(
     onRequest: () -> Unit,
     subBody: String? = null,
 ) {
-    val borderModifier = if (granted)
-        Modifier.border(
-            width = 1.5.dp,
-            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
-            shape = MaterialTheme.shapes.medium,
-        )
-    else Modifier
+    val primary = MaterialTheme.colorScheme.primary
 
     ElevatedCard(
-        modifier = Modifier.fillMaxWidth().then(borderModifier),
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 0.dp),
         colors = CardDefaults.elevatedCardColors(
             containerColor = if (granted)
                 MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f)
             else
-                MaterialTheme.colorScheme.surface,
+                MaterialTheme.colorScheme.surfaceContainerLow,
         ),
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(horizontal = 18.dp, vertical = 16.dp)) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    modifier = Modifier.size(28.dp),
-                    tint = if (granted) MaterialTheme.colorScheme.primary
-                    else MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Text(
-                    "$number. $title",
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.weight(1f),
-                )
-                // Animated check overlay when granted
+                // Number + icon badge
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(CircleShape)
+                        .background(primary.copy(alpha = if (granted) 0.15f else 0.08f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        modifier = Modifier.size(22.dp),
+                        tint = primary,
+                    )
+                }
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Step $number",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = primary.copy(alpha = 0.7f),
+                        fontWeight = FontWeight.Medium,
+                    )
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                }
                 AnimatedVisibility(
                     visible = granted,
                     enter = scaleIn(tween(300)) + fadeIn(tween(300)),
@@ -257,23 +272,23 @@ private fun PermissionCard(
                     Icon(
                         Icons.Filled.CheckCircle,
                         contentDescription = "Granted",
-                        tint = MaterialTheme.colorScheme.primary,
+                        tint = primary,
                         modifier = Modifier.size(22.dp),
                     )
                 }
             }
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(10.dp))
             Text(
                 body,
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
             )
             if (subBody != null) {
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(4.dp))
                 Text(
                     subBody,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
                 )
             }
             if (!granted) {

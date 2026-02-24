@@ -38,6 +38,7 @@ fun NumberRulesScreen(
     onBack: () -> Unit,
     onNavigateToBlocklist: () -> Unit,
     onNavigateToWhitelist: () -> Unit,
+    onNavigateToPrefixRules: () -> Unit,
     viewModel: AdvancedBlockingViewModel = hiltViewModel(),
 ) {
     val policy by viewModel.policy.collectAsStateWithLifecycle()
@@ -135,6 +136,7 @@ fun NumberRulesScreen(
                     Column {
                         ListLinkRow("Blocklist", onClick = onNavigateToBlocklist)
                         ListLinkRow("Whitelist", onClick = onNavigateToWhitelist)
+                        ListLinkRow("Prefix Rules", onClick = onNavigateToPrefixRules)
                     }
                 }
             }
