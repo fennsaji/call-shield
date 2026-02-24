@@ -22,11 +22,13 @@ import androidx.compose.material.icons.outlined.CardGiftcard
 import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.GppBad
 import androidx.compose.material.icons.outlined.LightMode
+import androidx.compose.material.icons.outlined.NotificationsOff
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.PhoneAndroid
 import androidx.compose.material.icons.outlined.SaveAlt
 import androidx.compose.material.icons.outlined.Security
 import androidx.compose.material.icons.outlined.Shield
+import androidx.compose.material.icons.outlined.VolumeOff
 import androidx.compose.material.icons.outlined.WorkspacePremium
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
@@ -119,12 +121,26 @@ fun SettingsScreen(
         SettingsSection("Notifications") {
             SettingRow(
                 icon = Icons.Outlined.Notifications,
-                iconTint = MaterialTheme.colorScheme.primary,
-                title = "Notify on block",
+                iconTint = MaterialTheme.colorScheme.error,
+                title = "Spam blocked",
+                subtitle = "Calls rejected by your blocklist or policies",
                 trailing = {
                     Switch(
-                        checked = state.notifyOnBlock,
-                        onCheckedChange = { scope.launch { viewModel.setNotifyOnBlock(it) } },
+                        checked = state.notifyOnReject,
+                        onCheckedChange = { scope.launch { viewModel.setNotifyOnReject(it) } },
+                    )
+                },
+            )
+            RowDivider()
+            SettingRow(
+                icon = Icons.Outlined.VolumeOff,
+                iconTint = MaterialTheme.colorScheme.primary,
+                title = "Call silenced",
+                subtitle = "Unknown callers silenced before ringing",
+                trailing = {
+                    Switch(
+                        checked = state.notifyOnSilence,
+                        onCheckedChange = { scope.launch { viewModel.setNotifyOnSilence(it) } },
                     )
                 },
             )
@@ -132,11 +148,28 @@ fun SettingsScreen(
             SettingRow(
                 icon = Icons.Outlined.Shield,
                 iconTint = MaterialTheme.colorScheme.tertiary,
-                title = "Notify on flag",
+                title = "Possible spam",
+                subtitle = "Calls that rang but looked suspicious",
                 trailing = {
                     Switch(
                         checked = state.notifyOnFlag,
                         onCheckedChange = { scope.launch { viewModel.setNotifyOnFlag(it) } },
+                    )
+                },
+            )
+        }
+
+        // ── Preset overrides ──────────────────────────────────────────────────
+        SettingsSection("Preset overrides") {
+            SettingRow(
+                icon = Icons.Outlined.DarkMode,
+                iconTint = MaterialTheme.colorScheme.secondary,
+                title = "Night Guard",
+                subtitle = "Notify when calls are silenced during sleep hours",
+                trailing = {
+                    Switch(
+                        checked = state.notifyOnNightGuard,
+                        onCheckedChange = { scope.launch { viewModel.setNotifyOnNightGuard(it) } },
                     )
                 },
             )
@@ -289,6 +322,7 @@ private fun SettingRow(
     icon: ImageVector,
     iconTint: Color,
     title: String,
+    subtitle: String? = null,
     onClick: (() -> Unit)? = null,
     trailing: @Composable (() -> Unit)? = null,
 ) {
@@ -314,11 +348,16 @@ private fun SettingRow(
                 tint = iconTint,
             )
         }
-        Text(
-            title,
-            style = MaterialTheme.typography.bodyLarge,
-            modifier = Modifier.weight(1f),
-        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.bodyLarge)
+            if (subtitle != null) {
+                Text(
+                    subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
+                )
+            }
+        }
         trailing?.invoke()
     }
 }

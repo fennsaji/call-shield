@@ -29,8 +29,10 @@ class ScreeningPreferences @Inject constructor(
     private object Keys {
         val AUTO_BLOCK = booleanPreferencesKey("auto_block_high_confidence")
         val BLOCK_HIDDEN = booleanPreferencesKey("block_hidden_numbers")
-        val NOTIFY_ON_BLOCK = booleanPreferencesKey("notify_on_block")
+        val NOTIFY_ON_REJECT = booleanPreferencesKey("notify_on_reject")
+        val NOTIFY_ON_SILENCE = booleanPreferencesKey("notify_on_silence")
         val NOTIFY_ON_FLAG = booleanPreferencesKey("notify_on_flag")
+        val NOTIFY_ON_NIGHT_GUARD = booleanPreferencesKey("notify_on_night_guard")
         val ONBOARDING_COMPLETE = booleanPreferencesKey("onboarding_complete")
         val TRIAL_TRIGGERED = booleanPreferencesKey("trial_triggered")
         val FAMILY_WAITLIST_EMAIL = stringPreferencesKey("family_waitlist_email")
@@ -56,11 +58,17 @@ class ScreeningPreferences @Inject constructor(
     suspend fun blockHiddenNumbers(): Boolean =
         context.dataStore.data.first()[Keys.BLOCK_HIDDEN] ?: false
 
-    suspend fun notifyOnBlock(): Boolean =
-        context.dataStore.data.first()[Keys.NOTIFY_ON_BLOCK] ?: true
+    suspend fun notifyOnReject(): Boolean =
+        context.dataStore.data.first()[Keys.NOTIFY_ON_REJECT] ?: true
+
+    suspend fun notifyOnSilence(): Boolean =
+        context.dataStore.data.first()[Keys.NOTIFY_ON_SILENCE] ?: true
 
     suspend fun notifyOnFlag(): Boolean =
         context.dataStore.data.first()[Keys.NOTIFY_ON_FLAG] ?: true
+
+    suspend fun notifyOnNightGuard(): Boolean =
+        context.dataStore.data.first()[Keys.NOTIFY_ON_NIGHT_GUARD] ?: false
 
     suspend fun isOnboardingComplete(): Boolean =
         context.dataStore.data.first()[Keys.ONBOARDING_COMPLETE] ?: false
@@ -76,12 +84,20 @@ class ScreeningPreferences @Inject constructor(
         context.dataStore.edit { it[Keys.BLOCK_HIDDEN] = value }
     }
 
-    suspend fun setNotifyOnBlock(value: Boolean) {
-        context.dataStore.edit { it[Keys.NOTIFY_ON_BLOCK] = value }
+    suspend fun setNotifyOnReject(value: Boolean) {
+        context.dataStore.edit { it[Keys.NOTIFY_ON_REJECT] = value }
+    }
+
+    suspend fun setNotifyOnSilence(value: Boolean) {
+        context.dataStore.edit { it[Keys.NOTIFY_ON_SILENCE] = value }
     }
 
     suspend fun setNotifyOnFlag(value: Boolean) {
         context.dataStore.edit { it[Keys.NOTIFY_ON_FLAG] = value }
+    }
+
+    suspend fun setNotifyOnNightGuard(value: Boolean) {
+        context.dataStore.edit { it[Keys.NOTIFY_ON_NIGHT_GUARD] = value }
     }
 
     suspend fun setOnboardingComplete(value: Boolean) {
