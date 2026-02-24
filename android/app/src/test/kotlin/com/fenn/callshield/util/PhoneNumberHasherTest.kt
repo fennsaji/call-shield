@@ -81,7 +81,7 @@ class PhoneNumberHasherTest {
 }
 
 /** Fake HomeCountryProvider for tests — no Android Context needed. */
-private class FakeHomeCountryProvider(code: String = "+91") : HomeCountryProvider(null!!) {
+private class FakeHomeCountryProvider(code: String = "+91") : HomeCountryProvider(null) {
     override val callingCodePrefix = code
     override val isoCode = CALLING_CODES.entries.firstOrNull { it.value == code }?.key ?: "IN"
 }

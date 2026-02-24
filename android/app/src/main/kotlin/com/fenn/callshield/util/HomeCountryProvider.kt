@@ -14,7 +14,7 @@ import javax.inject.Singleton
  */
 @Singleton
 open class HomeCountryProvider @Inject constructor(
-    @ApplicationContext private val context: Context,
+    @ApplicationContext private val context: Context?,
 ) {
 
     /**
@@ -24,11 +24,11 @@ open class HomeCountryProvider @Inject constructor(
      *  1. SIM card country (most reliable — tied to the SIM, correct even when roaming)
      *  2. Device locale country (set by user during device setup — good for WiFi-only devices)
      *  3. Network country (last cellular resort — avoid as primary; wrong when roaming)
-     *  4. "US" hard fallback (should rarely be reached)
+     *  4. "IN" hard fallback (should rarely be reached)
      */
     open val isoCode: String
         get() {
-            val tm = context.getSystemService(TelephonyManager::class.java)
+            val tm = context?.getSystemService(TelephonyManager::class.java)
             val simIso = tm?.simCountryIso?.uppercase()?.ifBlank { null }
             val localeIso = java.util.Locale.getDefault().country.uppercase().ifBlank { null }
             val networkIso = tm?.networkCountryIso?.uppercase()?.ifBlank { null }
