@@ -255,7 +255,10 @@ fun CallShieldNavHost(
         }
 
         composable(Destinations.REGION_POLICIES) {
-            RegionPoliciesScreen(onBack = { navController.popBackStack() })
+            RegionPoliciesScreen(
+                onBack = { navController.popBackStack() },
+                onNavigateToPaywall = { navController.navigate(Destinations.paywallRoute()) },
+            )
         }
 
         composable(Destinations.NUMBER_RULES) {

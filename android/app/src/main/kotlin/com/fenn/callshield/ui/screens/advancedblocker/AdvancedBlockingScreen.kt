@@ -38,8 +38,13 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.gestures.animateScrollBy
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -63,6 +68,24 @@ fun AdvancedBlockingScreen(
     viewModel: AdvancedBlockingViewModel = hiltViewModel(),
 ) {
     val policy by viewModel.policy.collectAsStateWithLifecycle()
+    val listState = rememberLazyListState()
+
+    LaunchedEffect(policy.preset) {
+        if (policy.preset == BlockingPreset.CUSTOM) {
+            // Wait one frame for the custom section item to enter the layout
+            delay(50)
+            val offset = listState.layoutInfo.visibleItemsInfo
+                .firstOrNull { it.index == 1 }?.offset?.toFloat()
+            if (offset != null && offset > 0f) {
+                listState.animateScrollBy(
+                    value = offset,
+                    animationSpec = tween(durationMillis = 600),
+                )
+            } else {
+                listState.animateScrollToItem(1)
+            }
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -77,6 +100,7 @@ fun AdvancedBlockingScreen(
         },
     ) { innerPadding ->
         LazyColumn(
+            state = listState,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding),

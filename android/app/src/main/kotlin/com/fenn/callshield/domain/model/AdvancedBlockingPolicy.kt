@@ -4,6 +4,9 @@ enum class BlockingPreset { BALANCED, AGGRESSIVE, CONTACTS_ONLY, NIGHT_GUARD, IN
 
 enum class UnknownCallAction { ALLOW, SILENCE, REJECT }
 
+/** Whether the country filter list acts as a whitelist or blacklist. */
+enum class CountryFilterMode { OFF, ALLOW_ONLY, BLOCK_LISTED }
+
 data class AdvancedBlockingPolicy(
     val preset: BlockingPreset = BlockingPreset.BALANCED,
     // Contact policies
@@ -16,6 +19,9 @@ data class AdvancedBlockingPolicy(
     val nightGuardAction: UnknownCallAction = UnknownCallAction.SILENCE, // Pro can set REJECT
     // Region policy
     val blockInternational: Boolean = false,
+    // Country filter (Pro) — ISO 3166-1 alpha-2 codes
+    val countryFilterMode: CountryFilterMode = CountryFilterMode.OFF,
+    val countryFilterList: Set<String> = emptySet(),
     // Escalation
     val autoEscalateEnabled: Boolean = false,
     val autoEscalateThreshold: Int = 3,
@@ -23,7 +29,7 @@ data class AdvancedBlockingPolicy(
     /** True if any non-default option is active beyond just the preset field. */
     fun isCustomized(): Boolean =
         allowContactsOnly || silenceUnknownNumbers || nightGuardEnabled ||
-                blockInternational || autoEscalateEnabled
+                blockInternational || countryFilterMode != CountryFilterMode.OFF || autoEscalateEnabled
 }
 
 fun BlockingPreset.toDefaultPolicy(): AdvancedBlockingPolicy = when (this) {

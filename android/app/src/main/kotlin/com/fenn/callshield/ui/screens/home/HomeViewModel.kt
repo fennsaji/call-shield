@@ -61,6 +61,7 @@ class HomeViewModel @Inject constructor(
 ) : ViewModel() {
 
     val isPro: StateFlow<Boolean> = billingManager.isPro
+    val isFamily: StateFlow<Boolean> = billingManager.isFamily
 
     private val _snackbarMessage = MutableSharedFlow<String>(extraBufferCapacity = 1)
     val snackbarMessage: SharedFlow<String> = _snackbarMessage.asSharedFlow()

@@ -27,6 +27,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.CallMissed
 import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.filled.Block
+import androidx.compose.material.icons.filled.CallEnd
 import androidx.compose.material.icons.filled.CallMade
 import androidx.compose.material.icons.filled.CallReceived
 import androidx.compose.material.icons.filled.Check
@@ -511,6 +512,8 @@ private fun DeviceCallLogRow(
 ) {
     val entry = item.entry
     val warningColor = LocalWarningColor.current
+    val dangerColor = LocalDangerColor.current
+    val successColor = LocalSuccessColor.current
 
     val (icon, accent, typeLabel) = when (entry.type) {
         CallLog.Calls.OUTGOING_TYPE -> Triple(
@@ -523,10 +526,25 @@ private fun DeviceCallLogRow(
             warningColor,
             "Missed",
         )
+        CallLog.Calls.REJECTED_TYPE -> Triple(
+            Icons.Filled.CallEnd as ImageVector,
+            dangerColor,
+            "Rejected",
+        )
+        CallLog.Calls.BLOCKED_TYPE -> Triple(
+            Icons.Filled.CallEnd as ImageVector,
+            dangerColor,
+            "Blocked",
+        )
+        CallLog.Calls.INCOMING_TYPE -> Triple(
+            Icons.Filled.CallReceived as ImageVector,
+            successColor,
+            "Received",
+        )
         else -> Triple(
             Icons.Filled.CallReceived as ImageVector,
-            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f),
-            "Incoming",
+            successColor,
+            "Received",
         )
     }
 
@@ -610,7 +628,10 @@ private fun DeviceCallLogSheet(
     val (callIcon, callAccent, typeLabel) = when (entry.type) {
         CallLog.Calls.OUTGOING_TYPE -> Triple(Icons.Filled.CallMade as ImageVector, MaterialTheme.colorScheme.primary, "Outgoing")
         CallLog.Calls.MISSED_TYPE -> Triple(Icons.AutoMirrored.Filled.CallMissed as ImageVector, warningColor, "Missed")
-        else -> Triple(Icons.Filled.CallReceived as ImageVector, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f), "Incoming")
+        CallLog.Calls.REJECTED_TYPE -> Triple(Icons.Filled.CallEnd as ImageVector, dangerColor, "Rejected")
+        CallLog.Calls.BLOCKED_TYPE -> Triple(Icons.Filled.CallEnd as ImageVector, dangerColor, "Blocked")
+        CallLog.Calls.INCOMING_TYPE -> Triple(Icons.Filled.CallReceived as ImageVector, successColor, "Received")
+        else -> Triple(Icons.Filled.CallReceived as ImageVector, successColor, "Received")
     }
 
     val numberLabel = maskNumber(entry.number)

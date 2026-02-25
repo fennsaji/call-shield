@@ -245,7 +245,6 @@ private fun ProFeaturesList() {
         Triple(Icons.Filled.DarkMode,         secondary,    "Night Guard — custom hours & reject"),
         Triple(Icons.Filled.Language,         primary,      "International call blocking"),
         Triple(Icons.Outlined.FamilyRestroom, successColor, "Family Protection — unlimited devices"),
-        Triple(Icons.Filled.History,          warningColor, "Full call history"),
         Triple(Icons.Filled.SystemUpdate,     tertiary,     "Priority spam database updates"),
     )
 
