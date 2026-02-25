@@ -9,9 +9,8 @@ on:
   workflow_dispatch:
     inputs:
       release_notes:
-        description: 'Release notes for this build'
-        required: false
-        default: 'Bug fixes and performance improvements.'
+        description: "What's new in this release? (shown to testers, max 500 chars)"
+        required: true
 
 env:
   JAVA_VERSION: '17'
@@ -28,6 +27,35 @@ jobs:
     steps:
     - name: 🔄 Checkout repository
       uses: actions/checkout@v4
+
+    - name: ✅ Validate release notes
+      run: |
+        if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          NOTES="${{ github.event.inputs.release_notes }}"
+        else
+          # Push trigger: ensure the whatsnew file was updated in this push
+          if ! git diff --name-only HEAD~1 HEAD | grep -q "distribution/whatsnew/"; then
+            echo "❌ Release notes not updated for this release."
+            echo "   Update distribution/whatsnew/whatsnew-en-IN with what changed before merging to main."
+            exit 1
+          fi
+          NOTES=$(cat distribution/whatsnew/whatsnew-en-IN 2>/dev/null || echo "")
+        fi
+
+        TRIMMED=$(echo "$NOTES" | tr -d '[:space:]')
+        if [ -z "$TRIMMED" ]; then
+          echo "❌ Release notes are empty."
+          exit 1
+        fi
+        if [ ${#NOTES} -lt 10 ]; then
+          echo "❌ Release notes are too short (min 10 chars). Describe what changed."
+          exit 1
+        fi
+        if echo "$NOTES" | grep -qi "bug fixes and performance improvements"; then
+          echo "❌ Release notes still contain the default placeholder. Write real notes."
+          exit 1
+        fi
+        echo "✅ Release notes accepted: $NOTES"
 
     # ── Java ──────────────────────────────────────────────────
     - name: ☕ Setup Java ${{ env.JAVA_VERSION }}
@@ -83,14 +111,16 @@ jobs:
       env:
         GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx4g -Dorg.gradle.parallel=true"
 
-    # ── Update whatsnew if provided via workflow_dispatch ─────
+    # ── Write release notes (manual dispatch overrides file; push uses committed file) ──
     - name: 📝 Write release notes
-      if: ${{ github.event.inputs.release_notes != '' }}
       run: |
-        NOTES="${{ github.event.inputs.release_notes }}"
-        NOTES="${NOTES:0:500}"   # Play Store limit: 500 chars
-        echo "$NOTES" > distribution/whatsnew/whatsnew-en-IN
-        echo "$NOTES" > distribution/whatsnew/whatsnew-en-US
+        if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          NOTES="${{ github.event.inputs.release_notes }}"
+          NOTES="${NOTES:0:500}"
+          echo "$NOTES" > distribution/whatsnew/whatsnew-en-IN
+          echo "$NOTES" > distribution/whatsnew/whatsnew-en-US
+        fi
+        # For push: whatsnew files are already committed in the repo — nothing to write
 
     # ── Play Store ────────────────────────────────────────────
     - name: 🔑 Write Play Store service account
@@ -106,7 +136,7 @@ jobs:
         packageName: com.fenn.callshield
         releaseFiles: android/app/build/outputs/bundle/release/app-release.aab
         track: internal
-        status: draft
+        status: completed
         whatsNewDirectory: distribution/whatsnew
         mappingFile: android/app/build/outputs/mapping/release/mapping.txt
         debugSymbols: android/app/build/intermediates/merged_native_libs/release/mergeReleaseNativeLibs/out/lib
@@ -143,7 +173,7 @@ jobs:
           **Track:** Internal Testing (Play Store)
 
           ### What's New
-          ${{ github.event.inputs.release_notes || 'Bug fixes and performance improvements.' }}
+          ${{ github.event.inputs.release_notes || 'See distribution/whatsnew/whatsnew-en-IN' }}
 
           ### Build Details
           - **Version code:** ${{ github.run_number }}
