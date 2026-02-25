@@ -36,6 +36,7 @@ import com.fenn.callshield.ui.screens.prefix.PrefixRulesScreen
 import com.fenn.callshield.ui.screens.privacy.PrivacyDashboardScreen
 import com.fenn.callshield.ui.screens.report.ReportSpamScreen
 import com.fenn.callshield.ui.screens.dnd.DndManagementScreen
+import com.fenn.callshield.ui.screens.currentplan.CurrentPlanScreen
 import com.fenn.callshield.ui.screens.trai.TraiReportedNumbersScreen
 import com.fenn.callshield.ui.screens.whitelist.WhitelistScreen
 
@@ -61,6 +62,7 @@ object Destinations {
     const val REGION_POLICIES = "region_policies"
     const val NUMBER_RULES = "number_rules"
     const val DECISION_ORDER = "decision_order"
+    const val CURRENT_PLAN = "current_plan"
 
     fun reportSpam(numberHash: String, displayLabel: String, screenedAt: Long = 0L) =
         "report_spam/${Uri.encode(numberHash)}/${Uri.encode(displayLabel)}?screenedAt=$screenedAt"
@@ -145,6 +147,7 @@ fun CallShieldNavHost(
                 onNavigateToReport = { hash, label, screenedAt ->
                     navController.navigate(Destinations.reportSpam(hash, label, screenedAt))
                 },
+                onNavigateToCurrentPlan = { navController.navigate(Destinations.CURRENT_PLAN) },
             )
         }
 
@@ -266,6 +269,10 @@ fun CallShieldNavHost(
 
         composable(Destinations.DECISION_ORDER) {
             DecisionOrderScreen(onBack = { navController.popBackStack() })
+        }
+
+        composable(Destinations.CURRENT_PLAN) {
+            CurrentPlanScreen(onBack = { navController.popBackStack() })
         }
     }
 }

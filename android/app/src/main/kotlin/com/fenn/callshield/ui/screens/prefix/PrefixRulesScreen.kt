@@ -4,6 +4,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -54,6 +56,7 @@ import com.fenn.callshield.R
 import com.fenn.callshield.ui.components.AppDialog
 import com.fenn.callshield.ui.theme.LocalDangerColor
 import com.fenn.callshield.ui.theme.LocalSuccessColor
+import com.fenn.callshield.ui.theme.LocalWarningColor
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -70,13 +73,14 @@ fun PrefixRulesScreen(
     var showLimitDialog by remember { mutableStateOf(false) }
     val dangerColor = LocalDangerColor.current
     val successColor = LocalSuccessColor.current
+    val warningColor = LocalWarningColor.current
 
     val atFreeLimit = !isPro && rules.size >= FREE_PREFIX_RULE_LIMIT
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.prefix_rules_title)) },
+                title = { Text("Pattern Rules") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
@@ -88,7 +92,7 @@ fun PrefixRulesScreen(
             FloatingActionButton(onClick = {
                 if (atFreeLimit) showLimitDialog = true else showAddDialog = true
             }) {
-                Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.add_prefix))
+                Icon(Icons.Filled.Add, contentDescription = "Add rule")
             }
         },
     ) { padding ->
@@ -108,13 +112,13 @@ fun PrefixRulesScreen(
                 )
                 Spacer(Modifier.height(12.dp))
                 Text(
-                    "No prefix rules",
+                    "No pattern rules",
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
                     style = MaterialTheme.typography.bodyLarge,
                 )
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    "Tap + to add your first rule",
+                    "Tap + to block by prefix, suffix, or pattern",
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
                     style = MaterialTheme.typography.bodyMedium,
                 )
@@ -127,14 +131,19 @@ fun PrefixRulesScreen(
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                items(rules, key = { it.prefix }) { rule ->
+                items(rules, key = { it.id }) { rule ->
                     val isBlock = rule.action == "block"
-                    val accentColor = if (isBlock) dangerColor else successColor
+                    val isSilence = rule.action == "silence"
+                    val accentColor = when {
+                        isBlock   -> dangerColor
+                        isSilence -> warningColor
+                        else      -> successColor
+                    }
 
                     val dismissState = rememberSwipeToDismissBoxState(
                         confirmValueChange = { value ->
                             if (value == SwipeToDismissBoxValue.EndToStart) {
-                                scope.launch { viewModel.remove(rule.prefix) }
+                                scope.launch { viewModel.remove(rule.id) }
                                 true
                             } else false
                         }
@@ -170,31 +179,40 @@ fun PrefixRulesScreen(
                                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                             ) {
                                 Icon(
-                                    if (isBlock) Icons.Filled.Block else Icons.Filled.CheckCircle,
+                                    if (isBlock || isSilence) Icons.Filled.Block else Icons.Filled.CheckCircle,
                                     contentDescription = rule.action,
                                     tint = accentColor,
                                     modifier = Modifier.size(22.dp),
                                 )
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
-                                        rule.prefix,
+                                        rule.pattern,
                                         style = MaterialTheme.typography.bodyLarge,
                                         fontWeight = FontWeight.Medium,
                                     )
-                                    if (rule.label.isNotBlank()) {
-                                        Text(
-                                            rule.label,
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
-                                        )
-                                    }
+                                    Text(
+                                        buildString {
+                                            append(when (rule.matchType) {
+                                                "suffix"   -> "ends with"
+                                                "contains" -> "contains"
+                                                else       -> "starts with"
+                                            })
+                                            if (rule.label.isNotBlank()) append(" · ${rule.label}")
+                                        },
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
+                                    )
                                 }
-                                // Action badge chip
+                                // Action badge
                                 AssistChip(
                                     onClick = {},
                                     label = {
                                         Text(
-                                            if (isBlock) "Block" else "Allow",
+                                            when (rule.action) {
+                                                "silence" -> "Silence"
+                                                "allow"   -> "Allow"
+                                                else      -> "Block"
+                                            },
                                             style = MaterialTheme.typography.labelSmall,
                                         )
                                     },
@@ -205,7 +223,7 @@ fun PrefixRulesScreen(
                                     border = null,
                                 )
                                 IconButton(onClick = {
-                                    scope.launch { viewModel.remove(rule.prefix) }
+                                    scope.launch { viewModel.remove(rule.id) }
                                 }) {
                                     Icon(
                                         Icons.Filled.Delete,
@@ -222,9 +240,9 @@ fun PrefixRulesScreen(
     }
 
     if (showAddDialog) {
-        AddPrefixDialog(
-            onConfirm = { prefix, action, label ->
-                scope.launch { viewModel.add(prefix, action, label) }
+        AddPatternDialog(
+            onConfirm = { pattern, matchType, action, label ->
+                scope.launch { viewModel.add(pattern, matchType, action, label) }
                 showAddDialog = false
             },
             onDismiss = { showAddDialog = false },
@@ -244,7 +262,7 @@ fun PrefixRulesScreen(
             onDismiss = { showLimitDialog = false },
         ) {
             Text(
-                "Free plan supports up to $FREE_PREFIX_RULE_LIMIT prefix rules. Upgrade to Pro for unlimited rules.",
+                "Free plan supports up to $FREE_PREFIX_RULE_LIMIT rules. Upgrade to Pro for unlimited rules.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
             )
@@ -252,28 +270,60 @@ fun PrefixRulesScreen(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun AddPrefixDialog(
-    onConfirm: (prefix: String, action: String, label: String) -> Unit,
+private fun AddPatternDialog(
+    onConfirm: (pattern: String, matchType: String, action: String, label: String) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    var prefix by remember { mutableStateOf("") }
+    var pattern by remember { mutableStateOf("") }
     var label by remember { mutableStateOf("") }
+    var matchType by remember { mutableStateOf("prefix") }
     var action by remember { mutableStateOf("block") }
+
+    val placeholder = when (matchType) {
+        "suffix"   -> "e.g. 9999"
+        "contains" -> "e.g. 140"
+        else       -> "e.g. +91140"
+    }
 
     AppDialog(
         onDismissRequest = onDismiss,
         icon = Icons.Filled.FilterList,
-        title = stringResource(R.string.add_prefix),
+        title = "Add pattern rule",
         confirmLabel = stringResource(R.string.done),
-        confirmEnabled = prefix.isNotBlank(),
-        onConfirm = { if (prefix.isNotBlank()) onConfirm(prefix.trim(), action, label.trim()) },
+        confirmEnabled = pattern.isNotBlank(),
+        onConfirm = { if (pattern.isNotBlank()) onConfirm(pattern.trim(), matchType, action, label.trim()) },
         onDismiss = onDismiss,
     ) {
+        // Match type
+        Text(
+            "Match type",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+        )
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FilterChip(
+                selected = matchType == "prefix",
+                onClick = { matchType = "prefix" },
+                label = { Text("Starts with") },
+            )
+            FilterChip(
+                selected = matchType == "suffix",
+                onClick = { matchType = "suffix" },
+                label = { Text("Ends with") },
+            )
+            FilterChip(
+                selected = matchType == "contains",
+                onClick = { matchType = "contains" },
+                label = { Text("Contains") },
+            )
+        }
+
         OutlinedTextField(
-            value = prefix,
-            onValueChange = { prefix = it },
-            label = { Text("Prefix (e.g. +91140)") },
+            value = pattern,
+            onValueChange = { pattern = it },
+            label = { Text("Pattern ($placeholder)") },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
         )
@@ -284,11 +334,23 @@ private fun AddPrefixDialog(
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
         )
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+
+        // Action
+        Text(
+            "Action",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+        )
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             FilterChip(
                 selected = action == "block",
                 onClick = { action = "block" },
                 label = { Text("Block") },
+            )
+            FilterChip(
+                selected = action == "silence",
+                onClick = { action = "silence" },
+                label = { Text("Silence") },
             )
             FilterChip(
                 selected = action == "allow",

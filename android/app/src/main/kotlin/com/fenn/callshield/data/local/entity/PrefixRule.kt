@@ -4,14 +4,21 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 
 /**
- * Prefix rule for call screening.
- * A prefix is an E.164 prefix string, e.g. "+91140" for telemarketer prefix.
- * [action] is "block" or "allow".
+ * A pattern rule for call screening.
+ *
+ * [pattern] is matched against the incoming E.164 number using [matchType]:
+ *   "prefix"   → number starts with pattern (e.g. "+91140")
+ *   "suffix"   → number ends with pattern   (e.g. "9999")
+ *   "contains" → number contains pattern    (e.g. "140")
+ *
+ * [action] is "block", "silence", or "allow".
  */
 @Entity(tableName = "prefix_rules")
 data class PrefixRule(
-    @PrimaryKey val prefix: String,
-    val action: String, // "block" | "allow"
+    @PrimaryKey(autoGenerate = true) val id: Int = 0,
+    val pattern: String,
+    val matchType: String = "prefix", // "prefix" | "suffix" | "contains"
+    val action: String,               // "block"  | "silence" | "allow"
     val label: String = "",
     val addedAt: Long = System.currentTimeMillis(),
 )

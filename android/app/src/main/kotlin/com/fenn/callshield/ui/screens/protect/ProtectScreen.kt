@@ -114,7 +114,7 @@ fun ProtectScreen(
                     )
                     QuickAccessCard(
                         icon = Icons.Outlined.FilterList,
-                        label = "Prefixes",
+                        label = "Patterns",
                         iconTint = primary,
                         onClick = onNavigateToPrefixRules,
                         modifier = Modifier.weight(1f),
@@ -169,7 +169,7 @@ fun ProtectScreen(
                 FeatureRowCard(
                     icon = Icons.Outlined.FamilyRestroom,
                     title = "Family Protection",
-                    subtitle = "Shield up to 2 family members (Pro)",
+                    subtitle = "Share blocking rules with unlimited family devices",
                     iconTint = successColor,
                     isLocked = !isPro,
                     onClick = onNavigateToFamilyProtection,

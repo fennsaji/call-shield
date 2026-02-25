@@ -71,6 +71,7 @@ fun MainScreen(
     onNavigateToBackup: () -> Unit,
     onNavigateToFamilyProtection: () -> Unit,
     onNavigateToAdvancedBlocking: () -> Unit,
+    onNavigateToCurrentPlan: () -> Unit,
     onNavigateToReport: (hash: String, label: String, screenedAt: Long) -> Unit,
 ) {
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
@@ -123,6 +124,7 @@ fun MainScreen(
                 onNavigateToPermissions = onNavigateToPermissions,
                 onNavigateToBackup = onNavigateToBackup,
                 onNavigateToPaywall = onNavigateToPaywall,
+                onNavigateToCurrentPlan = onNavigateToCurrentPlan,
             )
         }
     }

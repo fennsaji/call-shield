@@ -136,7 +136,7 @@ fun NumberRulesScreen(
                     Column {
                         ListLinkRow("Blocklist", onClick = onNavigateToBlocklist)
                         ListLinkRow("Whitelist", onClick = onNavigateToWhitelist)
-                        ListLinkRow("Prefix Rules", onClick = onNavigateToPrefixRules)
+                        ListLinkRow("Pattern Rules", onClick = onNavigateToPrefixRules)
                     }
                 }
             }

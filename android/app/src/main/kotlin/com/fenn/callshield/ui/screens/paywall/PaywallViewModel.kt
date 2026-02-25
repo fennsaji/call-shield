@@ -9,6 +9,7 @@ import com.android.billingclient.api.BillingClient
 import com.android.billingclient.api.ProductDetails
 import com.fenn.callshield.billing.BillingManager
 import com.fenn.callshield.billing.PRODUCT_FAMILY_ANNUAL
+import com.fenn.callshield.billing.PRODUCT_FAMILY_LIFETIME
 import com.fenn.callshield.billing.PRODUCT_PRO_ANNUAL
 import com.fenn.callshield.billing.PRODUCT_PRO_LIFETIME
 import com.fenn.callshield.billing.PRODUCT_PRO_MONTHLY
@@ -35,10 +36,14 @@ data class PaywallState(
     val monthlyProduct: ProductDetails? = null,
     val lifetimeProduct: ProductDetails? = null,
     val familyProduct: ProductDetails? = null,
+    val familyLifetimeProduct: ProductDetails? = null,
     val purchaseSuccess: Boolean = false,
     val error: String? = null,
     val familyWaitlistEmail: String = "",
     val familyWaitlistJoined: Boolean = false,
+    val promoCode: String = "",
+    val promoError: Boolean = false,
+    val hasPendingPurchase: Boolean = false,
 )
 
 @HiltViewModel
@@ -53,13 +58,19 @@ class PaywallViewModel @Inject constructor(
     private var purchaseInProgress = false
 
     init {
-        // Collect isPro once — set purchaseSuccess only after an explicit purchase attempt
+        // Collect isPro — set purchaseSuccess only after an explicit purchase attempt
         viewModelScope.launch {
             billingManager.isPro.collect { isPro ->
                 if (isPro && purchaseInProgress) {
                     purchaseInProgress = false
                     _state.value = _state.value.copy(purchaseSuccess = true)
                 }
+            }
+        }
+        // Mirror pending purchase state from BillingManager
+        viewModelScope.launch {
+            billingManager.hasPendingPurchase.collect { pending ->
+                _state.value = _state.value.copy(hasPendingPurchase = pending)
             }
         }
     }
@@ -78,12 +89,14 @@ class PaywallViewModel @Inject constructor(
                 val monthly = products.firstOrNull { it.productId == PRODUCT_PRO_MONTHLY }
                 val lifetime = products.firstOrNull { it.productId == PRODUCT_PRO_LIFETIME }
                 val family = products.firstOrNull { it.productId == PRODUCT_FAMILY_ANNUAL }
+                val familyLifetime = products.firstOrNull { it.productId == PRODUCT_FAMILY_LIFETIME }
                 _state.value = _state.value.copy(
                     loading = false,
                     annualProduct = annual,
                     monthlyProduct = monthly,
                     lifetimeProduct = lifetime,
                     familyProduct = family,
+                    familyLifetimeProduct = familyLifetime,
                     error = if (annual == null && monthly == null)
                         "Plans unavailable — app must be published on Google Play for purchases to work"
                     else null,
@@ -127,9 +140,22 @@ class PaywallViewModel @Inject constructor(
         }
     }
 
-    fun debugSimulatePurchase() {
-        billingManager.debugSimulatePurchase()
+    fun debugSimulatePlan(plan: com.fenn.callshield.billing.PlanType) {
+        billingManager.debugSimulatePlan(plan)
         _state.value = _state.value.copy(purchaseSuccess = true)
+    }
+
+    fun onPromoCodeChange(code: String) {
+        _state.value = _state.value.copy(promoCode = code, promoError = false)
+    }
+
+    fun redeemPromoCode() {
+        val code = _state.value.promoCode
+        if (billingManager.redeemPromoCode(code)) {
+            _state.value = _state.value.copy(purchaseSuccess = true)
+        } else {
+            _state.value = _state.value.copy(promoError = true)
+        }
     }
 
     fun onFamilyEmailChange(email: String) {

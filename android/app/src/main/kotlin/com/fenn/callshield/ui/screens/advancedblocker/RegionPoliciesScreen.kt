@@ -20,6 +20,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -32,6 +33,7 @@ fun RegionPoliciesScreen(
     viewModel: AdvancedBlockingViewModel = hiltViewModel(),
 ) {
     val policy by viewModel.policy.collectAsStateWithLifecycle()
+    val isPro by viewModel.isPro.collectAsStateWithLifecycle()
     val homeCode = viewModel.homeCallingCode
 
     Scaffold(
@@ -81,16 +83,29 @@ fun RegionPoliciesScreen(
             item {
                 Spacer(Modifier.height(4.dp))
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(
-                        "Country whitelist/blacklist — Pro",
-                        style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                    Text(
-                        "Allow specific countries while blocking others. Available with a Pro subscription.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                    )
+                    if (isPro) {
+                        Text(
+                            "Country whitelist/blacklist",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        Text(
+                            "Allow specific countries while blocking others — coming in the next update.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                        )
+                    } else {
+                        Text(
+                            "Country whitelist/blacklist — Pro",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                        Text(
+                            "Allow specific countries while blocking others. Available with a Pro subscription.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                        )
+                    }
                 }
             }
         }

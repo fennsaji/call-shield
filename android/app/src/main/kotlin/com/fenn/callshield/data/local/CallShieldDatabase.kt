@@ -35,7 +35,7 @@ import com.fenn.callshield.data.local.entity.WhitelistEntry
         TraiReportEntry::class,
         DndCommandEntry::class,
     ],
-    version = 5,
+    version = 6,
     exportSchema = true,
 )
 abstract class CallShieldDatabase : RoomDatabase() {
