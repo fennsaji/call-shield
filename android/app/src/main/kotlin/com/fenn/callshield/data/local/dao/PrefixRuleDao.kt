@@ -12,15 +12,15 @@ interface PrefixRuleDao {
     @Query("SELECT * FROM prefix_rules ORDER BY addedAt DESC")
     fun observeAll(): Flow<List<PrefixRule>>
 
-    /** Returns all rules sorted longest-prefix-first for priority matching. */
-    @Query("SELECT * FROM prefix_rules ORDER BY LENGTH(prefix) DESC")
+    /** Returns all rules sorted longest-pattern-first for priority matching. */
+    @Query("SELECT * FROM prefix_rules ORDER BY LENGTH(pattern) DESC")
     suspend fun getAllSortedByLength(): List<PrefixRule>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(rule: PrefixRule)
 
-    @Query("DELETE FROM prefix_rules WHERE prefix = :prefix")
-    suspend fun deleteByPrefix(prefix: String)
+    @Query("DELETE FROM prefix_rules WHERE id = :id")
+    suspend fun deleteById(id: Int)
 
     @Query("DELETE FROM prefix_rules")
     suspend fun deleteAll()

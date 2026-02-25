@@ -68,7 +68,7 @@ fun DecisionOrderScreen(onBack: () -> Unit) {
         DecisionStage(1, "Personal Whitelist", "Numbers you explicitly trust.", Icons.Filled.CheckCircle, primary, "→ Always Allow"),
         DecisionStage(2, "Personal Blocklist", "Numbers you manually blocked.", Icons.Filled.Block, error, "→ Reject"),
         DecisionStage(3, "Advanced Blocking Policy", "Night Guard, Contacts Only, Region Lock, Escalation.", Icons.Filled.Tune, secondary, "→ Silence or Reject"),
-        DecisionStage(4, "Prefix Rules", "Rules matching number prefixes you configured.", Icons.Filled.FilterList, tertiary, "→ Block, Silence, or Allow"),
+        DecisionStage(4, "Pattern Rules", "Prefix, suffix, or contains rules you configured.", Icons.Filled.FilterList, tertiary, "→ Block, Silence, or Allow"),
         DecisionStage(5, "Hidden / Private Number", "Calls with no caller ID.", Icons.Filled.VisibilityOff, error, "→ Silence or Reject (Pro)"),
         DecisionStage(6, "Local Spam Database", "Bundled database of known spam numbers.", Icons.Filled.Shield, error, "→ Silence (Known Spam)"),
         DecisionStage(7, "Community Reputation", "Score from community reports.", Icons.Filled.Phone, secondary, "→ Flag or Silence"),

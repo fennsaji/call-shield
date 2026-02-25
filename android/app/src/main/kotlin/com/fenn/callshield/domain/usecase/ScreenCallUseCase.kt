@@ -52,7 +52,7 @@ class ScreenCallUseCase @Inject constructor(
             return if (isPro && settings.blockHiddenNumbers) {
                 CallDecision.Reject(DecisionSource.HIDDEN)
             } else {
-                CallDecision.Silence(0.5, null, DecisionSource.HIDDEN)
+                CallDecision.Allow
             }
         }
 

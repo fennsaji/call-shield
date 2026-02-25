@@ -68,6 +68,7 @@ fun ProtectScreen(
 ) {
     val state by homeViewModel.uiState.collectAsStateWithLifecycle()
     val isPro by homeViewModel.isPro.collectAsStateWithLifecycle()
+    val isFamily by homeViewModel.isFamily.collectAsStateWithLifecycle()
     val policy by advancedBlockingViewModel.policy.collectAsStateWithLifecycle()
     val dangerColor = LocalDangerColor.current
     val successColor = LocalSuccessColor.current
@@ -85,8 +86,7 @@ fun ProtectScreen(
         item {
             Text(
                 text = "Protect",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.headlineMedium,
             )
         }
 
@@ -114,7 +114,7 @@ fun ProtectScreen(
                     )
                     QuickAccessCard(
                         icon = Icons.Outlined.FilterList,
-                        label = "Prefixes",
+                        label = "Patterns",
                         iconTint = primary,
                         onClick = onNavigateToPrefixRules,
                         modifier = Modifier.weight(1f),
@@ -169,9 +169,10 @@ fun ProtectScreen(
                 FeatureRowCard(
                     icon = Icons.Outlined.FamilyRestroom,
                     title = "Family Protection",
-                    subtitle = "Shield up to 2 family members (Pro)",
+                    subtitle = "Share blocking rules with unlimited family devices",
                     iconTint = successColor,
-                    isLocked = !isPro,
+                    isLocked = !isFamily,
+                    lockLabel = "Family",
                     onClick = onNavigateToFamilyProtection,
                     onLockedClick = onNavigateToPaywall,
                 )
@@ -333,6 +334,7 @@ private fun FeatureRowCard(
     onClick: () -> Unit,
     iconTint: Color = Color.Unspecified,
     isLocked: Boolean = false,
+    lockLabel: String = "Pro",
     onLockedClick: () -> Unit = {},
 ) {
     val effectiveClick = if (isLocked) onLockedClick else onClick
@@ -361,7 +363,7 @@ private fun FeatureRowCard(
             if (isLocked) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     Icon(Icons.Outlined.Lock, contentDescription = null, modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.primary)
-                    Text("Pro", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                    Text(lockLabel, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
                 }
             } else {
                 Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f))

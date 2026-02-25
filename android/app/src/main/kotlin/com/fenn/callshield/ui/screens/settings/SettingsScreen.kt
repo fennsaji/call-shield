@@ -18,7 +18,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
-import androidx.compose.material.icons.outlined.CardGiftcard
 import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.GppBad
 import androidx.compose.material.icons.outlined.LightMode
@@ -29,6 +28,7 @@ import androidx.compose.material.icons.outlined.SaveAlt
 import androidx.compose.material.icons.outlined.Security
 import androidx.compose.material.icons.outlined.Shield
 import androidx.compose.material.icons.outlined.VolumeOff
+import androidx.compose.material.icons.outlined.ManageAccounts
 import androidx.compose.material.icons.outlined.WorkspacePremium
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
@@ -36,7 +36,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
@@ -44,10 +43,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -61,7 +57,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.fenn.callshield.BuildConfig
 import com.fenn.callshield.R
-import com.fenn.callshield.ui.components.AppDialog
 import com.fenn.callshield.ui.theme.ThemeMode
 import kotlinx.coroutines.launch
 
@@ -73,13 +68,13 @@ fun SettingsScreen(
     onNavigateToPermissions: () -> Unit = {},
     onNavigateToBackup: () -> Unit = {},
     onNavigateToPaywall: () -> Unit = {},
+    onNavigateToCurrentPlan: () -> Unit = {},
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
     val isPro by viewModel.isPro.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
-    var showPromoDialog by remember { mutableStateOf(false) }
 
     Column(
         modifier = modifier
@@ -94,22 +89,11 @@ fun SettingsScreen(
             modifier = Modifier.padding(vertical = 16.dp, horizontal = 4.dp),
         )
 
-        // ── Upgrade to Pro ────────────────────────────────────────────────────
-        if (!isPro) {
+        // ── Plan card ─────────────────────────────────────────────────────────
+        if (isPro) {
+            YourPlanCard(onClick = onNavigateToCurrentPlan)
+        } else {
             UpgradeToProCard(onClick = onNavigateToPaywall)
-        }
-
-        // ── Account ───────────────────────────────────────────────────────────
-        if (!isPro) {
-            SettingsSection("Account") {
-                SettingRow(
-                    icon = Icons.Outlined.CardGiftcard,
-                    iconTint = MaterialTheme.colorScheme.primary,
-                    title = "Redeem Promo Code",
-                    onClick = { showPromoDialog = true },
-                    trailing = { ChevronIcon() },
-                )
-            }
         }
 
         // ── Appearance ────────────────────────────────────────────────────────
@@ -218,16 +202,6 @@ fun SettingsScreen(
         )
     }
 
-    if (showPromoDialog) {
-        PromoCodeDialog(
-            onDismiss = { showPromoDialog = false },
-            onRedeem = { code ->
-                val success = viewModel.redeemPromoCode(code)
-                if (success) showPromoDialog = false
-                success
-            },
-        )
-    }
 }
 
 // ── Section card wrapper ──────────────────────────────────────────────────────
@@ -305,6 +279,67 @@ private fun UpgradeToProCard(onClick: () -> Unit) {
                     )
                     Text(
                         "Auto-block spam, advanced blocking & more",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
+                    )
+                }
+                ChevronIcon()
+            }
+        }
+    }
+}
+
+// ── Your Plan card ────────────────────────────────────────────────────────────
+
+@Composable
+private fun YourPlanCard(onClick: () -> Unit) {
+    val primary = MaterialTheme.colorScheme.primary
+    ElevatedCard(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp),
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    Brush.horizontalGradient(
+                        listOf(primary.copy(alpha = 0.09f), primary.copy(alpha = 0.04f))
+                    )
+                )
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(14.dp),
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(38.dp)
+                        .clip(CircleShape)
+                        .background(primary.copy(alpha = 0.08f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        Icons.Outlined.ManageAccounts,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                        tint = primary,
+                    )
+                }
+                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                    Text(
+                        "Your Plan",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = primary,
+                    )
+                    Text(
+                        "Manage, switch, or upgrade your subscription",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
                     )
@@ -406,47 +441,6 @@ private fun ThemeSegmentedRow(
                 Text(label, style = MaterialTheme.typography.labelMedium)
             }
         }
-    }
-}
-
-// ── Promo dialog ──────────────────────────────────────────────────────────────
-
-@Composable
-private fun PromoCodeDialog(
-    onDismiss: () -> Unit,
-    onRedeem: (String) -> Boolean,
-) {
-    var code by remember { mutableStateOf("") }
-    var error by remember { mutableStateOf(false) }
-
-    AppDialog(
-        onDismissRequest = onDismiss,
-        icon = Icons.Outlined.CardGiftcard,
-        title = "Redeem Promo Code",
-        confirmLabel = "Redeem",
-        confirmEnabled = code.isNotBlank(),
-        onConfirm = {
-            val success = onRedeem(code)
-            if (!success) error = true
-        },
-        onDismiss = onDismiss,
-    ) {
-        Text(
-            "Enter your tester promo code to unlock Pro features.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-        )
-        OutlinedTextField(
-            value = code,
-            onValueChange = { code = it; error = false },
-            placeholder = { Text("Promo code") },
-            singleLine = true,
-            isError = error,
-            modifier = Modifier.fillMaxWidth(),
-            supportingText = if (error) {
-                { Text("Invalid promo code", color = MaterialTheme.colorScheme.error) }
-            } else null,
-        )
     }
 }
 

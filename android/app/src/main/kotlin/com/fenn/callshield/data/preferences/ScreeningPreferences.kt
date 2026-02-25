@@ -10,6 +10,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.fenn.callshield.domain.model.AdvancedBlockingPolicy
 import com.fenn.callshield.domain.model.BlockingPreset
+import com.fenn.callshield.domain.model.CountryFilterMode
 import com.fenn.callshield.domain.model.UnknownCallAction
 import com.fenn.callshield.ui.theme.ThemeMode
 import com.fenn.callshield.util.DndOperator
@@ -48,6 +49,8 @@ class ScreeningPreferences @Inject constructor(
         val ABP_NIGHT_GUARD_END = intPreferencesKey("abp_night_guard_end")
         val ABP_NIGHT_GUARD_ACTION = stringPreferencesKey("abp_night_guard_action")
         val ABP_BLOCK_INTERNATIONAL = booleanPreferencesKey("abp_block_international")
+        val ABP_COUNTRY_FILTER_MODE = stringPreferencesKey("abp_country_filter_mode")
+        val ABP_COUNTRY_FILTER_LIST = stringPreferencesKey("abp_country_filter_list") // comma-separated ISO codes
         val ABP_AUTO_ESCALATE = booleanPreferencesKey("abp_auto_escalate")
         val ABP_AUTO_ESCALATE_THRESHOLD = intPreferencesKey("abp_auto_escalate_threshold")
     }
@@ -160,6 +163,11 @@ class ScreeningPreferences @Inject constructor(
                     ?.let { runCatching { UnknownCallAction.valueOf(it) }.getOrNull() }
                     ?: UnknownCallAction.SILENCE,
                 blockInternational = prefs[Keys.ABP_BLOCK_INTERNATIONAL] ?: false,
+                countryFilterMode = prefs[Keys.ABP_COUNTRY_FILTER_MODE]
+                    ?.let { runCatching { CountryFilterMode.valueOf(it) }.getOrNull() }
+                    ?: CountryFilterMode.OFF,
+                countryFilterList = prefs[Keys.ABP_COUNTRY_FILTER_LIST]
+                    ?.split(",")?.filter { it.isNotBlank() }?.toSet() ?: emptySet(),
                 autoEscalateEnabled = prefs[Keys.ABP_AUTO_ESCALATE] ?: false,
                 autoEscalateThreshold = prefs[Keys.ABP_AUTO_ESCALATE_THRESHOLD] ?: 3,
             )
@@ -178,6 +186,8 @@ class ScreeningPreferences @Inject constructor(
             prefs[Keys.ABP_NIGHT_GUARD_END] = policy.nightGuardEndHour
             prefs[Keys.ABP_NIGHT_GUARD_ACTION] = policy.nightGuardAction.name
             prefs[Keys.ABP_BLOCK_INTERNATIONAL] = policy.blockInternational
+            prefs[Keys.ABP_COUNTRY_FILTER_MODE] = policy.countryFilterMode.name
+            prefs[Keys.ABP_COUNTRY_FILTER_LIST] = policy.countryFilterList.joinToString(",")
             prefs[Keys.ABP_AUTO_ESCALATE] = policy.autoEscalateEnabled
             prefs[Keys.ABP_AUTO_ESCALATE_THRESHOLD] = policy.autoEscalateThreshold
         }

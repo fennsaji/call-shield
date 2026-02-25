@@ -17,6 +17,10 @@
          Numbers are never uploaded; lookup is on-device only. -->
     <uses-permission android:name="android.permission.READ_CONTACTS" />
 
+    <!-- READ_CALL_LOG — used only to display the device call history so users can block/report
+         old calls locally. Call log data is read on-device only and never uploaded. -->
+    <uses-permission android:name="android.permission.READ_CALL_LOG" />
+
     <!-- Package visibility: required on API 30+ for resolving implicit intents -->
     <queries>
         <intent>

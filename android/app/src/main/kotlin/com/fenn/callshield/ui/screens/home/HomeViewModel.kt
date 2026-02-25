@@ -13,8 +13,10 @@ import com.fenn.callshield.data.local.entity.CallHistoryEntry
 import com.fenn.callshield.data.local.entity.ScamDigestEntry
 import com.fenn.callshield.data.local.entity.TraiReportEntry
 import com.fenn.callshield.data.preferences.ScreeningPreferences
+import com.fenn.callshield.domain.repository.BlocklistRepository
 import com.fenn.callshield.domain.repository.CallHistoryRepository
 import com.fenn.callshield.domain.repository.CallStats
+import com.fenn.callshield.domain.repository.WhitelistRepository
 import com.fenn.callshield.domain.usecase.MarkNotSpamUseCase
 import com.fenn.callshield.util.DndOperator
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -26,6 +28,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -40,6 +43,8 @@ data class HomeUiState(
     val dndOperator: DndOperator? = null,
     val dndCommand: String? = null,       // "FULL", "PROMO", "PARTIAL", or null
     val dndConfirmed: Boolean = false,    // false = sent but awaiting TRAI reply
+    val blockedHashes: Set<String> = emptySet(),
+    val whitelistedHashes: Set<String> = emptySet(),
 )
 
 @HiltViewModel
@@ -51,9 +56,12 @@ class HomeViewModel @Inject constructor(
     private val traiReportDao: TraiReportDao,
     private val billingManager: BillingManager,
     private val dndCommandDao: DndCommandDao,
+    private val blocklistRepo: BlocklistRepository,
+    private val whitelistRepo: WhitelistRepository,
 ) : ViewModel() {
 
     val isPro: StateFlow<Boolean> = billingManager.isPro
+    val isFamily: StateFlow<Boolean> = billingManager.isFamily
 
     private val _snackbarMessage = MutableSharedFlow<String>(extraBufferCapacity = 1)
     val snackbarMessage: SharedFlow<String> = _snackbarMessage.asSharedFlow()
@@ -88,6 +96,8 @@ class HomeViewModel @Inject constructor(
         _isScreeningActive,
         screeningPreferences.observeDndOperator(),
         dndCommandDao.observeLatestActive(),
+        blocklistRepo.observeAll().map { list -> list.map { it.numberHash }.toSet() },
+        whitelistRepo.observeAll().map { list -> list.map { it.numberHash }.toSet() },
     ) { args ->
         @Suppress("UNCHECKED_CAST")
         val calls = args[0] as List<CallHistoryEntry>
@@ -97,6 +107,8 @@ class HomeViewModel @Inject constructor(
         val isActive = args[4] as Boolean
         val dndOperator = args[5] as DndOperator?
         val dndEntry = args[6] as com.fenn.callshield.data.local.entity.DndCommandEntry?
+        val blockedHashes = args[7] as Set<String>
+        val whitelistedHashes = args[8] as Set<String>
         HomeUiState(
             recentCalls = calls,
             stats = stats,
@@ -107,6 +119,8 @@ class HomeViewModel @Inject constructor(
             dndOperator = dndOperator,
             dndCommand = dndEntry?.command?.takeIf { it != "DEACTIVATE" },
             dndConfirmed = dndEntry?.confirmedByUser ?: false,
+            blockedHashes = blockedHashes,
+            whitelistedHashes = whitelistedHashes,
         )
     }.stateIn(
         scope = viewModelScope,
@@ -141,6 +155,36 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             screeningPreferences.setBlockHiddenNumbers(v)
             _protectionState.value = _protectionState.value.copy(second = v)
+        }
+    }
+
+    fun blockNumber(numberHash: String, displayLabel: String) {
+        viewModelScope.launch {
+            blocklistRepo.add(numberHash, displayLabel)
+            whitelistRepo.remove(numberHash) // can't be both
+            _snackbarMessage.tryEmit("$displayLabel blocked")
+        }
+    }
+
+    fun unblockNumber(numberHash: String) {
+        viewModelScope.launch {
+            blocklistRepo.remove(numberHash)
+            _snackbarMessage.tryEmit("Removed from blocklist")
+        }
+    }
+
+    fun whitelistNumber(numberHash: String, displayLabel: String) {
+        viewModelScope.launch {
+            whitelistRepo.add(numberHash, displayLabel)
+            blocklistRepo.remove(numberHash) // can't be both
+            _snackbarMessage.tryEmit("$displayLabel whitelisted — calls will always be allowed")
+        }
+    }
+
+    fun unwhitelistNumber(numberHash: String) {
+        viewModelScope.launch {
+            whitelistRepo.remove(numberHash)
+            _snackbarMessage.tryEmit("Removed from whitelist")
         }
     }
 

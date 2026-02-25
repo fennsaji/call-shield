@@ -54,6 +54,32 @@ private val MIGRATION_4_5 = object : Migration(4, 5) {
     }
 }
 
+private val MIGRATION_5_6 = object : Migration(5, 6) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        // Recreate prefix_rules with autoincrement id, matchType, and renamed prefix→pattern
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS `prefix_rules_new` (
+                `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                `pattern` TEXT NOT NULL,
+                `matchType` TEXT NOT NULL DEFAULT 'prefix',
+                `action` TEXT NOT NULL,
+                `label` TEXT NOT NULL DEFAULT '',
+                `addedAt` INTEGER NOT NULL
+            )
+            """.trimIndent()
+        )
+        db.execSQL(
+            """
+            INSERT INTO `prefix_rules_new` (`pattern`, `matchType`, `action`, `label`, `addedAt`)
+            SELECT `prefix`, 'prefix', `action`, `label`, `addedAt` FROM `prefix_rules`
+            """.trimIndent()
+        )
+        db.execSQL("DROP TABLE `prefix_rules`")
+        db.execSQL("ALTER TABLE `prefix_rules_new` RENAME TO `prefix_rules`")
+    }
+}
+
 private val MIGRATION_2_3 = object : Migration(2, 3) {
     override fun migrate(db: SupportSQLiteDatabase) {
         db.execSQL(
@@ -83,7 +109,7 @@ object DatabaseModule {
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): CallShieldDatabase =
         Room.databaseBuilder(context, CallShieldDatabase::class.java, "callshield.db")
-            .addMigrations(MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+            .addMigrations(MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
             .build()
 
     @Provides fun provideBlocklistDao(db: CallShieldDatabase): BlocklistDao = db.blocklistDao()

@@ -43,7 +43,7 @@ class BackupManager @Inject constructor() {
             exportedAt = System.currentTimeMillis(),
             blocklist = blocklist.map { BackupBlocklistEntry(it.numberHash, it.displayLabel, it.addedAt) },
             whitelist = whitelist.map { BackupWhitelistEntry(it.numberHash, it.displayLabel, it.addedAt) },
-            prefixRules = prefixRules.map { BackupPrefixRule(it.prefix, it.action, it.label, it.addedAt) },
+            prefixRules = prefixRules.map { BackupPrefixRule(it.pattern, it.matchType, it.action, it.label, it.addedAt) },
         )
         val plaintext = json.encodeToString(payload).toByteArray(Charsets.UTF_8)
 
@@ -93,7 +93,7 @@ class BackupManager @Inject constructor() {
     fun toRoomEntities(payload: BackupPayload) = BackupRoomEntities(
         blocklist = payload.blocklist.map { BlocklistEntry(it.numberHash, it.displayLabel, it.addedAt) },
         whitelist = payload.whitelist.map { WhitelistEntry(it.numberHash, it.displayLabel, it.addedAt) },
-        prefixRules = payload.prefixRules.map { PrefixRule(it.prefix, it.action, it.label, it.addedAt) },
+        prefixRules = payload.prefixRules.map { PrefixRule(pattern = it.pattern, matchType = it.matchType, action = it.action, label = it.label, addedAt = it.addedAt) },
     )
 
     // ── Internal ──────────────────────────────────────────────────────────────
@@ -146,7 +146,8 @@ data class BackupWhitelistEntry(
 
 @Serializable
 data class BackupPrefixRule(
-    val prefix: String,
+    val pattern: String,
+    val matchType: String = "prefix",
     val action: String,
     val label: String,
     val addedAt: Long,

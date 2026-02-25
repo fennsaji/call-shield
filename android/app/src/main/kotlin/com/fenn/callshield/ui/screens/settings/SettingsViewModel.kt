@@ -57,7 +57,4 @@ class SettingsViewModel @Inject constructor(
     suspend fun setNotifyOnFlag(v: Boolean) { prefs.setNotifyOnFlag(v); _state.value = _state.value.copy(notifyOnFlag = v) }
     suspend fun setNotifyOnNightGuard(v: Boolean) { prefs.setNotifyOnNightGuard(v); _state.value = _state.value.copy(notifyOnNightGuard = v) }
     fun setTheme(mode: ThemeMode) { viewModelScope.launch { prefs.setTheme(mode) } }
-
-    /** Returns true if the code was valid and Pro was unlocked. */
-    fun redeemPromoCode(code: String): Boolean = billingManager.redeemPromoCode(code)
 }

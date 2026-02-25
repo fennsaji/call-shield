@@ -60,9 +60,9 @@
     <!-- Blocklist / Whitelist -->
     <string name="blocklist_title">Blocklist</string>
     <string name="whitelist_title">Whitelist</string>
-    <string name="prefix_rules_title">Prefix rules</string>
+    <string name="prefix_rules_title">Pattern Rules</string>
     <string name="add_number">Add number</string>
-    <string name="add_prefix">Add prefix</string>
+    <string name="add_prefix">Add pattern rule</string>
     <string name="remove">Remove</string>
     <string name="empty_blocklist">No blocked numbers</string>
     <string name="empty_whitelist">No whitelisted numbers</string>
@@ -93,6 +93,8 @@
     <string name="pro_price_lifetime">₹699</string>
     <string name="pro_lifetime_label">Lifetime Access</string>
     <string name="pro_lifetime_subtitle">One-time payment. All Pro features, no recurring charges. Best value for long-term users.</string>
+    <string name="family_price_annual">₹699 / year</string>
+    <string name="family_price_lifetime">₹1299</string>
     <string name="pro_subscribe">Subscribe</string>
     <string name="pro_restore">Restore purchase</string>
     <string name="pro_terms">Terms &amp; Privacy</string>

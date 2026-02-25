@@ -8,18 +8,25 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Block
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.outlined.Block
+import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
@@ -38,6 +45,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.fenn.callshield.ui.theme.LocalSuccessColor
 import com.fenn.callshield.R
 import com.fenn.callshield.data.local.entity.CallHistoryEntry
 import com.fenn.callshield.domain.model.DecisionSource
@@ -58,11 +66,18 @@ fun ReasonTransparencySheet(
     onMarkNotSpam: () -> Unit,
     onReport: () -> Unit,
     onTraiReported: () -> Unit = {},
+    isBlocked: Boolean = false,
+    isWhitelisted: Boolean = false,
+    onBlock: () -> Unit = {},
+    onUnblock: () -> Unit = {},
+    onWhitelist: () -> Unit = {},
+    onUnwhitelist: () -> Unit = {},
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
     val dangerColor = LocalDangerColor.current
     val warningColor = LocalWarningColor.current
+    val successColor = LocalSuccessColor.current
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -71,6 +86,7 @@ fun ReasonTransparencySheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 24.dp)
                 .padding(bottom = 32.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -216,7 +232,69 @@ fun ReasonTransparencySheet(
 
             Spacer(Modifier.height(4.dp))
 
-            // Actions
+            // Block / Whitelist toggle row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                if (isBlocked) {
+                    FilledTonalButton(
+                        onClick = {
+                            scope.launch { sheetState.hide(); onUnblock() }
+                        },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.filledTonalButtonColors(
+                            containerColor = dangerColor.copy(alpha = 0.10f),
+                            contentColor = dangerColor,
+                        ),
+                    ) {
+                        Icon(Icons.Filled.Block, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("Unblock")
+                    }
+                } else {
+                    OutlinedButton(
+                        onClick = {
+                            scope.launch { sheetState.hide(); onBlock() }
+                        },
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Icon(Icons.Outlined.Block, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("Block")
+                    }
+                }
+
+                if (isWhitelisted) {
+                    FilledTonalButton(
+                        onClick = {
+                            scope.launch { sheetState.hide(); onUnwhitelist() }
+                        },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.filledTonalButtonColors(
+                            containerColor = successColor.copy(alpha = 0.10f),
+                            contentColor = successColor,
+                        ),
+                    ) {
+                        Icon(Icons.Filled.CheckCircle, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("Whitelisted")
+                    }
+                } else {
+                    OutlinedButton(
+                        onClick = {
+                            scope.launch { sheetState.hide(); onWhitelist() }
+                        },
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Icon(Icons.Outlined.CheckCircle, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("Whitelist")
+                    }
+                }
+            }
+
+            // Mark as Not Spam / Report
             Button(
                 onClick = {
                     scope.launch {

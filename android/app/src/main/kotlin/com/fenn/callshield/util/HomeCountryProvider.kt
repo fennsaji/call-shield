@@ -39,6 +39,16 @@ open class HomeCountryProvider @Inject constructor(
     open val callingCodePrefix: String
         get() = CALLING_CODES[isoCode] ?: "+1"
 
+    /**
+     * Best-effort lookup: given an E.164 number returns the ISO 3166-1 alpha-2 country code.
+     * Uses longest-prefix-first matching to handle overlapping codes (e.g. +1787 before +1).
+     */
+    fun isoFromE164(e164Number: String): String? =
+        CALLING_CODES.entries
+            .sortedByDescending { it.value.length }
+            .firstOrNull { e164Number.startsWith(it.value) }
+            ?.key
+
     companion object {
         /** ITU-T E.164 country calling codes keyed by ISO 3166-1 alpha-2 country code. */
         val CALLING_CODES: Map<String, String> = mapOf(

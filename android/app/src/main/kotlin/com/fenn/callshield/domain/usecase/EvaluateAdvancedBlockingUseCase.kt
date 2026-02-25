@@ -3,6 +3,7 @@ package com.fenn.callshield.domain.usecase
 import com.fenn.callshield.domain.model.AdvancedBlockingPolicy
 import com.fenn.callshield.domain.model.BlockingPreset
 import com.fenn.callshield.domain.model.CallDecision
+import com.fenn.callshield.domain.model.CountryFilterMode
 import com.fenn.callshield.domain.model.DecisionSource
 import com.fenn.callshield.domain.model.UnknownCallAction
 import com.fenn.callshield.domain.repository.BlocklistRepository
@@ -68,6 +69,24 @@ class EvaluateAdvancedBlockingUseCase @Inject constructor(
         val homePrefix = homeCountryProvider.callingCodePrefix
         if (policy.blockInternational && e164Number != null && !e164Number.startsWith(homePrefix)) {
             return CallDecision.Silence(1.0, "international_lock", DecisionSource.ADVANCED_BLOCKING)
+        }
+
+        // 4b. Country filter (Pro) — whitelist or blacklist specific countries
+        if (isPro && policy.countryFilterMode != CountryFilterMode.OFF &&
+            e164Number != null && policy.countryFilterList.isNotEmpty()
+        ) {
+            val callerIso = homeCountryProvider.isoFromE164(e164Number)
+            if (callerIso != null) {
+                when (policy.countryFilterMode) {
+                    CountryFilterMode.ALLOW_ONLY ->
+                        if (callerIso !in policy.countryFilterList)
+                            return CallDecision.Silence(1.0, "country_not_allowed", DecisionSource.ADVANCED_BLOCKING)
+                    CountryFilterMode.BLOCK_LISTED ->
+                        if (callerIso in policy.countryFilterList)
+                            return CallDecision.Silence(1.0, "country_blocked", DecisionSource.ADVANCED_BLOCKING)
+                    CountryFilterMode.OFF -> Unit
+                }
+            }
         }
 
         // 5. Auto-Escalate
