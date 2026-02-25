@@ -67,6 +67,9 @@ import com.fenn.callshield.domain.model.SpamCategory
 import com.fenn.callshield.ui.components.AppDialog
 import com.fenn.callshield.ui.components.SmsCommandRow
 import com.fenn.callshield.util.TraiReportHelper
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import java.util.concurrent.TimeUnit
 
 private val categoryIcons: Map<SpamCategory, ImageVector> = mapOf(
@@ -137,7 +140,10 @@ fun ReportSpamScreen(
     LaunchedEffect(state.submitted) {
         if (state.submitted) {
             if (reportToTrai) {
-                val smsBody = description.ifBlank { "Received unsolicited spam call from $displayLabel" }
+                val callDate = SimpleDateFormat("dd/MM/yy", Locale("en", "IN"))
+                    .format(Date(if (screenedAt > 0L) screenedAt else System.currentTimeMillis()))
+                val base = description.ifBlank { "Received unsolicited spam call" }
+                val smsBody = "$base, $displayLabel, $callDate"
                 pendingTraiReport = PendingTraiReport(
                     smsBody = smsBody,
                     isComplaint = isWithinComplaintWindow,
