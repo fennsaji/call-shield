@@ -10,12 +10,9 @@ import com.android.billingclient.api.BillingClient
 import com.android.billingclient.api.ProductDetails
 import com.fenn.callshield.billing.BillingManager
 import com.fenn.callshield.billing.PromoGrant
-import com.fenn.callshield.billing.PRODUCT_FAMILY_ANNUAL
-import com.fenn.callshield.billing.PRODUCT_FAMILY_LIFETIME
 import com.fenn.callshield.billing.PRODUCT_PRO_ANNUAL
 import com.fenn.callshield.billing.PRODUCT_PRO_LIFETIME
 import com.fenn.callshield.billing.PRODUCT_PRO_MONTHLY
-import com.fenn.callshield.data.preferences.ScreeningPreferences
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -37,12 +34,8 @@ data class PaywallState(
     val annualProduct: ProductDetails? = null,
     val monthlyProduct: ProductDetails? = null,
     val lifetimeProduct: ProductDetails? = null,
-    val familyProduct: ProductDetails? = null,
-    val familyLifetimeProduct: ProductDetails? = null,
     val purchaseSuccess: Boolean = false,
     val error: String? = null,
-    val familyWaitlistEmail: String = "",
-    val familyWaitlistJoined: Boolean = false,
     val promoCode: String = "",
     val promoError: Boolean = false,
     val promoErrorMessage: String = "Invalid or expired promo code",
@@ -52,7 +45,6 @@ data class PaywallState(
 @HiltViewModel
 class PaywallViewModel @Inject constructor(
     private val billingManager: BillingManager,
-    private val prefs: ScreeningPreferences,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(PaywallState())
@@ -91,15 +83,11 @@ class PaywallViewModel @Inject constructor(
                 val annual = products.firstOrNull { it.productId == PRODUCT_PRO_ANNUAL }
                 val monthly = products.firstOrNull { it.productId == PRODUCT_PRO_MONTHLY }
                 val lifetime = products.firstOrNull { it.productId == PRODUCT_PRO_LIFETIME }
-                val family = products.firstOrNull { it.productId == PRODUCT_FAMILY_ANNUAL }
-                val familyLifetime = products.firstOrNull { it.productId == PRODUCT_FAMILY_LIFETIME }
                 _state.value = _state.value.copy(
                     loading = false,
                     annualProduct = annual,
                     monthlyProduct = monthly,
                     lifetimeProduct = lifetime,
-                    familyProduct = family,
-                    familyLifetimeProduct = familyLifetime,
                     error = if (annual == null && monthly == null)
                         "Plans unavailable — app must be published on Google Play for purchases to work"
                     else null,
@@ -156,22 +144,8 @@ class PaywallViewModel @Inject constructor(
     fun redeemPromoCode() {
         val code = _state.value.promoCode
         when (billingManager.redeemPromoCode(code)) {
-            PromoGrant.PRO, PromoGrant.FAMILY -> _state.value = _state.value.copy(purchaseSuccess = true)
+            PromoGrant.PRO  -> _state.value = _state.value.copy(purchaseSuccess = true)
             PromoGrant.NONE -> _state.value = _state.value.copy(promoError = true)
-        }
-    }
-
-    fun onFamilyEmailChange(email: String) {
-        _state.value = _state.value.copy(familyWaitlistEmail = email)
-    }
-
-    fun joinFamilyWaitlist() {
-        viewModelScope.launch {
-            val email = _state.value.familyWaitlistEmail
-            if (email.contains("@")) {
-                prefs.setFamilyWaitlistEmail(email)
-                _state.value = _state.value.copy(familyWaitlistJoined = true)
-            }
         }
     }
 }

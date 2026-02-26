@@ -34,11 +34,9 @@ import javax.inject.Singleton
 import kotlin.coroutines.resume
 
 // Product IDs — must match Play Console configuration
-const val PRODUCT_PRO_ANNUAL      = "callshield_pro_annual"
-const val PRODUCT_PRO_MONTHLY     = "callshield_pro_monthly"
-const val PRODUCT_FAMILY_ANNUAL   = "callshield_family_annual"    // Phase 3 — ₹699/year
-const val PRODUCT_PRO_LIFETIME    = "callshield_pro_lifetime"     // Phase 4 — ₹599–799 one-time (Pro only)
-const val PRODUCT_FAMILY_LIFETIME = "callshield_family_lifetime"  // Phase 4 — one-time (Pro + Family)
+const val PRODUCT_PRO_ANNUAL   = "callshield_pro_annual"
+const val PRODUCT_PRO_MONTHLY  = "callshield_pro_monthly"
+const val PRODUCT_PRO_LIFETIME = "callshield_pro_lifetime"     // Phase 4 — ₹599–799 one-time
 
 /** Which plan the user is currently subscribed to / has purchased. */
 enum class PlanType {
@@ -46,10 +44,7 @@ enum class PlanType {
     PRO_MONTHLY,
     PRO_ANNUAL,
     PRO_LIFETIME,
-    FAMILY_ANNUAL,
-    FAMILY_LIFETIME,
     PROMO_PRO,
-    PROMO_FAMILY,
 }
 
 @Singleton
@@ -59,20 +54,17 @@ class BillingManager @Inject constructor(
     private val deviceTokenManager: com.fenn.callshield.util.DeviceTokenManager,
 ) : PurchasesUpdatedListener {
 
-    private val _isPro                    = MutableStateFlow(false)
-    private val _isFamily                 = MutableStateFlow(false)
-    private val _hasPendingPurchase       = MutableStateFlow(false)
-    private val _planType                 = MutableStateFlow(PlanType.NONE)
-    private val _activeSubscriptionToken  = MutableStateFlow<String?>(null)
-    val isPro:                    StateFlow<Boolean>  = _isPro.asStateFlow()
-    /** True when the user has an active Family Plan (superset of Pro). */
-    val isFamily:                 StateFlow<Boolean>  = _isFamily.asStateFlow()
+    private val _isPro                   = MutableStateFlow(false)
+    private val _hasPendingPurchase      = MutableStateFlow(false)
+    private val _planType                = MutableStateFlow(PlanType.NONE)
+    private val _activeSubscriptionToken = MutableStateFlow<String?>(null)
+    val isPro:                   StateFlow<Boolean>  = _isPro.asStateFlow()
     /** True when at least one purchase is in PENDING state (e.g. UPI / cash delayed processing). */
-    val hasPendingPurchase:       StateFlow<Boolean>  = _hasPendingPurchase.asStateFlow()
+    val hasPendingPurchase:      StateFlow<Boolean>  = _hasPendingPurchase.asStateFlow()
     /** The user's current plan tier. */
-    val planType:                 StateFlow<PlanType> = _planType.asStateFlow()
+    val planType:                StateFlow<PlanType> = _planType.asStateFlow()
     /** Purchase token of the active subscription, needed for plan switching. Null for INAPP / PROMO. */
-    val activeSubscriptionToken:  StateFlow<String?>  = _activeSubscriptionToken.asStateFlow()
+    val activeSubscriptionToken: StateFlow<String?>  = _activeSubscriptionToken.asStateFlow()
 
     private val billingClient: BillingClient = BillingClient.newBuilder(context)
         .setListener(this)
@@ -139,10 +131,6 @@ class BillingManager @Inject constructor(
                         .setProductId(PRODUCT_PRO_MONTHLY)
                         .setProductType(BillingClient.ProductType.SUBS)
                         .build(),
-                    QueryProductDetailsParams.Product.newBuilder()
-                        .setProductId(PRODUCT_FAMILY_ANNUAL)
-                        .setProductType(BillingClient.ProductType.SUBS)
-                        .build(),
                 )
             )
             .build()
@@ -152,10 +140,6 @@ class BillingManager @Inject constructor(
                 listOf(
                     QueryProductDetailsParams.Product.newBuilder()
                         .setProductId(PRODUCT_PRO_LIFETIME)
-                        .setProductType(BillingClient.ProductType.INAPP)
-                        .build(),
-                    QueryProductDetailsParams.Product.newBuilder()
-                        .setProductId(PRODUCT_FAMILY_LIFETIME)
                         .setProductType(BillingClient.ProductType.INAPP)
                         .build(),
                 )
@@ -183,15 +167,6 @@ class BillingManager @Inject constructor(
         val subsPurchases = billingClient.queryPurchasesAsync(subsParams).purchasesList
         val inAppPurchases = billingClient.queryPurchasesAsync(inAppParams).purchasesList
 
-        val hasFamilyAnnual = subsPurchases.any { p ->
-            p.purchaseState == Purchase.PurchaseState.PURCHASED &&
-                p.products.contains(PRODUCT_FAMILY_ANNUAL)
-        }
-        val hasFamilyLifetime = inAppPurchases.any { p ->
-            p.purchaseState == Purchase.PurchaseState.PURCHASED &&
-                p.products.contains(PRODUCT_FAMILY_LIFETIME)
-        }
-        val hasFamily = hasFamilyAnnual || hasFamilyLifetime
         val hasLifetime = inAppPurchases.any { p ->
             p.purchaseState == Purchase.PurchaseState.PURCHASED &&
                 p.products.contains(PRODUCT_PRO_LIFETIME)
@@ -204,23 +179,18 @@ class BillingManager @Inject constructor(
             p.purchaseState == Purchase.PurchaseState.PURCHASED &&
                 p.products.contains(PRODUCT_PRO_MONTHLY)
         }
-        val hasBillingPro = hasFamily || hasLifetime || hasProAnnual || hasProMonthly
+        val hasBillingPro = hasLifetime || hasProAnnual || hasProMonthly
         val promoGrant    = promoGrantManager.activeGrant(deviceTokenManager.deviceTokenHash)
-        val hasPromoFamily = promoGrant == PromoGrant.FAMILY
         val hasPromoPro   = promoGrant != PromoGrant.NONE
-        _isFamily.value = hasFamily || hasPromoFamily
         _isPro.value = hasBillingPro || hasPromoPro
 
         // Determine active plan type (highest tier wins)
         _planType.value = when {
-            hasFamilyLifetime -> PlanType.FAMILY_LIFETIME
-            hasFamilyAnnual   -> PlanType.FAMILY_ANNUAL
-            hasLifetime       -> PlanType.PRO_LIFETIME
-            hasProAnnual      -> PlanType.PRO_ANNUAL
-            hasProMonthly     -> PlanType.PRO_MONTHLY
-            hasPromoFamily    -> PlanType.PROMO_FAMILY
-            hasPromoPro       -> PlanType.PROMO_PRO
-            else              -> PlanType.NONE
+            hasLifetime   -> PlanType.PRO_LIFETIME
+            hasProAnnual  -> PlanType.PRO_ANNUAL
+            hasProMonthly -> PlanType.PRO_MONTHLY
+            hasPromoPro   -> PlanType.PROMO_PRO
+            else          -> PlanType.NONE
         }
 
         // Cache the purchase token of the active subscription for plan switching
@@ -244,19 +214,18 @@ class BillingManager @Inject constructor(
 
     /**
      * Validates [code] against the configured promo hashes and grants the matching plan tier.
-     * @return [PromoGrant.PRO], [PromoGrant.FAMILY], or [PromoGrant.NONE] if invalid/expired.
+     * @return [PromoGrant.PRO] or [PromoGrant.NONE] if invalid/expired.
      */
     fun redeemPromoCode(code: String): PromoGrant {
         val grant = promoGrantManager.redeem(code, deviceTokenManager.deviceTokenHash)
         when (grant) {
-            PromoGrant.FAMILY -> { _isFamily.value = true; _isPro.value = true; _planType.value = PlanType.PROMO_FAMILY }
-            PromoGrant.PRO    -> { _isPro.value = true; _planType.value = PlanType.PROMO_PRO }
-            PromoGrant.NONE   -> Unit
+            PromoGrant.PRO  -> { _isPro.value = true; _planType.value = PlanType.PROMO_PRO }
+            PromoGrant.NONE -> Unit
         }
         return grant
     }
 
-    /** Launch billing flow for subscription products (annual/monthly/family). */
+    /** Launch billing flow for subscription products (annual/monthly). */
     fun launchBillingFlow(activity: Activity, productDetails: ProductDetails): BillingResult {
         val offerToken = productDetails.subscriptionOfferDetails?.firstOrNull()?.offerToken
             ?: return BillingResult.newBuilder()
@@ -302,30 +271,10 @@ class BillingManager @Inject constructor(
                     acknowledgePurchase(purchase)
                 }
             }
-            val hasFamilyAnnual = purchases.any { p ->
-                p.purchaseState == Purchase.PurchaseState.PURCHASED &&
-                    p.products.contains(PRODUCT_FAMILY_ANNUAL)
-            }
-            val hasFamilyLifetime = purchases.any { p ->
-                p.purchaseState == Purchase.PurchaseState.PURCHASED &&
-                    p.products.contains(PRODUCT_FAMILY_LIFETIME)
-            }
-            val hasFamily = hasFamilyAnnual || hasFamilyLifetime
             val hasLifetime = purchases.any { p ->
                 p.purchaseState == Purchase.PurchaseState.PURCHASED &&
                     p.products.contains(PRODUCT_PRO_LIFETIME)
             }
-            val hasBillingPro = hasFamily || hasLifetime || purchases.any { p ->
-                p.purchaseState == Purchase.PurchaseState.PURCHASED &&
-                    (p.products.contains(PRODUCT_PRO_ANNUAL) || p.products.contains(PRODUCT_PRO_MONTHLY))
-            }
-            val promoGrant     = promoGrantManager.activeGrant(deviceTokenManager.deviceTokenHash)
-            val hasPromoFamily = promoGrant == PromoGrant.FAMILY
-            val hasPromoPro    = promoGrant != PromoGrant.NONE
-            _isFamily.value = hasFamily || hasPromoFamily
-            _isPro.value = hasBillingPro || hasPromoPro
-
-            // Update plan type and subscription token
             val hasProAnnual = purchases.any { p ->
                 p.purchaseState == Purchase.PurchaseState.PURCHASED &&
                     p.products.contains(PRODUCT_PRO_ANNUAL)
@@ -334,23 +283,25 @@ class BillingManager @Inject constructor(
                 p.purchaseState == Purchase.PurchaseState.PURCHASED &&
                     p.products.contains(PRODUCT_PRO_MONTHLY)
             }
+            val hasBillingPro = hasLifetime || hasProAnnual || hasProMonthly
+            val promoGrant  = promoGrantManager.activeGrant(deviceTokenManager.deviceTokenHash)
+            val hasPromoPro = promoGrant != PromoGrant.NONE
+            _isPro.value = hasBillingPro || hasPromoPro
+
+            // Update plan type and subscription token
             val newPlanType = when {
-                hasFamilyLifetime -> PlanType.FAMILY_LIFETIME
-                hasFamilyAnnual   -> PlanType.FAMILY_ANNUAL
-                hasLifetime       -> PlanType.PRO_LIFETIME
-                hasProAnnual      -> PlanType.PRO_ANNUAL
-                hasProMonthly     -> PlanType.PRO_MONTHLY
-                hasPromoFamily    -> PlanType.PROMO_FAMILY
-                hasPromoPro       -> PlanType.PROMO_PRO
-                else              -> _planType.value
+                hasLifetime   -> PlanType.PRO_LIFETIME
+                hasProAnnual  -> PlanType.PRO_ANNUAL
+                hasProMonthly -> PlanType.PRO_MONTHLY
+                hasPromoPro   -> PlanType.PROMO_PRO
+                else          -> _planType.value
             }
             if (newPlanType != PlanType.NONE) _planType.value = newPlanType
 
             purchases.firstOrNull {
                 it.purchaseState == Purchase.PurchaseState.PURCHASED &&
                     (it.products.contains(PRODUCT_PRO_ANNUAL) ||
-                        it.products.contains(PRODUCT_PRO_MONTHLY) ||
-                        it.products.contains(PRODUCT_FAMILY_ANNUAL))
+                        it.products.contains(PRODUCT_PRO_MONTHLY))
             }?.purchaseToken?.let { _activeSubscriptionToken.value = it }
         }
     }
@@ -371,7 +322,6 @@ class BillingManager @Inject constructor(
     fun debugSimulatePlan(plan: PlanType) {
         check(BuildConfig.DEBUG) { "debugSimulatePlan is only available in debug builds" }
         _planType.value = plan
-        _isFamily.value = plan == PlanType.FAMILY_ANNUAL || plan == PlanType.FAMILY_LIFETIME
         _isPro.value = plan != PlanType.NONE
     }
 

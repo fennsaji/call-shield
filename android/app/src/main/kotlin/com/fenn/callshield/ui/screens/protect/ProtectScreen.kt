@@ -20,7 +20,6 @@ import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.outlined.Block
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.DoNotDisturb
-import androidx.compose.material.icons.outlined.FamilyRestroom
 import androidx.compose.material.icons.outlined.FilterList
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.filled.Balance
@@ -61,14 +60,12 @@ fun ProtectScreen(
     onNavigateToWhitelist: () -> Unit,
     onNavigateToPrefixRules: () -> Unit,
     onNavigateToDndManagement: () -> Unit,
-    onNavigateToFamilyProtection: () -> Unit,
     onNavigateToPaywall: () -> Unit,
     homeViewModel: HomeViewModel = hiltViewModel(),
     advancedBlockingViewModel: AdvancedBlockingViewModel = hiltViewModel(),
 ) {
     val state by homeViewModel.uiState.collectAsStateWithLifecycle()
     val isPro by homeViewModel.isPro.collectAsStateWithLifecycle()
-    val isFamily by homeViewModel.isFamily.collectAsStateWithLifecycle()
     val policy by advancedBlockingViewModel.policy.collectAsStateWithLifecycle()
     val dangerColor = LocalDangerColor.current
     val successColor = LocalSuccessColor.current
@@ -164,16 +161,6 @@ fun ProtectScreen(
                     checked = state.blockHidden,
                     isPro = isPro,
                     onCheckedChange = { homeViewModel.setBlockHidden(it) },
-                    onLockedClick = onNavigateToPaywall,
-                )
-                FeatureRowCard(
-                    icon = Icons.Outlined.FamilyRestroom,
-                    title = "Family Protection",
-                    subtitle = "Share blocking rules with unlimited family devices",
-                    iconTint = successColor,
-                    isLocked = !isFamily,
-                    lockLabel = "Family",
-                    onClick = onNavigateToFamilyProtection,
                     onLockedClick = onNavigateToPaywall,
                 )
             }

@@ -93,8 +93,6 @@
     <string name="pro_price_lifetime">₹699</string>
     <string name="pro_lifetime_label">Lifetime Access</string>
     <string name="pro_lifetime_subtitle">One-time payment. All Pro features, no recurring charges. Best value for long-term users.</string>
-    <string name="family_price_annual">₹699 / year</string>
-    <string name="family_price_lifetime">₹1299</string>
     <string name="pro_subscribe">Subscribe</string>
     <string name="pro_restore">Restore purchase</string>
     <string name="pro_terms">Terms &amp; Privacy</string>
@@ -124,11 +122,6 @@
     <string name="pro_trial_trigger_title">Pro would have blocked this before it rang</string>
     <string name="pro_trial_trigger_body">This call is from a high-confidence scam number. Upgrade to block it silently next time.</string>
     <string name="pro_trial_cta">Start 7-day free trial</string>
-    <string name="pro_family_upsell">Want to protect a family member too?</string>
-    <string name="pro_family_waitlist">Join the Family Plan waitlist</string>
-    <string name="pro_family_email_hint">Enter email address</string>
-    <string name="pro_family_joined">You\'re on the waitlist!</string>
-
     <!-- Privacy dashboard extras -->
     <string name="privacy_delete_all_data">Delete all local data</string>
     <string name="privacy_delete_confirm_title">Delete all data?</string>

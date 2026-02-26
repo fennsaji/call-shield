@@ -182,21 +182,20 @@ fun BackupScreen(
         }
     }
 
-    // Pro plan upgrade dialog — shown when a Pro/Family backup is opened on a free device
+    // Pro plan upgrade dialog — shown when a Pro backup is opened on a free device
     if (state.showProUpgradeDialog) {
-        state.pendingPayload?.let { payload ->
-            val planLabel = if (payload.exportedWithFamily) "Family" else "Pro"
+        state.pendingPayload?.let { _ ->
             AppDialog(
                 onDismissRequest = viewModel::onRestoreFreeContentOnly,
                 icon = Icons.Filled.WorkspacePremium,
-                title = "$planLabel Backup Detected",
+                title = "Pro Backup Detected",
                 confirmLabel = "View Pro Plans",
                 dismissLabel = "Restore Free Content",
                 onConfirm = viewModel::onProUpgradeClicked,
                 onDismiss = viewModel::onRestoreFreeContentOnly,
             ) {
                 Text(
-                    "This backup was created with a $planLabel subscription. Some settings require an active plan to fully restore.",
+                    "This backup was created with a Pro subscription. Some settings require an active plan to fully restore.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
                 )

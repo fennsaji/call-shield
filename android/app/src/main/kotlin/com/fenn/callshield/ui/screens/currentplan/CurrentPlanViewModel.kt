@@ -11,8 +11,6 @@ import com.android.billingclient.api.BillingClient
 import com.android.billingclient.api.ProductDetails
 import com.fenn.callshield.billing.BillingManager
 import com.fenn.callshield.billing.PlanType
-import com.fenn.callshield.billing.PRODUCT_FAMILY_ANNUAL
-import com.fenn.callshield.billing.PRODUCT_FAMILY_LIFETIME
 import com.fenn.callshield.billing.PRODUCT_PRO_ANNUAL
 import com.fenn.callshield.billing.PRODUCT_PRO_MONTHLY
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -36,8 +34,6 @@ data class CurrentPlanState(
     val planType: PlanType = PlanType.NONE,
     val annualProduct: ProductDetails? = null,
     val monthlyProduct: ProductDetails? = null,
-    val familyAnnualProduct: ProductDetails? = null,
-    val familyLifetimeProduct: ProductDetails? = null,
     val switchSuccess: Boolean = false,
     val error: String? = null,
 )
@@ -82,8 +78,6 @@ class CurrentPlanViewModel @Inject constructor(
                     planType = billingManager.planType.value,
                     annualProduct = products.firstOrNull { it.productId == PRODUCT_PRO_ANNUAL },
                     monthlyProduct = products.firstOrNull { it.productId == PRODUCT_PRO_MONTHLY },
-                    familyAnnualProduct = products.firstOrNull { it.productId == PRODUCT_FAMILY_ANNUAL },
-                    familyLifetimeProduct = products.firstOrNull { it.productId == PRODUCT_FAMILY_LIFETIME },
                 )
             } catch (e: Exception) {
                 _state.value = _state.value.copy(loading = false, error = e.message)

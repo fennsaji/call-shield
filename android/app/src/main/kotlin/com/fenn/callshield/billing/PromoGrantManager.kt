@@ -10,21 +10,19 @@ import javax.crypto.spec.SecretKeySpec
 import javax.inject.Inject
 import javax.inject.Singleton
 
-private const val PREFS_NAME              = "callshield_secure_prefs"   // shared with DeviceTokenManager
-private const val PREF_PROMO_GRANT_PRO    = "promo_grant_pro_token"
-private const val PREF_PROMO_GRANT_FAMILY = "promo_grant_family_token"
-private const val GRANT_DOMAIN_PRO        = "callshield-promo-pro-v1"
-private const val GRANT_DOMAIN_FAMILY     = "callshield-promo-family-v1"
+private const val PREFS_NAME           = "callshield_secure_prefs"   // shared with DeviceTokenManager
+private const val PREF_PROMO_GRANT_PRO = "promo_grant_pro_token"
+private const val GRANT_DOMAIN_PRO     = "callshield-promo-pro-v1"
 
 /** The plan tier unlocked by a promo grant. */
-enum class PromoGrant { NONE, PRO, FAMILY }
+enum class PromoGrant { NONE, PRO }
 
 /**
  * Manages tester/reviewer promo code grants.
  *
  * Security model:
  * - Raw promo codes are NEVER stored or compiled into the APK.
- * - BuildConfig.PROMO_CODE_PRO_HASH / PROMO_CODE_FAMILY_HASH = SHA-256(rawCode),
+ * - BuildConfig.PROMO_CODE_PRO_HASH = SHA-256(rawCode),
  *   set in local.properties / CI secrets.
  * - Each grant has a hard expiry stored in BuildConfig (epoch-ms); expired codes
  *   are rejected at both redemption time and every subsequent check.
@@ -42,8 +40,6 @@ class PromoGrantManager @Inject constructor(
      * Family > Pro. Returns [PromoGrant.NONE] if no valid grant is stored.
      */
     fun activeGrant(deviceTokenHash: String): PromoGrant {
-        if (checkSlot(deviceTokenHash, BuildConfig.PROMO_CODE_FAMILY_HASH, PREF_PROMO_GRANT_FAMILY, GRANT_DOMAIN_FAMILY, BuildConfig.PROMO_CODE_FAMILY_EXPIRY))
-            return PromoGrant.FAMILY
         if (checkSlot(deviceTokenHash, BuildConfig.PROMO_CODE_PRO_HASH, PREF_PROMO_GRANT_PRO, GRANT_DOMAIN_PRO, BuildConfig.PROMO_CODE_PRO_EXPIRY))
             return PromoGrant.PRO
         return PromoGrant.NONE
@@ -57,13 +53,6 @@ class PromoGrantManager @Inject constructor(
      */
     fun redeem(inputCode: String, deviceTokenHash: String): PromoGrant {
         val inputHash = sha256Hex(inputCode.trim())
-
-        val familyHash = BuildConfig.PROMO_CODE_FAMILY_HASH
-        if (familyHash.isNotBlank() && constantTimeEquals(inputHash, familyHash)) {
-            if (System.currentTimeMillis() > BuildConfig.PROMO_CODE_FAMILY_EXPIRY) return PromoGrant.NONE
-            writeGrantToken(computeGrantToken(deviceTokenHash, familyHash, GRANT_DOMAIN_FAMILY), PREF_PROMO_GRANT_FAMILY)
-            return PromoGrant.FAMILY
-        }
 
         val proHash = BuildConfig.PROMO_CODE_PRO_HASH
         if (proHash.isNotBlank() && constantTimeEquals(inputHash, proHash)) {
@@ -80,7 +69,6 @@ class PromoGrantManager @Inject constructor(
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             .edit()
             .remove(PREF_PROMO_GRANT_PRO)
-            .remove(PREF_PROMO_GRANT_FAMILY)
             .apply()
     }
 

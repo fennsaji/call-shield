@@ -49,10 +49,8 @@ android {
         // Promo codes — store only SHA-256 hashes; raw codes are never compiled into the APK
         // Generate hash: printf '%s' "YOUR_CODE" | shasum -a 256 | awk '{print $1}'
         // Expiry is epoch-milliseconds (Long); defaults = 2026-09-30 23:59:59 UTC
-        buildConfigField("String", "PROMO_CODE_PRO_HASH",    "\"${localOrProject("PROMO_CODE_PRO_HASH")}\"")
-        buildConfigField("long",   "PROMO_CODE_PRO_EXPIRY",  "${localOrProject("PROMO_CODE_PRO_EXPIRY", "1790812799000")}L")
-        buildConfigField("String", "PROMO_CODE_FAMILY_HASH", "\"${localOrProject("PROMO_CODE_FAMILY_HASH")}\"")
-        buildConfigField("long",   "PROMO_CODE_FAMILY_EXPIRY", "${localOrProject("PROMO_CODE_FAMILY_EXPIRY", "1790812799000")}L")
+        buildConfigField("String", "PROMO_CODE_PRO_HASH",   "\"${localOrProject("PROMO_CODE_PRO_HASH")}\"")
+        buildConfigField("long",   "PROMO_CODE_PRO_EXPIRY", "${localOrProject("PROMO_CODE_PRO_EXPIRY", "1790812799000")}L")
 
     }
 

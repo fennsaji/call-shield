@@ -165,7 +165,6 @@ class BackupViewModel @Inject constructor(
                     backupManager.exportBackup(
                         blocklist, whitelist, prefixRules,
                         isPro = billingManager.isPro.value,
-                        isFamily = billingManager.isFamily.value,
                         settings = settings,
                         pin = pin,
                     )
@@ -195,8 +194,8 @@ class BackupViewModel @Inject constructor(
                 val payload = withContext(Dispatchers.Default) {
                     backupManager.importBackup(bytes, pin)
                 }
-                val backupHasPro = payload.exportedWithPro || payload.exportedWithFamily
-                val deviceIsFree = !billingManager.isPro.value && !billingManager.isFamily.value
+                val backupHasPro = payload.exportedWithPro
+                val deviceIsFree = !billingManager.isPro.value
                 if (backupHasPro && deviceIsFree) {
                     _state.value = _state.value.copy(
                         status = BackupStatus.Idle,

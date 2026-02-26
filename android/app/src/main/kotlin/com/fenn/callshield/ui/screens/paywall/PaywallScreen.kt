@@ -27,11 +27,9 @@ import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.HourglassTop
 import androidx.compose.material.icons.filled.Language
-import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.filled.WorkspacePremium
-import androidx.compose.material.icons.outlined.FamilyRestroom
 import androidx.compose.material.icons.outlined.FilterList
 import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.Button
@@ -127,8 +125,6 @@ fun PaywallScreen(
                     Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
                 }
                 if (state.hasPendingPurchase) { PendingPaymentBanner() }
-
-                FamilyPlanSection(state = state, context = context, viewModel = viewModel)
 
                 PromoCodeRow(state = state, viewModel = viewModel)
 
@@ -251,10 +247,9 @@ private fun ProFeaturesList() {
         Triple(Icons.Filled.Block,            dangerColor,  "Auto-block spam before it rings"),
         Triple(Icons.Outlined.VisibilityOff,  tertiary,     "Block hidden & private numbers"),
         Triple(Icons.Outlined.FilterList,     primary,      "Unlimited pattern rules"),
-        Triple(Icons.Filled.DarkMode,         secondary,    "Night Guard — custom hours & reject"),
-        Triple(Icons.Filled.Language,         primary,      "International call blocking"),
-        Triple(Icons.Outlined.FamilyRestroom, successColor, "Family Protection — unlimited devices"),
-        Triple(Icons.Filled.SystemUpdate,     tertiary,     "Priority spam database updates"),
+        Triple(Icons.Filled.DarkMode,     secondary, "Night Guard — custom hours & reject"),
+        Triple(Icons.Filled.Language,     primary,   "International call blocking"),
+        Triple(Icons.Filled.SystemUpdate, tertiary,  "Priority spam database updates"),
     )
 
     Column {
@@ -421,97 +416,6 @@ private fun ProPlanSection(
     }
 }
 
-// ── Family Plan section ───────────────────────────────────────────────────────
-
-@Composable
-private fun FamilyPlanSection(
-    state: PaywallState,
-    context: android.content.Context,
-    viewModel: PaywallViewModel,
-) {
-    val secondary = MaterialTheme.colorScheme.secondary
-
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Box(
-                modifier = Modifier.size(36.dp).clip(CircleShape).background(secondary.copy(alpha = 0.15f)),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(Icons.Filled.People, contentDescription = null, modifier = Modifier.size(18.dp), tint = secondary)
-            }
-            Column {
-                Text("Family Plan", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-                Text(
-                    "Protect unlimited devices — whole family covered",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                )
-            }
-        }
-
-        ElevatedCard(
-            onClick = { state.familyProduct?.let { viewModel.purchase(context, it) } },
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp),
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text("FAMILY ANNUAL", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f))
-                    Text(
-                        state.familyProduct?.subscriptionOfferDetails
-                            ?.firstOrNull()?.pricingPhases?.pricingPhaseList
-                            ?.firstOrNull()?.formattedPrice?.let { "$it / year" }
-                            ?: stringResource(R.string.family_price_annual),
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
-                }
-                Text(
-                    "Unlimited\ndevices",
-                    style = MaterialTheme.typography.bodySmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = secondary,
-                    textAlign = TextAlign.End,
-                )
-            }
-        }
-
-        ElevatedCard(
-            onClick = { state.familyLifetimeProduct?.let { viewModel.purchase(context, it) } },
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp),
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text("FAMILY LIFETIME", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f))
-                    Text(
-                        state.familyLifetimeProduct?.oneTimePurchaseOfferDetails?.formattedPrice
-                            ?: stringResource(R.string.family_price_lifetime),
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
-                }
-                Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text("One-time", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold, color = secondary)
-                    Text("Unlimited devices", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f))
-                }
-            }
-        }
-    }
-}
-
 // ── Promo code row ────────────────────────────────────────────────────────────
 
 @Composable
@@ -569,11 +473,9 @@ private fun PendingPaymentBanner() {
 private fun DebugSimulateSection(onSimulate: (PlanType) -> Unit) {
     var selected by remember { mutableStateOf<PlanType?>(null) }
     val plans = listOf(
-        PlanType.PRO_MONTHLY     to "Monthly",
-        PlanType.PRO_ANNUAL      to "Annual",
-        PlanType.PRO_LIFETIME    to "Lifetime",
-        PlanType.FAMILY_ANNUAL   to "Family Annual",
-        PlanType.FAMILY_LIFETIME to "Family Lifetime",
+        PlanType.PRO_MONTHLY  to "Monthly",
+        PlanType.PRO_ANNUAL   to "Annual",
+        PlanType.PRO_LIFETIME to "Lifetime",
     )
 
     Surface(

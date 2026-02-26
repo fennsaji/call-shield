@@ -27,7 +27,6 @@ import com.fenn.callshield.ui.screens.advancedblocker.RegionPoliciesScreen
 import com.fenn.callshield.ui.screens.advancedblocker.TimePoliciesScreen
 import com.fenn.callshield.ui.screens.backup.BackupScreen
 import com.fenn.callshield.ui.screens.blocklist.BlocklistScreen
-import com.fenn.callshield.ui.screens.family.FamilyProtectionScreen
 import com.fenn.callshield.ui.screens.main.MainScreen
 import com.fenn.callshield.ui.screens.onboarding.OnboardingScreen
 import com.fenn.callshield.ui.screens.paywall.PaywallScreen
@@ -53,7 +52,6 @@ object Destinations {
     const val TRAI_REPORTED_NUMBERS = "trai_reported_numbers"
     const val DND_MANAGEMENT = "dnd_management"
     const val BACKUP = "backup"
-    const val FAMILY_PROTECTION = "family_protection"
     const val PAYWALL = "paywall?trigger={trigger}&scrollToRestore={scrollToRestore}"
     // Advanced Blocking
     const val ADVANCED_BLOCKING = "advanced_blocking"
@@ -143,7 +141,6 @@ fun CallShieldNavHost(
                 onNavigateToPaywall = { navController.navigate(Destinations.paywallRoute()) },
                 onNavigateToPermissions = { navController.navigate(Destinations.PERMISSIONS_SETTINGS) },
                 onNavigateToBackup = { navController.navigate(Destinations.BACKUP) },
-                onNavigateToFamilyProtection = { navController.navigate(Destinations.FAMILY_PROTECTION) },
                 onNavigateToAdvancedBlocking = { navController.navigate(Destinations.ADVANCED_BLOCKING) },
                 onNavigateToReport = { hash, label, screenedAt ->
                     navController.navigate(Destinations.reportSpam(hash, label, screenedAt))
@@ -213,10 +210,6 @@ fun CallShieldNavHost(
                     navController.navigate(Destinations.paywallRoute(scrollToRestore = true))
                 },
             )
-        }
-
-        composable(Destinations.FAMILY_PROTECTION) {
-            FamilyProtectionScreen(onBack = { navController.popBackStack() })
         }
 
         composable(

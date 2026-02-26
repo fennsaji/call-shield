@@ -37,7 +37,6 @@ class ScreeningPreferences @Inject constructor(
         val NOTIFY_ON_NIGHT_GUARD = booleanPreferencesKey("notify_on_night_guard")
         val ONBOARDING_COMPLETE = booleanPreferencesKey("onboarding_complete")
         val TRIAL_TRIGGERED = booleanPreferencesKey("trial_triggered")
-        val FAMILY_WAITLIST_EMAIL = stringPreferencesKey("family_waitlist_email")
         val TRAI_REPORTS_COUNT = intPreferencesKey("trai_reports_count")
         val DND_OPERATOR = stringPreferencesKey("dnd_operator")
         val THEME = stringPreferencesKey("theme_mode")
@@ -154,13 +153,6 @@ class ScreeningPreferences @Inject constructor(
 
     suspend fun setTrialTriggered(value: Boolean) {
         context.dataStore.edit { it[Keys.TRIAL_TRIGGERED] = value }
-    }
-
-    suspend fun getFamilyWaitlistEmail(): String? =
-        context.dataStore.data.first()[Keys.FAMILY_WAITLIST_EMAIL]
-
-    suspend fun setFamilyWaitlistEmail(email: String) {
-        context.dataStore.edit { it[Keys.FAMILY_WAITLIST_EMAIL] = email }
     }
 
     suspend fun getTraiReportsCount(): Int =
