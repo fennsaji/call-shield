@@ -16,6 +16,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.filled.WorkspacePremium
 import androidx.compose.material.icons.outlined.CloudDownload
 import androidx.compose.material.icons.outlined.CloudUpload
 import androidx.compose.material.icons.outlined.Lock
@@ -53,10 +54,15 @@ import com.fenn.callshield.ui.components.AppDialog
 @Composable
 fun BackupScreen(
     onBack: () -> Unit,
+    onNavigateToPaywall: () -> Unit = {},
     viewModel: BackupViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(Unit) {
+        viewModel.navigateToPaywall.collect { onNavigateToPaywall() }
+    }
 
     // SAF launchers
     val exportLauncher = rememberLauncherForActivityResult(
@@ -142,6 +148,10 @@ fun BackupScreen(
     // Import confirmation dialog
     if (state.showImportConfirm) {
         state.pendingPayload?.let { payload ->
+            val prefixCount = if (state.freeRestoreOnly)
+                minOf(payload.prefixRules.size, 5)
+            else
+                payload.prefixRules.size
             AppDialog(
                 onDismissRequest = viewModel::onImportCancelled,
                 icon = Icons.Outlined.CloudDownload,
@@ -159,12 +169,39 @@ fun BackupScreen(
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text("• ${payload.blocklist.size} blocked numbers")
                     Text("• ${payload.whitelist.size} whitelisted numbers")
-                    Text("• ${payload.prefixRules.size} prefix rules")
+                    Text("• $prefixCount prefix rules${if (state.freeRestoreOnly && payload.prefixRules.size > 5) " (free limit)" else ""}")
                 }
                 Text(
                     "Your current rules will be permanently overwritten.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error,
+                )
+            }
+        }
+    }
+
+    // Pro plan upgrade dialog — shown when a Pro/Family backup is opened on a free device
+    if (state.showProUpgradeDialog) {
+        state.pendingPayload?.let { payload ->
+            val planLabel = if (payload.exportedWithFamily) "Family" else "Pro"
+            AppDialog(
+                onDismissRequest = viewModel::onRestoreFreeContentOnly,
+                icon = Icons.Filled.WorkspacePremium,
+                title = "$planLabel Backup Detected",
+                confirmLabel = "View Pro Plans",
+                dismissLabel = "Restore Free Content",
+                onConfirm = viewModel::onProUpgradeClicked,
+                onDismiss = viewModel::onRestoreFreeContentOnly,
+            ) {
+                Text(
+                    "This backup was created with a $planLabel subscription. Some settings require an active plan to fully restore.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
+                )
+                Text(
+                    "Upgrade or restore your subscription to unlock everything, or continue with free content only (blocklist, whitelist, and up to 5 prefix rules).",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                 )
             }
         }

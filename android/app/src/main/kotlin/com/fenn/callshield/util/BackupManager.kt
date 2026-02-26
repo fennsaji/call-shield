@@ -37,10 +37,14 @@ class BackupManager @Inject constructor() {
         blocklist: List<BlocklistEntry>,
         whitelist: List<WhitelistEntry>,
         prefixRules: List<PrefixRule>,
+        isPro: Boolean = false,
+        isFamily: Boolean = false,
         pin: String,
     ): ByteArray {
         val payload = BackupPayload(
             exportedAt = System.currentTimeMillis(),
+            exportedWithPro = isPro,
+            exportedWithFamily = isFamily,
             blocklist = blocklist.map { BackupBlocklistEntry(it.numberHash, it.displayLabel, it.addedAt) },
             whitelist = whitelist.map { BackupWhitelistEntry(it.numberHash, it.displayLabel, it.addedAt) },
             prefixRules = prefixRules.map { BackupPrefixRule(it.pattern, it.matchType, it.action, it.label, it.addedAt) },
@@ -125,6 +129,8 @@ class BackupManager @Inject constructor() {
 data class BackupPayload(
     val version: Int = 1,
     val exportedAt: Long,
+    val exportedWithPro: Boolean = false,
+    val exportedWithFamily: Boolean = false,
     val blocklist: List<BackupBlocklistEntry>,
     val whitelist: List<BackupWhitelistEntry>,
     val prefixRules: List<BackupPrefixRule>,

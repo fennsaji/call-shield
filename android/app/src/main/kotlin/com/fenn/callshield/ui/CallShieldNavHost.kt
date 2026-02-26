@@ -54,7 +54,7 @@ object Destinations {
     const val DND_MANAGEMENT = "dnd_management"
     const val BACKUP = "backup"
     const val FAMILY_PROTECTION = "family_protection"
-    const val PAYWALL = "paywall?trigger={trigger}"
+    const val PAYWALL = "paywall?trigger={trigger}&scrollToRestore={scrollToRestore}"
     // Advanced Blocking
     const val ADVANCED_BLOCKING = "advanced_blocking"
     const val CONTACT_POLICIES = "contact_policies"
@@ -67,8 +67,9 @@ object Destinations {
     fun reportSpam(numberHash: String, displayLabel: String, screenedAt: Long = 0L) =
         "report_spam/${Uri.encode(numberHash)}/${Uri.encode(displayLabel)}?screenedAt=$screenedAt"
 
-    /** Concrete paywall route with the trigger value substituted. */
-    fun paywallRoute(trigger: Boolean = false) = "paywall?trigger=$trigger"
+    /** Concrete paywall route with the trigger/scrollToRestore values substituted. */
+    fun paywallRoute(trigger: Boolean = false, scrollToRestore: Boolean = false) =
+        "paywall?trigger=$trigger&scrollToRestore=$scrollToRestore"
 }
 
 @Composable
@@ -206,7 +207,12 @@ fun CallShieldNavHost(
         }
 
         composable(Destinations.BACKUP) {
-            BackupScreen(onBack = { navController.popBackStack() })
+            BackupScreen(
+                onBack = { navController.popBackStack() },
+                onNavigateToPaywall = {
+                    navController.navigate(Destinations.paywallRoute(scrollToRestore = true))
+                },
+            )
         }
 
         composable(Destinations.FAMILY_PROTECTION) {
@@ -215,10 +221,10 @@ fun CallShieldNavHost(
 
         composable(
             route = Destinations.PAYWALL,
-            arguments = listOf(navArgument("trigger") {
-                type = NavType.BoolType
-                defaultValue = false
-            }),
+            arguments = listOf(
+                navArgument("trigger") { type = NavType.BoolType; defaultValue = false },
+                navArgument("scrollToRestore") { type = NavType.BoolType; defaultValue = false },
+            ),
             enterTransition = { slideInVertically(initialOffsetY = { it }) + fadeIn() },
             exitTransition = { slideOutVertically(targetOffsetY = { it }) + fadeOut() },
             popEnterTransition = { slideInVertically(initialOffsetY = { it }) + fadeIn() },
@@ -227,6 +233,7 @@ fun CallShieldNavHost(
             PaywallScreen(
                 onDismiss = { navController.popBackStack() },
                 fromTrigger = backStackEntry.arguments?.getBoolean("trigger") ?: false,
+                scrollToRestore = backStackEntry.arguments?.getBoolean("scrollToRestore") ?: false,
             )
         }
 

@@ -78,13 +78,20 @@ import com.fenn.callshield.ui.theme.LocalWarningColor
 fun PaywallScreen(
     onDismiss: () -> Unit,
     fromTrigger: Boolean = false,
+    scrollToRestore: Boolean = false,
     viewModel: PaywallViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val scrollState = rememberScrollState()
 
     LaunchedEffect(Unit) { viewModel.loadProducts() }
     LaunchedEffect(state.purchaseSuccess) { if (state.purchaseSuccess) onDismiss() }
+    LaunchedEffect(scrollToRestore, scrollState.maxValue) {
+        if (scrollToRestore && scrollState.maxValue > 0) {
+            scrollState.animateScrollTo(scrollState.maxValue)
+        }
+    }
 
     Box(
         modifier = Modifier
@@ -95,7 +102,7 @@ fun PaywallScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState()),
+                .verticalScroll(scrollState),
         ) {
             HeroSection(fromTrigger = fromTrigger)
 
