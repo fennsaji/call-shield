@@ -9,6 +9,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.fenn.callshield.domain.model.AdvancedBlockingPolicy
+import com.fenn.callshield.util.BackupSettings
 import com.fenn.callshield.domain.model.BlockingPreset
 import com.fenn.callshield.domain.model.CountryFilterMode
 import com.fenn.callshield.domain.model.UnknownCallAction
@@ -105,6 +106,19 @@ class ScreeningPreferences @Inject constructor(
     fun observeProtectionFlags(): Flow<Pair<Boolean, Boolean>> =
         context.dataStore.data.map { prefs ->
             (prefs[Keys.AUTO_BLOCK] ?: false) to (prefs[Keys.BLOCK_HIDDEN] ?: false)
+        }
+
+    /** Observes all 6 screening + notification flags as a live Flow — reacts to backup restore. */
+    fun observeAllSettingsFlags(): Flow<ScreeningFlags> =
+        context.dataStore.data.map { prefs ->
+            ScreeningFlags(
+                autoBlockHighConfidence = prefs[Keys.AUTO_BLOCK] ?: false,
+                blockHiddenNumbers      = prefs[Keys.BLOCK_HIDDEN] ?: false,
+                notifyOnReject          = prefs[Keys.NOTIFY_ON_REJECT] ?: true,
+                notifyOnSilence         = prefs[Keys.NOTIFY_ON_SILENCE] ?: true,
+                notifyOnFlag            = prefs[Keys.NOTIFY_ON_FLAG] ?: true,
+                notifyOnNightGuard      = prefs[Keys.NOTIFY_ON_NIGHT_GUARD] ?: false,
+            )
         }
 
     suspend fun setAutoBlockHighConfidence(value: Boolean) {
@@ -218,6 +232,57 @@ class ScreeningPreferences @Inject constructor(
             prefs[Keys.ABP_COUNTRY_FILTER_LIST] = policy.countryFilterList.joinToString(",")
             prefs[Keys.ABP_AUTO_ESCALATE] = policy.autoEscalateEnabled
             prefs[Keys.ABP_AUTO_ESCALATE_THRESHOLD] = policy.autoEscalateThreshold
+        }
+    }
+
+    /** Reads all user-configurable settings in a single DataStore pass for backup. */
+    suspend fun readAllForBackup(): BackupSettings {
+        val prefs = context.dataStore.data.first()
+        return BackupSettings(
+            autoBlockHighConfidence = prefs[Keys.AUTO_BLOCK] ?: false,
+            blockHiddenNumbers      = prefs[Keys.BLOCK_HIDDEN] ?: false,
+            notifyOnReject          = prefs[Keys.NOTIFY_ON_REJECT] ?: true,
+            notifyOnSilence         = prefs[Keys.NOTIFY_ON_SILENCE] ?: true,
+            notifyOnFlag            = prefs[Keys.NOTIFY_ON_FLAG] ?: true,
+            notifyOnNightGuard      = prefs[Keys.NOTIFY_ON_NIGHT_GUARD] ?: false,
+            themeMode               = prefs[Keys.THEME] ?: "SYSTEM",
+            abpPreset               = prefs[Keys.ABP_PRESET] ?: "BALANCED",
+            abpAllowContactsOnly    = prefs[Keys.ABP_ALLOW_CONTACTS_ONLY] ?: false,
+            abpSilenceUnknown       = prefs[Keys.ABP_SILENCE_UNKNOWN] ?: false,
+            abpNightGuardEnabled    = prefs[Keys.ABP_NIGHT_GUARD_ENABLED] ?: false,
+            abpNightGuardStart      = prefs[Keys.ABP_NIGHT_GUARD_START] ?: 22,
+            abpNightGuardEnd        = prefs[Keys.ABP_NIGHT_GUARD_END] ?: 7,
+            abpNightGuardAction     = prefs[Keys.ABP_NIGHT_GUARD_ACTION] ?: "SILENCE",
+            abpBlockInternational   = prefs[Keys.ABP_BLOCK_INTERNATIONAL] ?: false,
+            abpCountryFilterMode    = prefs[Keys.ABP_COUNTRY_FILTER_MODE] ?: "OFF",
+            abpCountryFilterList    = prefs[Keys.ABP_COUNTRY_FILTER_LIST] ?: "",
+            abpAutoEscalate         = prefs[Keys.ABP_AUTO_ESCALATE] ?: false,
+            abpAutoEscalateThreshold = prefs[Keys.ABP_AUTO_ESCALATE_THRESHOLD] ?: 3,
+        )
+    }
+
+    /** Restores all backed-up settings in a single DataStore write. */
+    suspend fun restoreFromBackup(s: BackupSettings) {
+        context.dataStore.edit { prefs ->
+            prefs[Keys.AUTO_BLOCK]            = s.autoBlockHighConfidence
+            prefs[Keys.BLOCK_HIDDEN]          = s.blockHiddenNumbers
+            prefs[Keys.NOTIFY_ON_REJECT]      = s.notifyOnReject
+            prefs[Keys.NOTIFY_ON_SILENCE]     = s.notifyOnSilence
+            prefs[Keys.NOTIFY_ON_FLAG]        = s.notifyOnFlag
+            prefs[Keys.NOTIFY_ON_NIGHT_GUARD] = s.notifyOnNightGuard
+            prefs[Keys.THEME]                 = s.themeMode
+            prefs[Keys.ABP_PRESET]                 = s.abpPreset
+            prefs[Keys.ABP_ALLOW_CONTACTS_ONLY]    = s.abpAllowContactsOnly
+            prefs[Keys.ABP_SILENCE_UNKNOWN]        = s.abpSilenceUnknown
+            prefs[Keys.ABP_NIGHT_GUARD_ENABLED]    = s.abpNightGuardEnabled
+            prefs[Keys.ABP_NIGHT_GUARD_START]      = s.abpNightGuardStart
+            prefs[Keys.ABP_NIGHT_GUARD_END]        = s.abpNightGuardEnd
+            prefs[Keys.ABP_NIGHT_GUARD_ACTION]     = s.abpNightGuardAction
+            prefs[Keys.ABP_BLOCK_INTERNATIONAL]    = s.abpBlockInternational
+            prefs[Keys.ABP_COUNTRY_FILTER_MODE]    = s.abpCountryFilterMode
+            prefs[Keys.ABP_COUNTRY_FILTER_LIST]    = s.abpCountryFilterList
+            prefs[Keys.ABP_AUTO_ESCALATE]          = s.abpAutoEscalate
+            prefs[Keys.ABP_AUTO_ESCALATE_THRESHOLD] = s.abpAutoEscalateThreshold
         }
     }
 }

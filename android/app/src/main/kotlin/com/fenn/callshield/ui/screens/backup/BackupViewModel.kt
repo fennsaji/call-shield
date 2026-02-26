@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.fenn.callshield.billing.BillingManager
 import com.fenn.callshield.data.local.dao.BlocklistDao
+import com.fenn.callshield.data.preferences.ScreeningPreferences
 import com.fenn.callshield.data.local.dao.PrefixRuleDao
 import com.fenn.callshield.data.local.dao.WhitelistDao
 import com.fenn.callshield.util.BackupManager
@@ -52,6 +53,7 @@ class BackupViewModel @Inject constructor(
     private val whitelistDao: WhitelistDao,
     private val prefixRuleDao: PrefixRuleDao,
     private val billingManager: BillingManager,
+    private val screeningPreferences: ScreeningPreferences,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(BackupUiState())
@@ -99,6 +101,24 @@ class BackupViewModel @Inject constructor(
                 entities.blocklist.forEach { blocklistDao.insert(it) }
                 entities.whitelist.forEach { whitelistDao.insert(it) }
                 prefixRulesToRestore.forEach { prefixRuleDao.insert(it) }
+
+                payload.settings?.let { s ->
+                    val settingsToRestore = if (freeOnly) s.copy(
+                        // Screening — both toggles are pro only
+                        autoBlockHighConfidence = false,
+                        blockHiddenNumbers = false,
+                        // Night Guard — enabled is free, but custom hours and REJECT action are pro
+                        abpNightGuardStart = 22,
+                        abpNightGuardEnd = 7,
+                        abpNightGuardAction = if (s.abpNightGuardAction == "REJECT") "SILENCE" else s.abpNightGuardAction,
+                        // Region policies — blockInternational toggle is FREE; Country Filter is pro only
+                        abpCountryFilterMode = "OFF",
+                        abpCountryFilterList = "",
+                        // Reset pro-only presets to BALANCED to avoid inconsistent state
+                        abpPreset = if (s.abpPreset in PRO_ONLY_PRESETS) "BALANCED" else s.abpPreset,
+                    ) else s
+                    screeningPreferences.restoreFromBackup(settingsToRestore)
+                }
             }
             val total = payload.blocklist.size + payload.whitelist.size +
                 if (freeOnly) minOf(payload.prefixRules.size, FREE_PREFIX_RULE_LIMIT) else payload.prefixRules.size
@@ -140,11 +160,13 @@ class BackupViewModel @Inject constructor(
                 val blocklist   = withContext(Dispatchers.IO) { blocklistDao.observeAll().first() }
                 val whitelist   = withContext(Dispatchers.IO) { whitelistDao.observeAll().first() }
                 val prefixRules = withContext(Dispatchers.IO) { prefixRuleDao.observeAll().first() }
+                val settings = withContext(Dispatchers.IO) { screeningPreferences.readAllForBackup() }
                 val bytes = withContext(Dispatchers.Default) {
                     backupManager.exportBackup(
                         blocklist, whitelist, prefixRules,
                         isPro = billingManager.isPro.value,
                         isFamily = billingManager.isFamily.value,
+                        settings = settings,
                         pin = pin,
                     )
                 }
@@ -202,5 +224,7 @@ class BackupViewModel @Inject constructor(
 
     companion object {
         private const val FREE_PREFIX_RULE_LIMIT = 5
+        /** Presets that rely exclusively on pro-only features — reset to BALANCED on free restore. */
+        private val PRO_ONLY_PRESETS = setOf("INTERNATIONAL_LOCK", "AGGRESSIVE")
     }
 }

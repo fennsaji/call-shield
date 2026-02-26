@@ -106,7 +106,8 @@ fun BackupScreen(
             BackupActionCard(
                 icon = Icons.Outlined.CloudUpload,
                 title = "Export Backup",
-                description = "Save your blocklist, whitelist, and prefix rules to an encrypted file. " +
+                description = "Save your blocklist, whitelist, prefix rules, and all app settings " +
+                    "(advanced blocking, notifications) to an encrypted file. " +
                     "You will set a PIN to protect it.",
                 buttonLabel = "Choose Save Location",
                 isProcessing = state.status is BackupStatus.Processing,
@@ -170,6 +171,7 @@ fun BackupScreen(
                     Text("• ${payload.blocklist.size} blocked numbers")
                     Text("• ${payload.whitelist.size} whitelisted numbers")
                     Text("• $prefixCount prefix rules${if (state.freeRestoreOnly && payload.prefixRules.size > 5) " (free limit)" else ""}")
+                    if (payload.settings != null) Text("• App settings & advanced blocking config")
                 }
                 Text(
                     "Your current rules will be permanently overwritten.",

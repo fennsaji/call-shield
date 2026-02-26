@@ -39,6 +39,7 @@ class BackupManager @Inject constructor() {
         prefixRules: List<PrefixRule>,
         isPro: Boolean = false,
         isFamily: Boolean = false,
+        settings: BackupSettings? = null,
         pin: String,
     ): ByteArray {
         val payload = BackupPayload(
@@ -48,6 +49,7 @@ class BackupManager @Inject constructor() {
             blocklist = blocklist.map { BackupBlocklistEntry(it.numberHash, it.displayLabel, it.addedAt) },
             whitelist = whitelist.map { BackupWhitelistEntry(it.numberHash, it.displayLabel, it.addedAt) },
             prefixRules = prefixRules.map { BackupPrefixRule(it.pattern, it.matchType, it.action, it.label, it.addedAt) },
+            settings = settings,
         )
         val plaintext = json.encodeToString(payload).toByteArray(Charsets.UTF_8)
 
@@ -127,13 +129,41 @@ class BackupManager @Inject constructor() {
 
 @Serializable
 data class BackupPayload(
-    val version: Int = 1,
+    val version: Int = 2,
     val exportedAt: Long,
     val exportedWithPro: Boolean = false,
     val exportedWithFamily: Boolean = false,
     val blocklist: List<BackupBlocklistEntry>,
     val whitelist: List<BackupWhitelistEntry>,
     val prefixRules: List<BackupPrefixRule>,
+    val settings: BackupSettings? = null,
+)
+
+@Serializable
+data class BackupSettings(
+    // Screening
+    val autoBlockHighConfidence: Boolean = false,
+    val blockHiddenNumbers: Boolean = false,
+    // Notifications
+    val notifyOnReject: Boolean = true,
+    val notifyOnSilence: Boolean = true,
+    val notifyOnFlag: Boolean = true,
+    val notifyOnNightGuard: Boolean = false,
+    // Theme
+    val themeMode: String = "SYSTEM",
+    // Advanced Blocking Policy
+    val abpPreset: String = "BALANCED",
+    val abpAllowContactsOnly: Boolean = false,
+    val abpSilenceUnknown: Boolean = false,
+    val abpNightGuardEnabled: Boolean = false,
+    val abpNightGuardStart: Int = 22,
+    val abpNightGuardEnd: Int = 7,
+    val abpNightGuardAction: String = "SILENCE",
+    val abpBlockInternational: Boolean = false,
+    val abpCountryFilterMode: String = "OFF",
+    val abpCountryFilterList: String = "",
+    val abpAutoEscalate: Boolean = false,
+    val abpAutoEscalateThreshold: Int = 3,
 )
 
 @Serializable
