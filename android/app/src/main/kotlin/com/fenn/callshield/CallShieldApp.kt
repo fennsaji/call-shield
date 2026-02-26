@@ -6,6 +6,7 @@ import androidx.work.Configuration
 import com.fenn.callshield.billing.BillingManager
 import com.fenn.callshield.data.behavioral.BehavioralPurgeWorker
 import com.fenn.callshield.data.local.ContactsLookupHelper
+import com.fenn.callshield.family.FamilySubscriptionSyncer
 import com.fenn.callshield.notification.CallNotificationManager
 import com.fenn.callshield.screening.CallStateMonitor
 import dagger.hilt.android.HiltAndroidApp
@@ -23,6 +24,7 @@ class CallShieldApp : Application(), Configuration.Provider {
     @Inject lateinit var callStateMonitor: CallStateMonitor
     @Inject lateinit var contactsLookupHelper: ContactsLookupHelper
     @Inject lateinit var callNotificationManager: CallNotificationManager
+    @Inject lateinit var familySubscriptionSyncer: FamilySubscriptionSyncer
 
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -30,6 +32,7 @@ class CallShieldApp : Application(), Configuration.Provider {
         super.onCreate()
         callStateMonitor.start()
         contactsLookupHelper.initialize()
+        familySubscriptionSyncer.start(appScope)
         BehavioralPurgeWorker.schedule(this)
         appScope.launch {
             if (billingManager.connect()) billingManager.refreshSubscriptionStatus()

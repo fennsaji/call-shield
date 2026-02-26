@@ -24,11 +24,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.FamilyRestroom
 import androidx.compose.material.icons.outlined.LinkOff
+import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.PersonAdd
 import androidx.compose.material.icons.outlined.QrCodeScanner
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Shield
 import androidx.compose.material.icons.outlined.Sync
+import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -63,6 +65,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.fenn.callshield.BuildConfig
 import com.fenn.callshield.family.FamilyRole
 import com.fenn.callshield.ui.components.AppDialog
 import com.fenn.callshield.ui.components.QrScanner
@@ -71,6 +74,7 @@ import com.fenn.callshield.ui.components.QrScanner
 @Composable
 fun FamilyProtectionScreen(
     onBack: () -> Unit,
+    onNavigateToPaywall: () -> Unit = {},
     viewModel: FamilyProtectionViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -131,8 +135,10 @@ fun FamilyProtectionScreen(
                     when (state.role) {
                         null      -> UnpairedContent(
                             isLoading = state.isLoading,
+                            isFamily = state.isFamily,
                             onGuardian = viewModel::startAsGuardian,
                             onDependent = viewModel::showScanner,
+                            onGuardianLocked = onNavigateToPaywall,
                         )
                         FamilyRole.GUARDIAN -> GuardianContent(
                             state     = state,
@@ -143,6 +149,15 @@ fun FamilyProtectionScreen(
                             state   = state,
                             onSync  = viewModel::syncNow,
                             onUnpair = { showUnpairConfirm = true },
+                        )
+                    }
+
+                    if (BuildConfig.DEBUG && state.role != null) {
+                        DebugSimulationPanel(
+                            role = state.role!!,
+                            onSimulateCancel = viewModel::debugSimulateCancel,
+                            onSimulateRenew  = viewModel::debugSimulateRenew,
+                            onForceSync      = viewModel::syncNow,
                         )
                     }
                 }
@@ -175,8 +190,10 @@ fun FamilyProtectionScreen(
 @Composable
 private fun UnpairedContent(
     isLoading: Boolean,
+    isFamily: Boolean,
     onGuardian: () -> Unit,
     onDependent: () -> Unit,
+    onGuardianLocked: () -> Unit,
 ) {
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -207,7 +224,9 @@ private fun UnpairedContent(
             title = "I want to protect",
             description = "Generate a QR code. Family member scans it to receive your rules.",
             enabled = !isLoading,
-            onClick = onGuardian,
+            isLocked = !isFamily,
+            lockLabel = "Family",
+            onClick = if (isFamily) onGuardian else onGuardianLocked,
         )
         RoleCard(
             icon = Icons.Outlined.PersonAdd,
@@ -228,6 +247,8 @@ private fun RoleCard(
     description: String,
     enabled: Boolean,
     onClick: () -> Unit,
+    isLocked: Boolean = false,
+    lockLabel: String = "Pro",
 ) {
     ElevatedCard(
         onClick = onClick,
@@ -245,13 +266,27 @@ private fun RoleCard(
                 modifier = Modifier.size(32.dp),
                 tint = MaterialTheme.colorScheme.primary,
             )
-            Column {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 Text(
                     description,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                 )
+            }
+            if (isLocked) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    Icon(
+                        Icons.Outlined.Lock,
+                        contentDescription = null,
+                        modifier = Modifier.size(14.dp),
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                    Text(lockLabel, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                }
             }
         }
     }
@@ -369,6 +404,43 @@ private fun DependentContent(
             color = MaterialTheme.colorScheme.primary,
         )
 
+        // Subscription expired / revoked banner
+        if (state.isSubscriptionExpired) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                ),
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.Top,
+                ) {
+                    Icon(
+                        Icons.Outlined.Warning,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onErrorContainer,
+                        modifier = Modifier.size(20.dp),
+                    )
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(
+                            "Guardian plan inactive",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                        )
+                        Text(
+                            "The guardian's Family Plan has expired or been cancelled. " +
+                                "Contact them to renew, or remove this pairing and get your own plan.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                        )
+                    }
+                }
+            }
+        }
+
         // Synced rules summary
         val prefixCount     = state.syncedRules.count { it.rule_type == "prefix" }
         val preferenceCount = state.syncedRules.count { it.rule_type == "preference" }
@@ -398,7 +470,7 @@ private fun DependentContent(
 
         Button(
             onClick = onSync,
-            enabled = !state.isLoading,
+            enabled = !state.isLoading && !state.isSubscriptionExpired,
             modifier = Modifier.fillMaxWidth(),
         ) {
             if (state.isLoading) {
@@ -435,6 +507,65 @@ private fun DependentContent(
         ) {
             Icon(Icons.Outlined.LinkOff, contentDescription = null, modifier = Modifier.size(18.dp))
             Text("  Remove Pairing")
+        }
+    }
+}
+
+// ── Debug panel (DEBUG builds only) ──────────────────────────────────────────
+
+@Composable
+private fun DebugSimulationPanel(
+    role: FamilyRole,
+    onSimulateCancel: () -> Unit,
+    onSimulateRenew: () -> Unit,
+    onForceSync: () -> Unit,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.5f),
+        ),
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                "DEBUG — Subscription Simulation",
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onTertiaryContainer,
+            )
+            if (role == FamilyRole.GUARDIAN) {
+                Text(
+                    "Simulates plan change → FamilySubscriptionSyncer calls /family-revoke or /family-renew",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.7f),
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(
+                        onClick = onSimulateCancel,
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.error,
+                        ),
+                    ) { Text("Cancel Plan", style = MaterialTheme.typography.labelMedium) }
+                    OutlinedButton(
+                        onClick = onSimulateRenew,
+                        modifier = Modifier.weight(1f),
+                    ) { Text("Renew Plan", style = MaterialTheme.typography.labelMedium) }
+                }
+            } else {
+                Text(
+                    "Force-pulls rules — observe 402 if guardian cancelled",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.7f),
+                )
+                OutlinedButton(
+                    onClick = onForceSync,
+                    modifier = Modifier.fillMaxWidth(),
+                ) { Text("Force Sync Now", style = MaterialTheme.typography.labelMedium) }
+            }
         }
     }
 }

@@ -3,10 +3,14 @@ package com.fenn.callshield.ui.screens.family
 import android.graphics.Bitmap
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.fenn.callshield.billing.BillingManager
+import com.fenn.callshield.billing.PlanType
 import com.fenn.callshield.family.FamilyRole
 import com.fenn.callshield.family.FamilySyncRepository
 import com.fenn.callshield.family.FamilySyncRule
 import com.fenn.callshield.family.FamilyTokenManager
+import com.fenn.callshield.family.SubscriptionExpiredException
+import com.fenn.callshield.util.DeviceTokenManager
 import com.fenn.callshield.util.QrCodeGenerator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,11 +24,16 @@ import javax.inject.Inject
 
 data class FamilyProtectionUiState(
     val role: FamilyRole? = null,
+    val isFamily: Boolean = false,
     val qrBitmap: Bitmap? = null,
     val syncedRules: List<FamilySyncRule> = emptyList(),
     val showScanner: Boolean = false,
     val isLoading: Boolean = false,
     val error: String? = null,
+    /** True when the dependent's guardian has cancelled/downgraded their plan. */
+    val isSubscriptionExpired: Boolean = false,
+    /** "subscription_expired" | "subscription_inactive" — drives UI copy. */
+    val expiredReason: String? = null,
 )
 
 @HiltViewModel
@@ -32,16 +41,22 @@ class FamilyProtectionViewModel @Inject constructor(
     private val familyTokenManager: FamilyTokenManager,
     private val familySyncRepository: FamilySyncRepository,
     private val qrCodeGenerator: QrCodeGenerator,
+    private val billingManager: BillingManager,
+    private val deviceTokenManager: DeviceTokenManager,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(FamilyProtectionUiState())
     val state: StateFlow<FamilyProtectionUiState> = _state.asStateFlow()
 
     init {
-        // Observe role changes from DataStore (handles app restart / re-pairing)
         viewModelScope.launch {
             familyTokenManager.observeRole().collect { role ->
                 _state.update { it.copy(role = role) }
+            }
+        }
+        viewModelScope.launch {
+            billingManager.isFamily.collect { isFamily ->
+                _state.update { it.copy(isFamily = isFamily) }
             }
         }
     }
@@ -61,10 +76,20 @@ class FamilyProtectionViewModel @Inject constructor(
 
             // Register with backend — 9-min expiry to stay safely within the 10-min window
             val expiresAt = Instant.now().plus(9, ChronoUnit.MINUTES).toString()
-            familySyncRepository.registerPairing(tokenHash, expiresAt)
-                .onFailure { ex ->
-                    _state.update { it.copy(error = "Registration failed: ${ex.message}") }
-                }
+            val guardianDeviceHash = deviceTokenManager.deviceTokenHash
+            val planType = billingManager.planType.value.name
+            val subscriptionExpiresAt = billingManager.subscriptionExpiresAt.value
+                ?.let { Instant.ofEpochMilli(it).toString() }
+
+            familySyncRepository.registerPairing(
+                tokenHash = tokenHash,
+                expiresAt = expiresAt,
+                guardianDeviceHash = guardianDeviceHash,
+                planType = planType,
+                subscriptionExpiresAt = subscriptionExpiresAt,
+            ).onFailure { ex ->
+                _state.update { it.copy(error = "Registration failed: ${ex.message}") }
+            }
 
             _state.update { it.copy(isLoading = false) }
         }
@@ -89,8 +114,10 @@ class FamilyProtectionViewModel @Inject constructor(
 
             // Pull rules — also marks paired_at on the server (see assertPaired in Edge Function)
             familySyncRepository.pullRules(tokenHash)
-                .onSuccess { rules -> _state.update { it.copy(syncedRules = rules) } }
-                .onFailure { ex  -> _state.update { it.copy(error = "Pairing failed: ${ex.message}") } }
+                .onSuccess { rules ->
+                    _state.update { it.copy(syncedRules = rules, isSubscriptionExpired = false, expiredReason = null) }
+                }
+                .onFailure { ex -> handlePullFailure(ex) }
 
             _state.update { it.copy(isLoading = false) }
         }
@@ -105,8 +132,10 @@ class FamilyProtectionViewModel @Inject constructor(
                 return@launch
             }
             familySyncRepository.pullRules(tokenHash)
-                .onSuccess { rules -> _state.update { it.copy(syncedRules = rules) } }
-                .onFailure { ex  -> _state.update { it.copy(error = "Sync failed: ${ex.message}") } }
+                .onSuccess { rules ->
+                    _state.update { it.copy(syncedRules = rules, isSubscriptionExpired = false, expiredReason = null) }
+                }
+                .onFailure { ex -> handlePullFailure(ex) }
             _state.update { it.copy(isLoading = false) }
         }
     }
@@ -122,9 +151,39 @@ class FamilyProtectionViewModel @Inject constructor(
                 familySyncRepository.unpair(tokenHash) // best-effort — ignore failure
             }
             familyTokenManager.clearPairing()
-            _state.update { it.copy(qrBitmap = null, syncedRules = emptyList(), isLoading = false) }
+            _state.update {
+                it.copy(
+                    qrBitmap = null,
+                    syncedRules = emptyList(),
+                    isLoading = false,
+                    isSubscriptionExpired = false,
+                    expiredReason = null,
+                )
+            }
         }
     }
 
     fun clearError() { _state.update { it.copy(error = null) } }
+
+    // ── Debug (debug builds only) ─────────────────────────────────────────────
+
+    /** Simulates the guardian cancelling their subscription → triggers revoke on backend. */
+    fun debugSimulateCancel() {
+        billingManager.debugSimulatePlan(PlanType.NONE)
+    }
+
+    /** Simulates the guardian's family annual plan renewing → triggers renew on backend. */
+    fun debugSimulateRenew() {
+        billingManager.debugSimulatePlan(PlanType.FAMILY_ANNUAL)
+    }
+
+    // ── Private ───────────────────────────────────────────────────────────────
+
+    private fun handlePullFailure(ex: Throwable) {
+        if (ex is SubscriptionExpiredException) {
+            _state.update { it.copy(isSubscriptionExpired = true, expiredReason = ex.reason) }
+        } else {
+            _state.update { it.copy(error = "Sync failed: ${ex.message}") }
+        }
+    }
 }

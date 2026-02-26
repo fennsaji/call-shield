@@ -171,10 +171,7 @@ fun ProtectScreen(
                     title = "Family Protection",
                     subtitle = "Share blocking rules with unlimited family devices",
                     iconTint = successColor,
-                    isLocked = !isFamily,
-                    lockLabel = "Family",
                     onClick = onNavigateToFamilyProtection,
-                    onLockedClick = onNavigateToPaywall,
                 )
             }
         }

@@ -29,6 +29,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.coroutines.resume
@@ -64,6 +65,7 @@ class BillingManager @Inject constructor(
     private val _hasPendingPurchase       = MutableStateFlow(false)
     private val _planType                 = MutableStateFlow(PlanType.NONE)
     private val _activeSubscriptionToken  = MutableStateFlow<String?>(null)
+    private val _subscriptionExpiresAt    = MutableStateFlow<Long?>(null)
     val isPro:                    StateFlow<Boolean>  = _isPro.asStateFlow()
     /** True when the user has an active Family Plan (superset of Pro). */
     val isFamily:                 StateFlow<Boolean>  = _isFamily.asStateFlow()
@@ -73,6 +75,11 @@ class BillingManager @Inject constructor(
     val planType:                 StateFlow<PlanType> = _planType.asStateFlow()
     /** Purchase token of the active subscription, needed for plan switching. Null for INAPP / PROMO. */
     val activeSubscriptionToken:  StateFlow<String?>  = _activeSubscriptionToken.asStateFlow()
+    /**
+     * Epoch-millisecond timestamp when the active subscription expires (with grace buffer).
+     * Null for lifetime / promo plans that never expire.
+     */
+    val subscriptionExpiresAt:    StateFlow<Long?>    = _subscriptionExpiresAt.asStateFlow()
 
     private val billingClient: BillingClient = BillingClient.newBuilder(context)
         .setListener(this)
@@ -233,6 +240,16 @@ class BillingManager @Inject constructor(
             it.purchaseState == Purchase.PurchaseState.PENDING
         }
 
+        // Compute subscription expiry with grace buffer for family-sync abuse prevention
+        val activePurchase = subsPurchases.firstOrNull { it.purchaseState == Purchase.PurchaseState.PURCHASED }
+        _subscriptionExpiresAt.value = when (_planType.value) {
+            PlanType.FAMILY_ANNUAL, PlanType.PRO_ANNUAL ->
+                activePurchase?.purchaseTime?.plus(TimeUnit.DAYS.toMillis(370))
+            PlanType.PRO_MONTHLY ->
+                activePurchase?.purchaseTime?.plus(TimeUnit.DAYS.toMillis(35))
+            else -> null  // lifetime or promo — no expiry
+        }
+
         // Acknowledge any purchases that completed but were never acknowledged
         // (e.g. after reinstall, restore, or if onPurchasesUpdated never fired)
         (subsPurchases + inAppPurchases).forEach { purchase ->
@@ -373,6 +390,14 @@ class BillingManager @Inject constructor(
         _planType.value = plan
         _isFamily.value = plan == PlanType.FAMILY_ANNUAL || plan == PlanType.FAMILY_LIFETIME
         _isPro.value = plan != PlanType.NONE
+        // Set a realistic expiry so FamilySubscriptionSyncer sends the correct timestamp to backend
+        _subscriptionExpiresAt.value = when (plan) {
+            PlanType.FAMILY_ANNUAL, PlanType.PRO_ANNUAL ->
+                System.currentTimeMillis() + TimeUnit.DAYS.toMillis(370)
+            PlanType.PRO_MONTHLY ->
+                System.currentTimeMillis() + TimeUnit.DAYS.toMillis(35)
+            else -> null
+        }
     }
 
     private fun acknowledgePurchase(purchase: Purchase) {

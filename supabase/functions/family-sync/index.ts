@@ -123,11 +123,32 @@ async function assertPaired(
 ): Promise<{ token_hash: string } | Response> {
   const { data } = await supabase
     .from("family_pairing")
-    .select("token_hash, paired_at, expires_at")
+    .select("token_hash, paired_at, expires_at, subscription_active, subscription_expires_at, guardian_device_hash")
     .eq("token_hash", token_hash)
     .single();
 
   if (!data) return errorResponse("Token not found", 404);
+
+  // Check 1: immediate revocation flag
+  if (data.subscription_active === false) {
+    return errorResponse("Guardian subscription is inactive", 402, { reason: "subscription_inactive" });
+  }
+
+  // Check 2: passive expiry (only if subscription_expires_at is set — null = lifetime)
+  if (data.subscription_expires_at) {
+    const expired = new Date(data.subscription_expires_at) < new Date();
+    if (expired) {
+      // Auto-mark all pairings for this guardian as inactive so future checks are instant
+      if (data.guardian_device_hash) {
+        await supabase
+          .from("family_pairing")
+          .update({ subscription_active: false })
+          .eq("guardian_device_hash", data.guardian_device_hash);
+      }
+      return errorResponse("Guardian subscription has expired", 402, { reason: "subscription_expired" });
+    }
+  }
+
   if (!data.paired_at) {
     // Mark as paired on first use (dependent calling pull for the first time)
     await supabase

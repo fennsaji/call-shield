@@ -216,7 +216,10 @@ fun CallShieldNavHost(
         }
 
         composable(Destinations.FAMILY_PROTECTION) {
-            FamilyProtectionScreen(onBack = { navController.popBackStack() })
+            FamilyProtectionScreen(
+                onBack = { navController.popBackStack() },
+                onNavigateToPaywall = { navController.navigate(Destinations.paywallRoute()) },
+            )
         }
 
         composable(
