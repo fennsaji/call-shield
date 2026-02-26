@@ -193,8 +193,11 @@ if [ -z "$ADB_DEVICES" ]; then
     fi
 
     printf "${YELLOW}📱 Starting emulator: ${EMULATOR_ARRAY[$selection]}${NC}\n"
-    emulator -avd "${EMULATOR_ARRAY[$selection]}" -no-snapshot-load >/dev/null 2>&1 &
-    disown  # detach from script — emulator keeps running after script exits or Ctrl+C
+    # Triple detach: all three stdio fds redirected away from terminal, nohup ignores SIGHUP,
+    # subshell re-parents emulator to launchd (PID 1). Survives Ctrl+C, window close, and
+    # EOF-on-stdin (the most common cause of emulator exit after script stops).
+    (nohup emulator -avd "${EMULATOR_ARRAY[$selection]}" -no-snapshot-load \
+        </dev/null >/dev/null 2>&1 &)
 
     printf "${BLUE}⏳ Waiting for emulator to boot...${NC}\n"
     adb wait-for-device

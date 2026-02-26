@@ -45,6 +45,7 @@ data class HomeUiState(
     val dndConfirmed: Boolean = false,    // false = sent but awaiting TRAI reply
     val blockedHashes: Set<String> = emptySet(),
     val whitelistedHashes: Set<String> = emptySet(),
+    val traiReportedHashes: Set<String> = emptySet(),
 )
 
 @HiltViewModel
@@ -98,6 +99,7 @@ class HomeViewModel @Inject constructor(
         dndCommandDao.observeLatestActive(),
         blocklistRepo.observeAll().map { list -> list.map { it.numberHash }.toSet() },
         whitelistRepo.observeAll().map { list -> list.map { it.numberHash }.toSet() },
+        traiReportDao.observeAllHashes().map { it.toSet() },
     ) { args ->
         @Suppress("UNCHECKED_CAST")
         val calls = args[0] as List<CallHistoryEntry>
@@ -109,6 +111,7 @@ class HomeViewModel @Inject constructor(
         val dndEntry = args[6] as com.fenn.callshield.data.local.entity.DndCommandEntry?
         val blockedHashes = args[7] as Set<String>
         val whitelistedHashes = args[8] as Set<String>
+        val traiReportedHashes = args[9] as Set<String>
         HomeUiState(
             recentCalls = calls,
             stats = stats,
@@ -121,6 +124,7 @@ class HomeViewModel @Inject constructor(
             dndConfirmed = dndEntry?.confirmedByUser ?: false,
             blockedHashes = blockedHashes,
             whitelistedHashes = whitelistedHashes,
+            traiReportedHashes = traiReportedHashes,
         )
     }.stateIn(
         scope = viewModelScope,

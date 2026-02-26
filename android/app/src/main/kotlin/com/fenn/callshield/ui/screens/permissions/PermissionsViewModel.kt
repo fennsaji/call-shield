@@ -22,6 +22,7 @@ data class PermissionsState(
     val notificationsGranted: Boolean = false,
     val batteryOptimisationDisabled: Boolean = false,
     val oemBatteryHint: String = "",
+    val callLogGranted: Boolean = false,
 )
 
 @HiltViewModel
@@ -42,8 +43,15 @@ class PermissionsViewModel @Inject constructor(
             notificationsGranted = isNotificationsGranted(),
             batteryOptimisationDisabled = isBatteryOptimisationDisabled(),
             oemBatteryHint = oemBatteryHint(),
+            callLogGranted = isCallLogGranted(),
         )
     }
+
+    private fun isCallLogGranted(): Boolean =
+        ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.READ_CALL_LOG,
+        ) == PackageManager.PERMISSION_GRANTED
 
     private fun isScreeningRoleGranted(): Boolean {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {

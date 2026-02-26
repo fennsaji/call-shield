@@ -18,6 +18,9 @@ interface TraiReportDao {
     @Query("SELECT COUNT(*) FROM trai_reports")
     suspend fun count(): Int
 
+    @Query("SELECT DISTINCT numberHash FROM trai_reports")
+    fun observeAllHashes(): Flow<List<String>>
+
     @Query("DELETE FROM trai_reports")
     suspend fun deleteAll()
 }

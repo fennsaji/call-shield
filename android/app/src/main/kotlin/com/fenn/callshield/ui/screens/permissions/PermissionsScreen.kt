@@ -34,6 +34,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BatteryChargingFull
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.Button
 import androidx.compose.material3.CardDefaults
@@ -101,6 +102,11 @@ fun PermissionsScreen(
     // Battery optimisation — StartActivityForResult so we get a callback on return
     val batteryLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
+    ) { viewModel.refresh() }
+
+    // Call log (optional)
+    val callLogLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
     ) { viewModel.refresh() }
 
     Scaffold { padding ->
@@ -184,6 +190,20 @@ fun PermissionsScreen(
                 },
             )
 
+            // ── Call log (optional) ───────────────────────────────────────────
+            PermissionCard(
+                number = 0,
+                stepLabel = "Optional",
+                icon = Icons.Filled.History,
+                title = "Read call history",
+                body = "Shows unknown calls from your device log alongside screened calls in the Activity tab. Nothing is uploaded.",
+                granted = state.callLogGranted,
+                buttonLabel = "Allow",
+                onRequest = {
+                    callLogLauncher.launch(Manifest.permission.READ_CALL_LOG)
+                },
+            )
+
             Spacer(Modifier.height(8.dp))
 
             Button(
@@ -218,6 +238,7 @@ private fun PermissionCard(
     buttonLabel: String,
     onRequest: () -> Unit,
     subBody: String? = null,
+    stepLabel: String? = null,
 ) {
     val primary = MaterialTheme.colorScheme.primary
 
@@ -254,7 +275,7 @@ private fun PermissionCard(
                 }
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Step $number",
+                        text = stepLabel ?: "Step $number",
                         style = MaterialTheme.typography.labelSmall,
                         color = primary.copy(alpha = 0.7f),
                         fontWeight = FontWeight.Medium,
