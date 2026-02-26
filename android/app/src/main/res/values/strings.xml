@@ -142,6 +142,9 @@
     <string name="battery_oem_miui">On MIUI: Security → Battery → CallShield → No restrictions</string>
     <string name="battery_oem_samsung">On Samsung: Device Care → Battery → App power management → CallShield → Unrestricted</string>
     <string name="battery_oem_oneplus">On OnePlus: Settings → Battery → Battery Optimization → CallShield → Don\'t optimize</string>
+    <string name="battery_oem_huawei">On Huawei/Honor: Settings → Battery → App Battery Management → CallShield → No restrictions</string>
+    <string name="battery_oem_oppo">On OPPO/Realme: Settings → Battery → More Settings → App Battery Management → CallShield → No restrictions</string>
+    <string name="battery_oem_vivo">On vivo/iQOO: i Manager → App Management → Power Consumption Protection → CallShield → No restrictions</string>
     <string name="battery_oem_generic">Go to Battery settings and disable optimization for CallShield</string>
 
     <!-- Bottom navigation labels -->

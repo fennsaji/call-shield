@@ -2,6 +2,8 @@ package com.fenn.callshield.billing
 
 import android.app.Activity
 import android.content.Context
+import android.content.SharedPreferences
+import com.fenn.callshield.BuildConfig
 import com.android.billingclient.api.AcknowledgePurchaseParams
 import com.android.billingclient.api.BillingClient
 import com.android.billingclient.api.BillingClientStateListener
@@ -16,10 +18,17 @@ import com.android.billingclient.api.acknowledgePurchase
 import com.android.billingclient.api.queryProductDetails
 import com.android.billingclient.api.queryPurchasesAsync
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.coroutines.resume
@@ -39,7 +48,8 @@ enum class PlanType {
     PRO_LIFETIME,
     FAMILY_ANNUAL,
     FAMILY_LIFETIME,
-    PROMO,
+    PROMO_PRO,
+    PROMO_FAMILY,
 }
 
 @Singleton
@@ -71,6 +81,11 @@ class BillingManager @Inject constructor(
 
     private var productDetails: List<ProductDetails> = emptyList()
 
+    private val managerScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val connectMutex = Mutex()
+    private val pendingAckPrefs: SharedPreferences =
+        context.getSharedPreferences("pending_ack_tokens", Context.MODE_PRIVATE)
+
     /**
      * Connect to Play Billing and refresh subscription status.
      * Call from application onCreate or a ViewModel init block.
@@ -80,17 +95,35 @@ class BillingManager @Inject constructor(
      */
     suspend fun connect(): Boolean {
         if (billingClient.isReady) return true
-        return suspendCancellableCoroutine { cont ->
-            billingClient.startConnection(object : BillingClientStateListener {
-                override fun onBillingSetupFinished(result: BillingResult) {
-                    cont.resume(result.responseCode == BillingClient.BillingResponseCode.OK)
-                }
+        return connectMutex.withLock {
+            if (billingClient.isReady) return@withLock true
+            suspendCancellableCoroutine { cont ->
+                billingClient.startConnection(object : BillingClientStateListener {
+                    override fun onBillingSetupFinished(result: BillingResult) {
+                        if (cont.isActive) cont.resume(result.responseCode == BillingClient.BillingResponseCode.OK)
+                    }
 
-                override fun onBillingServiceDisconnected() {
-                    // Will retry on next purchase attempt
-                    if (cont.isActive) cont.resume(false)
-                }
-            })
+                    override fun onBillingServiceDisconnected() {
+                        if (cont.isActive) {
+                            cont.resume(false)
+                        } else {
+                            // Post-connection disconnect (OEM battery kill) — schedule reconnect
+                            scheduleReconnect()
+                        }
+                    }
+                })
+            }
+        }
+    }
+
+    private fun scheduleReconnect() {
+        managerScope.launch {
+            var delayMs = 1_000L
+            repeat(3) {
+                delay(delayMs)
+                if (connect()) return@launch
+                delayMs *= 2
+            }
         }
     }
 
@@ -137,6 +170,9 @@ class BillingManager @Inject constructor(
     }
 
     suspend fun refreshSubscriptionStatus() {
+        // Retry any purchase tokens that failed acknowledgment in a previous session
+        pendingAckPrefs.all.keys.toList().forEach { token -> retryAcknowledge(token) }
+
         val subsParams = QueryPurchasesParams.newBuilder()
             .setProductType(BillingClient.ProductType.SUBS)
             .build()
@@ -169,9 +205,11 @@ class BillingManager @Inject constructor(
                 p.products.contains(PRODUCT_PRO_MONTHLY)
         }
         val hasBillingPro = hasFamily || hasLifetime || hasProAnnual || hasProMonthly
-        val hasPromoGrant = promoGrantManager.isGrantActive(deviceTokenManager.deviceTokenHash)
-        _isFamily.value = hasFamily
-        _isPro.value = hasBillingPro || hasPromoGrant
+        val promoGrant    = promoGrantManager.activeGrant(deviceTokenManager.deviceTokenHash)
+        val hasPromoFamily = promoGrant == PromoGrant.FAMILY
+        val hasPromoPro   = promoGrant != PromoGrant.NONE
+        _isFamily.value = hasFamily || hasPromoFamily
+        _isPro.value = hasBillingPro || hasPromoPro
 
         // Determine active plan type (highest tier wins)
         _planType.value = when {
@@ -180,7 +218,8 @@ class BillingManager @Inject constructor(
             hasLifetime       -> PlanType.PRO_LIFETIME
             hasProAnnual      -> PlanType.PRO_ANNUAL
             hasProMonthly     -> PlanType.PRO_MONTHLY
-            hasPromoGrant     -> PlanType.PROMO
+            hasPromoFamily    -> PlanType.PROMO_FAMILY
+            hasPromoPro       -> PlanType.PROMO_PRO
             else              -> PlanType.NONE
         }
 
@@ -204,13 +243,17 @@ class BillingManager @Inject constructor(
     }
 
     /**
-     * Validates [code] against the configured promo code hash and grants Pro if correct.
-     * @return true on success, false if the code is wrong or no hash is configured.
+     * Validates [code] against the configured promo hashes and grants the matching plan tier.
+     * @return [PromoGrant.PRO], [PromoGrant.FAMILY], or [PromoGrant.NONE] if invalid/expired.
      */
-    fun redeemPromoCode(code: String): Boolean {
-        val granted = promoGrantManager.redeem(code, deviceTokenManager.deviceTokenHash)
-        if (granted) _isPro.value = true
-        return granted
+    fun redeemPromoCode(code: String): PromoGrant {
+        val grant = promoGrantManager.redeem(code, deviceTokenManager.deviceTokenHash)
+        when (grant) {
+            PromoGrant.FAMILY -> { _isFamily.value = true; _isPro.value = true; _planType.value = PlanType.PROMO_FAMILY }
+            PromoGrant.PRO    -> { _isPro.value = true; _planType.value = PlanType.PROMO_PRO }
+            PromoGrant.NONE   -> Unit
+        }
+        return grant
     }
 
     /** Launch billing flow for subscription products (annual/monthly/family). */
@@ -276,9 +319,11 @@ class BillingManager @Inject constructor(
                 p.purchaseState == Purchase.PurchaseState.PURCHASED &&
                     (p.products.contains(PRODUCT_PRO_ANNUAL) || p.products.contains(PRODUCT_PRO_MONTHLY))
             }
-            if (hasFamily) _isFamily.value = true
-            val hasPromoGrant = promoGrantManager.isGrantActive(deviceTokenManager.deviceTokenHash)
-            if (hasBillingPro || hasPromoGrant) _isPro.value = true
+            val promoGrant     = promoGrantManager.activeGrant(deviceTokenManager.deviceTokenHash)
+            val hasPromoFamily = promoGrant == PromoGrant.FAMILY
+            val hasPromoPro    = promoGrant != PromoGrant.NONE
+            _isFamily.value = hasFamily || hasPromoFamily
+            _isPro.value = hasBillingPro || hasPromoPro
 
             // Update plan type and subscription token
             val hasProAnnual = purchases.any { p ->
@@ -295,7 +340,8 @@ class BillingManager @Inject constructor(
                 hasLifetime       -> PlanType.PRO_LIFETIME
                 hasProAnnual      -> PlanType.PRO_ANNUAL
                 hasProMonthly     -> PlanType.PRO_MONTHLY
-                hasPromoGrant     -> PlanType.PROMO
+                hasPromoFamily    -> PlanType.PROMO_FAMILY
+                hasPromoPro       -> PlanType.PROMO_PRO
                 else              -> _planType.value
             }
             if (newPlanType != PlanType.NONE) _planType.value = newPlanType
@@ -323,15 +369,27 @@ class BillingManager @Inject constructor(
 
     /** Debug-only: simulate a specific plan without going through Play Billing. */
     fun debugSimulatePlan(plan: PlanType) {
+        check(BuildConfig.DEBUG) { "debugSimulatePlan is only available in debug builds" }
         _planType.value = plan
         _isFamily.value = plan == PlanType.FAMILY_ANNUAL || plan == PlanType.FAMILY_LIFETIME
         _isPro.value = plan != PlanType.NONE
     }
 
     private fun acknowledgePurchase(purchase: Purchase) {
+        managerScope.launch { retryAcknowledge(purchase.purchaseToken) }
+    }
+
+    private suspend fun retryAcknowledge(token: String) {
         val params = AcknowledgePurchaseParams.newBuilder()
-            .setPurchaseToken(purchase.purchaseToken)
+            .setPurchaseToken(token)
             .build()
-        billingClient.acknowledgePurchase(params) { /* fire-and-forget */ }
+        val result = billingClient.acknowledgePurchase(params)
+        when (result.responseCode) {
+            BillingClient.BillingResponseCode.OK,
+            BillingClient.BillingResponseCode.ITEM_ALREADY_OWNED ->
+                pendingAckPrefs.edit().remove(token).apply()
+            else ->
+                pendingAckPrefs.edit().putBoolean(token, true).apply()
+        }
     }
 }

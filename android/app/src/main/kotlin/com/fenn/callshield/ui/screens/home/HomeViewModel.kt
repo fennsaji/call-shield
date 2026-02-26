@@ -10,6 +10,7 @@ import com.fenn.callshield.data.local.dao.DndCommandDao
 import com.fenn.callshield.data.local.dao.ScamDigestDao
 import com.fenn.callshield.data.local.dao.TraiReportDao
 import com.fenn.callshield.data.local.entity.CallHistoryEntry
+import com.fenn.callshield.data.local.entity.DndCommandEntry
 import com.fenn.callshield.data.local.entity.ScamDigestEntry
 import com.fenn.callshield.data.local.entity.TraiReportEntry
 import com.fenn.callshield.data.preferences.ScreeningPreferences
@@ -26,7 +27,6 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -67,17 +67,9 @@ class HomeViewModel @Inject constructor(
     private val _snackbarMessage = MutableSharedFlow<String>(extraBufferCapacity = 1)
     val snackbarMessage: SharedFlow<String> = _snackbarMessage.asSharedFlow()
 
-    private val _protectionState = MutableStateFlow(Pair(false, false)) // autoBlock, blockHidden
+    private val _protectionState = screeningPreferences.observeProtectionFlags()
+        .stateIn(viewModelScope, SharingStarted.Eagerly, Pair(false, false))
     private val _isScreeningActive = MutableStateFlow(false)
-
-    init {
-        viewModelScope.launch {
-            _protectionState.value = Pair(
-                screeningPreferences.autoBlockHighConfidence(),
-                screeningPreferences.blockHiddenNumbers(),
-            )
-        }
-    }
 
     /** Call on every screen resume to reflect current Call Screening role status. */
     fun refreshScreeningRole(context: Context) {
@@ -89,42 +81,55 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    private data class CallsState(
+        val recentCalls: List<CallHistoryEntry>,
+        val scamDigest: ScamDigestEntry?,
+        val stats: CallStats,
+        val protection: Pair<Boolean, Boolean>,
+        val isScreeningActive: Boolean,
+    )
+
+    private data class ListsState(
+        val dndOperator: DndOperator?,
+        val dndEntry: DndCommandEntry?,
+        val blockedHashes: Set<String>,
+        val whitelistedHashes: Set<String>,
+        val traiReportedHashes: Set<String>,
+    )
+
     val uiState: StateFlow<HomeUiState> = combine(
-        callHistoryRepo.observeRecent(),
-        scamDigestDao.observeLatest(),
-        callHistoryRepo.observeStats(),
-        _protectionState,
-        _isScreeningActive,
-        screeningPreferences.observeDndOperator(),
-        dndCommandDao.observeLatestActive(),
-        blocklistRepo.observeAll().map { list -> list.map { it.numberHash }.toSet() },
-        whitelistRepo.observeAll().map { list -> list.map { it.numberHash }.toSet() },
-        traiReportDao.observeAllHashes().map { it.toSet() },
-    ) { args ->
-        @Suppress("UNCHECKED_CAST")
-        val calls = args[0] as List<CallHistoryEntry>
-        val digest = args[1] as ScamDigestEntry?
-        val stats = args[2] as CallStats
-        val protection = args[3] as Pair<Boolean, Boolean>
-        val isActive = args[4] as Boolean
-        val dndOperator = args[5] as DndOperator?
-        val dndEntry = args[6] as com.fenn.callshield.data.local.entity.DndCommandEntry?
-        val blockedHashes = args[7] as Set<String>
-        val whitelistedHashes = args[8] as Set<String>
-        val traiReportedHashes = args[9] as Set<String>
+        combine(
+            callHistoryRepo.observeRecent(),
+            scamDigestDao.observeLatest(),
+            callHistoryRepo.observeStats(),
+            _protectionState,
+            _isScreeningActive,
+        ) { calls, digest, stats, protection, isActive ->
+            CallsState(calls, digest, stats, protection, isActive)
+        },
+        combine(
+            screeningPreferences.observeDndOperator(),
+            dndCommandDao.observeLatestActive(),
+            blocklistRepo.observeAll().map { list -> list.map { it.numberHash }.toSet() },
+            whitelistRepo.observeAll().map { list -> list.map { it.numberHash }.toSet() },
+            traiReportDao.observeAllHashes().map { it.toSet() },
+        ) { dndOperator, dndEntry, blockedHashes, whitelistedHashes, traiReportedHashes ->
+            ListsState(dndOperator, dndEntry, blockedHashes, whitelistedHashes, traiReportedHashes)
+        },
+    ) { calls, lists ->
         HomeUiState(
-            recentCalls = calls,
-            stats = stats,
-            isScreeningActive = isActive,
-            scamDigest = digest,
-            autoBlock = protection.first,
-            blockHidden = protection.second,
-            dndOperator = dndOperator,
-            dndCommand = dndEntry?.command?.takeIf { it != "DEACTIVATE" },
-            dndConfirmed = dndEntry?.confirmedByUser ?: false,
-            blockedHashes = blockedHashes,
-            whitelistedHashes = whitelistedHashes,
-            traiReportedHashes = traiReportedHashes,
+            recentCalls = calls.recentCalls,
+            stats = calls.stats,
+            isScreeningActive = calls.isScreeningActive,
+            scamDigest = calls.scamDigest,
+            autoBlock = calls.protection.first,
+            blockHidden = calls.protection.second,
+            dndOperator = lists.dndOperator,
+            dndCommand = lists.dndEntry?.command?.takeIf { it != "DEACTIVATE" },
+            dndConfirmed = lists.dndEntry?.confirmedByUser ?: false,
+            blockedHashes = lists.blockedHashes,
+            whitelistedHashes = lists.whitelistedHashes,
+            traiReportedHashes = lists.traiReportedHashes,
         )
     }.stateIn(
         scope = viewModelScope,
@@ -149,17 +154,11 @@ class HomeViewModel @Inject constructor(
     }
 
     fun setAutoBlock(v: Boolean) {
-        viewModelScope.launch {
-            screeningPreferences.setAutoBlockHighConfidence(v)
-            _protectionState.value = _protectionState.value.copy(first = v)
-        }
+        viewModelScope.launch { screeningPreferences.setAutoBlockHighConfidence(v) }
     }
 
     fun setBlockHidden(v: Boolean) {
-        viewModelScope.launch {
-            screeningPreferences.setBlockHiddenNumbers(v)
-            _protectionState.value = _protectionState.value.copy(second = v)
-        }
+        viewModelScope.launch { screeningPreferences.setBlockHiddenNumbers(v) }
     }
 
     fun blockNumber(numberHash: String, displayLabel: String) {

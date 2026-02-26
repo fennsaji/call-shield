@@ -40,8 +40,8 @@ interface CallHistoryDao {
     )
     suspend fun pruneOldEntries()
 
-    @Query("SELECT COUNT(*) FROM call_history WHERE numberHash = :numberHash AND outcome = 'rejected'")
-    suspend fun countRejectionsByHash(numberHash: String): Int
+    @Query("SELECT COUNT(*) FROM call_history WHERE numberHash = :numberHash AND outcome = 'rejected' AND screenedAt >= :since")
+    suspend fun countRejectionsByHash(numberHash: String, since: Long): Int
 
     @Query("DELETE FROM call_history")
     suspend fun deleteAll()

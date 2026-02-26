@@ -73,11 +73,39 @@ class ScreeningPreferences @Inject constructor(
     suspend fun notifyOnNightGuard(): Boolean =
         context.dataStore.data.first()[Keys.NOTIFY_ON_NIGHT_GUARD] ?: false
 
+    /** Reads all 6 screening flags in a single DataStore read — use this in the screening hot path. */
+    suspend fun getScreeningFlags(): ScreeningFlags {
+        val prefs = context.dataStore.data.first()
+        return ScreeningFlags(
+            autoBlockHighConfidence = prefs[Keys.AUTO_BLOCK] ?: false,
+            blockHiddenNumbers      = prefs[Keys.BLOCK_HIDDEN] ?: false,
+            notifyOnReject          = prefs[Keys.NOTIFY_ON_REJECT] ?: true,
+            notifyOnSilence         = prefs[Keys.NOTIFY_ON_SILENCE] ?: true,
+            notifyOnFlag            = prefs[Keys.NOTIFY_ON_FLAG] ?: true,
+            notifyOnNightGuard      = prefs[Keys.NOTIFY_ON_NIGHT_GUARD] ?: false,
+        )
+    }
+
+    data class ScreeningFlags(
+        val autoBlockHighConfidence: Boolean,
+        val blockHiddenNumbers: Boolean,
+        val notifyOnReject: Boolean,
+        val notifyOnSilence: Boolean,
+        val notifyOnFlag: Boolean,
+        val notifyOnNightGuard: Boolean,
+    )
+
     suspend fun isOnboardingComplete(): Boolean =
         context.dataStore.data.first()[Keys.ONBOARDING_COMPLETE] ?: false
 
     fun observeOnboardingComplete(): Flow<Boolean> =
         context.dataStore.data.map { it[Keys.ONBOARDING_COMPLETE] ?: false }
+
+    /** Observes both protection toggles in a single DataStore stream. */
+    fun observeProtectionFlags(): Flow<Pair<Boolean, Boolean>> =
+        context.dataStore.data.map { prefs ->
+            (prefs[Keys.AUTO_BLOCK] ?: false) to (prefs[Keys.BLOCK_HIDDEN] ?: false)
+        }
 
     suspend fun setAutoBlockHighConfidence(value: Boolean) {
         context.dataStore.edit { it[Keys.AUTO_BLOCK] = value }

@@ -31,14 +31,13 @@ abstract class SeedDbDao {
     abstract suspend fun count(): Int
 
     /**
-     * Atomically replace all seed DB entries. Runs clearAll + insertAll in a
-     * single transaction so a checksum failure during download never wipes
-     * previously valid data — the old data stays intact until a verified
-     * replacement is ready.
+     * Atomically replace all seed DB entries in batches to avoid OOM on 2 GB devices.
+     * Runs clearAll + batched insertAll in a single transaction so a checksum failure
+     * during download never wipes previously valid data.
      */
     @Transaction
-    open suspend fun replaceAll(numbers: List<SeedDbNumber>) {
+    open suspend fun replaceAll(numbers: List<SeedDbNumber>, batchSize: Int = 1000) {
         clearAll()
-        if (numbers.isNotEmpty()) insertAll(numbers)
+        numbers.chunked(batchSize).forEach { batch -> insertAll(batch) }
     }
 }

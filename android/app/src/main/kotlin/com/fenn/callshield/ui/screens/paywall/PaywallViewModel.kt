@@ -2,12 +2,14 @@ package com.fenn.callshield.ui.screens.paywall
 
 import android.app.Activity
 import android.content.Context
+import com.fenn.callshield.BuildConfig
 import android.content.ContextWrapper
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.android.billingclient.api.BillingClient
 import com.android.billingclient.api.ProductDetails
 import com.fenn.callshield.billing.BillingManager
+import com.fenn.callshield.billing.PromoGrant
 import com.fenn.callshield.billing.PRODUCT_FAMILY_ANNUAL
 import com.fenn.callshield.billing.PRODUCT_FAMILY_LIFETIME
 import com.fenn.callshield.billing.PRODUCT_PRO_ANNUAL
@@ -43,6 +45,7 @@ data class PaywallState(
     val familyWaitlistJoined: Boolean = false,
     val promoCode: String = "",
     val promoError: Boolean = false,
+    val promoErrorMessage: String = "Invalid or expired promo code",
     val hasPendingPurchase: Boolean = false,
 )
 
@@ -141,6 +144,7 @@ class PaywallViewModel @Inject constructor(
     }
 
     fun debugSimulatePlan(plan: com.fenn.callshield.billing.PlanType) {
+        check(BuildConfig.DEBUG) { "debugSimulatePlan is only available in debug builds" }
         billingManager.debugSimulatePlan(plan)
         _state.value = _state.value.copy(purchaseSuccess = true)
     }
@@ -151,10 +155,9 @@ class PaywallViewModel @Inject constructor(
 
     fun redeemPromoCode() {
         val code = _state.value.promoCode
-        if (billingManager.redeemPromoCode(code)) {
-            _state.value = _state.value.copy(purchaseSuccess = true)
-        } else {
-            _state.value = _state.value.copy(promoError = true)
+        when (billingManager.redeemPromoCode(code)) {
+            PromoGrant.PRO, PromoGrant.FAMILY -> _state.value = _state.value.copy(purchaseSuccess = true)
+            PromoGrant.NONE -> _state.value = _state.value.copy(promoError = true)
         }
     }
 

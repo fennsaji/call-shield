@@ -5,6 +5,7 @@ import io.ktor.client.HttpClient
 import io.ktor.client.engine.android.Android
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.defaultRequest
+import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.logging.LogLevel
 import io.ktor.client.plugins.logging.Logging
 import io.ktor.client.request.get
@@ -31,6 +32,7 @@ class ApiClient @Inject constructor() {
 
     val http: HttpClient = HttpClient(Android) {
         install(ContentNegotiation) { json(json) }
+        install(HttpTimeout) { requestTimeoutMillis = 8_000 }
         install(Logging) { level = LogLevel.NONE } // set to HEADERS in debug builds
         defaultRequest {
             header("apikey", BuildConfig.SUPABASE_ANON_KEY)

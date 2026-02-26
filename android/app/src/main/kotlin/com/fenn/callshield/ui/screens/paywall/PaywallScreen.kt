@@ -522,7 +522,7 @@ private fun PromoCodeRow(state: PaywallState, viewModel: PaywallViewModel) {
             isError = state.promoError,
             modifier = Modifier.weight(1f),
             supportingText = if (state.promoError) {
-                { Text("Invalid promo code", color = MaterialTheme.colorScheme.error) }
+                { Text(state.promoErrorMessage, color = MaterialTheme.colorScheme.error) }
             } else null,
         )
         Button(

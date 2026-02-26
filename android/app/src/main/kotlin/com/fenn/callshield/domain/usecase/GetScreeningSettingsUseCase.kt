@@ -15,12 +15,15 @@ data class ScreeningSettings(
 class GetScreeningSettingsUseCase @Inject constructor(
     private val prefs: ScreeningPreferences,
 ) {
-    suspend fun get(): ScreeningSettings = ScreeningSettings(
-        autoBlockHighConfidence = prefs.autoBlockHighConfidence(),
-        blockHiddenNumbers = prefs.blockHiddenNumbers(),
-        notifyOnReject = prefs.notifyOnReject(),
-        notifyOnSilence = prefs.notifyOnSilence(),
-        notifyOnFlag = prefs.notifyOnFlag(),
-        notifyOnNightGuard = prefs.notifyOnNightGuard(),
-    )
+    suspend fun get(): ScreeningSettings {
+        val flags = prefs.getScreeningFlags()
+        return ScreeningSettings(
+            autoBlockHighConfidence = flags.autoBlockHighConfidence,
+            blockHiddenNumbers      = flags.blockHiddenNumbers,
+            notifyOnReject          = flags.notifyOnReject,
+            notifyOnSilence         = flags.notifyOnSilence,
+            notifyOnFlag            = flags.notifyOnFlag,
+            notifyOnNightGuard      = flags.notifyOnNightGuard,
+        )
+    }
 }

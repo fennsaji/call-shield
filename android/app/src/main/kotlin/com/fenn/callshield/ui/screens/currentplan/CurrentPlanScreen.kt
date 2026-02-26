@@ -190,7 +190,7 @@ fun CurrentPlanScreen(
                     when (state.planType) {
                         PlanType.PRO_LIFETIME, PlanType.FAMILY_LIFETIME ->
                             "Lifetime purchases cannot be cancelled. Contact Google Play support for refunds."
-                        PlanType.PROMO ->
+                        PlanType.PROMO_PRO, PlanType.PROMO_FAMILY ->
                             "Your access was granted via a promo code and is not managed through Google Play."
                         else ->
                             "Cancel, pause, or update your payment method via Google Play."
@@ -468,7 +468,8 @@ private fun PlanType.displayName(): String = when (this) {
     PlanType.PRO_LIFETIME    -> "Pro Lifetime"
     PlanType.FAMILY_ANNUAL   -> "Family Annual"
     PlanType.FAMILY_LIFETIME -> "Family Lifetime"
-    PlanType.PROMO           -> "Pro (Promo)"
+    PlanType.PROMO_PRO       -> "Pro (Promo)"
+    PlanType.PROMO_FAMILY    -> "Family (Promo)"
 }
 
 private fun PlanType.displayPrice(): String = when (this) {
@@ -478,10 +479,11 @@ private fun PlanType.displayPrice(): String = when (this) {
     PlanType.PRO_LIFETIME    -> "₹699 — one-time"
     PlanType.FAMILY_ANNUAL   -> "₹699 / year"
     PlanType.FAMILY_LIFETIME -> "₹1299 — one-time"
-    PlanType.PROMO           -> "Promotional grant"
+    PlanType.PROMO_PRO       -> "Promotional grant"
+    PlanType.PROMO_FAMILY    -> "Promotional grant"
 }
 
 private fun PlanType.icon(): ImageVector = when (this) {
-    PlanType.FAMILY_ANNUAL, PlanType.FAMILY_LIFETIME -> Icons.Outlined.Star
+    PlanType.FAMILY_ANNUAL, PlanType.FAMILY_LIFETIME, PlanType.PROMO_FAMILY -> Icons.Outlined.Star
     else -> Icons.Outlined.WorkspacePremium
 }

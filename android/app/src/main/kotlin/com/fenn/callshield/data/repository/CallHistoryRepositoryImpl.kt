@@ -52,6 +52,6 @@ class CallHistoryRepositoryImpl @Inject constructor(
             CallStats(totalScreened = total, totalBlocked = blocked)
         }
 
-    override suspend fun countRejections(numberHash: String): Int =
-        dao.countRejectionsByHash(numberHash)
+    override suspend fun countRejections(numberHash: String, since: Long): Int =
+        dao.countRejectionsByHash(numberHash, since)
 }
