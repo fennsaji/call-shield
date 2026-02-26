@@ -35,11 +35,14 @@ jobs:
         if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
           NOTES="${{ github.event.inputs.release_notes }}"
         else
-          # Push trigger: ensure the whatsnew file was updated in this push
-          if ! git diff --name-only HEAD~1 HEAD | grep -q "distribution/whatsnew/"; then
-            echo "❌ Release notes not updated for this release."
-            echo "   Update distribution/whatsnew/whatsnew-en-IN with what changed before merging to main."
-            exit 1
+          # Push trigger: only require whatsnew update when Android source files changed
+          ANDROID_CHANGED=$(git diff --name-only HEAD~1 HEAD | grep -c "^android/" || true)
+          if [ "$ANDROID_CHANGED" -gt 0 ]; then
+            if ! git diff --name-only HEAD~1 HEAD | grep -q "distribution/whatsnew/"; then
+              echo "❌ Release notes not updated for this release."
+              echo "   Update distribution/whatsnew/whatsnew-en-IN with what changed before merging to main."
+              exit 1
+            fi
           fi
           NOTES=$(cat distribution/whatsnew/whatsnew-en-IN 2>/dev/null || echo "")
         fi
