@@ -726,7 +726,7 @@ private fun DeviceCallLogSheet(
             ) {
                 if (isBlocked) {
                     FilledTonalButton(
-                        onClick = { scope.launch { sheetState.hide(); onUnblock() } },
+                        onClick = { scope.launch { sheetState.hide(); onDismiss(); onUnblock() } },
                         modifier = Modifier.weight(1f),
                         colors = ButtonDefaults.filledTonalButtonColors(
                             containerColor = dangerColor.copy(alpha = 0.10f),
@@ -739,7 +739,7 @@ private fun DeviceCallLogSheet(
                     }
                 } else {
                     OutlinedButton(
-                        onClick = { scope.launch { sheetState.hide(); onBlock() } },
+                        onClick = { scope.launch { sheetState.hide(); onDismiss(); onBlock() } },
                         modifier = Modifier.weight(1f),
                     ) {
                         Icon(Icons.Filled.Block, contentDescription = null, modifier = Modifier.size(16.dp))
@@ -750,7 +750,7 @@ private fun DeviceCallLogSheet(
 
                 if (isWhitelisted) {
                     FilledTonalButton(
-                        onClick = { scope.launch { sheetState.hide(); onUnwhitelist() } },
+                        onClick = { scope.launch { sheetState.hide(); onDismiss(); onUnwhitelist() } },
                         modifier = Modifier.weight(1f),
                         colors = ButtonDefaults.filledTonalButtonColors(
                             containerColor = successColor.copy(alpha = 0.10f),
@@ -763,7 +763,7 @@ private fun DeviceCallLogSheet(
                     }
                 } else {
                     OutlinedButton(
-                        onClick = { scope.launch { sheetState.hide(); onWhitelist() } },
+                        onClick = { scope.launch { sheetState.hide(); onDismiss(); onWhitelist() } },
                         modifier = Modifier.weight(1f),
                     ) {
                         Icon(Icons.Filled.Check, contentDescription = null, modifier = Modifier.size(16.dp))

@@ -240,7 +240,7 @@ fun ReasonTransparencySheet(
                 if (isBlocked) {
                     FilledTonalButton(
                         onClick = {
-                            scope.launch { sheetState.hide(); onUnblock() }
+                            scope.launch { sheetState.hide(); onDismiss(); onUnblock() }
                         },
                         modifier = Modifier.weight(1f),
                         colors = ButtonDefaults.filledTonalButtonColors(
@@ -255,7 +255,7 @@ fun ReasonTransparencySheet(
                 } else {
                     OutlinedButton(
                         onClick = {
-                            scope.launch { sheetState.hide(); onBlock() }
+                            scope.launch { sheetState.hide(); onDismiss(); onBlock() }
                         },
                         modifier = Modifier.weight(1f),
                     ) {
@@ -268,7 +268,7 @@ fun ReasonTransparencySheet(
                 if (isWhitelisted) {
                     FilledTonalButton(
                         onClick = {
-                            scope.launch { sheetState.hide(); onUnwhitelist() }
+                            scope.launch { sheetState.hide(); onDismiss(); onUnwhitelist() }
                         },
                         modifier = Modifier.weight(1f),
                         colors = ButtonDefaults.filledTonalButtonColors(
@@ -283,7 +283,7 @@ fun ReasonTransparencySheet(
                 } else {
                     OutlinedButton(
                         onClick = {
-                            scope.launch { sheetState.hide(); onWhitelist() }
+                            scope.launch { sheetState.hide(); onDismiss(); onWhitelist() }
                         },
                         modifier = Modifier.weight(1f),
                     ) {
