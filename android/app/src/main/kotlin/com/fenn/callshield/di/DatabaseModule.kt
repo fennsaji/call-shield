@@ -110,6 +110,8 @@ object DatabaseModule {
     fun provideDatabase(@ApplicationContext context: Context): CallShieldDatabase =
         Room.databaseBuilder(context, CallShieldDatabase::class.java, "callshield.db")
             .addMigrations(MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
+            .fallbackToDestructiveMigrationFrom(1)
+            .fallbackToDestructiveMigrationOnDowngrade()
             .build()
 
     @Provides fun provideBlocklistDao(db: CallShieldDatabase): BlocklistDao = db.blocklistDao()

@@ -141,9 +141,13 @@ class CallShieldScreeningService : CallScreeningService() {
                 // PRD §3.3: silenced calls go to missed calls — warn user about callback risk.
                 // Night Guard silences use a separate preference (off by default — user is asleep).
                 val isNightGuard = decision.category == "night_guard"
-                val shouldNotify = if (isNightGuard) settings.notifyOnNightGuard else settings.notifyOnSilence
-                if (shouldNotify) notificationManager.showMissedCallWarningNotification(label, hash, decision.category)
-                else Log.d(TAG, "Silence notification suppressed — isNightGuard=$isNightGuard")
+                if (isNightGuard) {
+                    if (settings.notifyOnNightGuard) notificationManager.showNightGuardNotification(label, hash)
+                    else Log.d(TAG, "Night Guard notification suppressed — notifyOnNightGuard=false")
+                } else {
+                    if (settings.notifyOnSilence) notificationManager.showMissedCallWarningNotification(label, hash, decision.category)
+                    else Log.d(TAG, "Silence notification suppressed")
+                }
                 paywallTrigger.onSpamCallDetected()
             }
             is CallDecision.Flag -> {

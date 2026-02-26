@@ -9,6 +9,7 @@ import android.os.PowerManager
 import android.Manifest
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
+import com.fenn.callshield.data.local.ContactsLookupHelper
 import com.fenn.callshield.R
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -22,11 +23,13 @@ data class PermissionsState(
     val notificationsGranted: Boolean = false,
     val batteryOptimisationDisabled: Boolean = false,
     val oemBatteryHint: String = "",
+    val callLogGranted: Boolean = false,
 )
 
 @HiltViewModel
 class PermissionsViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
+    private val contactsLookupHelper: ContactsLookupHelper,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(PermissionsState())
@@ -42,8 +45,17 @@ class PermissionsViewModel @Inject constructor(
             notificationsGranted = isNotificationsGranted(),
             batteryOptimisationDisabled = isBatteryOptimisationDisabled(),
             oemBatteryHint = oemBatteryHint(),
+            callLogGranted = isCallLogGranted(),
         )
+        // Re-attempt contact set initialization in case READ_CONTACTS was just granted
+        contactsLookupHelper.initialize()
     }
+
+    private fun isCallLogGranted(): Boolean =
+        ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.READ_CALL_LOG,
+        ) == PackageManager.PERMISSION_GRANTED
 
     private fun isScreeningRoleGranted(): Boolean {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -73,6 +85,9 @@ class PermissionsViewModel @Inject constructor(
             "xiaomi" in manufacturer || "redmi" in manufacturer -> R.string.battery_oem_miui
             "samsung" in manufacturer -> R.string.battery_oem_samsung
             "oneplus" in manufacturer -> R.string.battery_oem_oneplus
+            "huawei" in manufacturer || "honor" in manufacturer -> R.string.battery_oem_huawei
+            "oppo" in manufacturer || "realme" in manufacturer -> R.string.battery_oem_oppo
+            "vivo" in manufacturer || "iqoo" in manufacturer -> R.string.battery_oem_vivo
             else -> R.string.battery_oem_generic
         }
         return context.getString(resId)

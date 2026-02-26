@@ -12,8 +12,11 @@ SUPABASE_ANON_KEY=your_anon_key_here
 # Default is used if not set: "callshield-v1-salt-2024"
 # HMAC_SALT=callshield-v1-salt-2024
 
-# Promo code — store ONLY the SHA-256 hash of your chosen promo code, never the raw code
-# Generate the hash: echo -n "YOUR_PROMO_CODE" | shasum -a 256
-# Example: if your promo code is "SHIELD2024" → run the command above and paste the hash here
-# Leave empty to disable promo code redemption
-# PROMO_CODE_HASH=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+# Promo codes — store ONLY the SHA-256 hash of each raw code, never the raw code itself
+# Generate a hash: printf '%s' "YOUR_CODE" | shasum -a 256 | awk '{print $1}'
+# Expiry is epoch-milliseconds (Long); omit to use the default baked into build.gradle.kts
+# Leave hash empty to disable that promo slot.
+# PROMO_CODE_PRO_HASH=<sha256 of your pro promo code>
+# PROMO_CODE_PRO_EXPIRY=1790812799000
+# PROMO_CODE_FAMILY_HASH=<sha256 of your family promo code>
+# PROMO_CODE_FAMILY_EXPIRY=1790812799000

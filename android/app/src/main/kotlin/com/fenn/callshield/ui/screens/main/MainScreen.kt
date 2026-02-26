@@ -69,7 +69,6 @@ fun MainScreen(
     onNavigateToPaywall: () -> Unit,
     onNavigateToPermissions: () -> Unit,
     onNavigateToBackup: () -> Unit,
-    onNavigateToFamilyProtection: () -> Unit,
     onNavigateToAdvancedBlocking: () -> Unit,
     onNavigateToCurrentPlan: () -> Unit,
     onNavigateToReport: (hash: String, label: String, screenedAt: Long) -> Unit,
@@ -110,7 +109,6 @@ fun MainScreen(
                 onNavigateToWhitelist = onNavigateToWhitelist,
                 onNavigateToPrefixRules = onNavigateToPrefixRules,
                 onNavigateToDndManagement = onNavigateToDndManagement,
-                onNavigateToFamilyProtection = onNavigateToFamilyProtection,
                 onNavigateToPaywall = onNavigateToPaywall,
             )
             2 -> ActivityScreen(

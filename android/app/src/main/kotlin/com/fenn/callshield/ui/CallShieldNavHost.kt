@@ -27,7 +27,6 @@ import com.fenn.callshield.ui.screens.advancedblocker.RegionPoliciesScreen
 import com.fenn.callshield.ui.screens.advancedblocker.TimePoliciesScreen
 import com.fenn.callshield.ui.screens.backup.BackupScreen
 import com.fenn.callshield.ui.screens.blocklist.BlocklistScreen
-import com.fenn.callshield.ui.screens.family.FamilyProtectionScreen
 import com.fenn.callshield.ui.screens.main.MainScreen
 import com.fenn.callshield.ui.screens.onboarding.OnboardingScreen
 import com.fenn.callshield.ui.screens.paywall.PaywallScreen
@@ -53,8 +52,7 @@ object Destinations {
     const val TRAI_REPORTED_NUMBERS = "trai_reported_numbers"
     const val DND_MANAGEMENT = "dnd_management"
     const val BACKUP = "backup"
-    const val FAMILY_PROTECTION = "family_protection"
-    const val PAYWALL = "paywall?trigger={trigger}"
+    const val PAYWALL = "paywall?trigger={trigger}&scrollToRestore={scrollToRestore}"
     // Advanced Blocking
     const val ADVANCED_BLOCKING = "advanced_blocking"
     const val CONTACT_POLICIES = "contact_policies"
@@ -67,8 +65,9 @@ object Destinations {
     fun reportSpam(numberHash: String, displayLabel: String, screenedAt: Long = 0L) =
         "report_spam/${Uri.encode(numberHash)}/${Uri.encode(displayLabel)}?screenedAt=$screenedAt"
 
-    /** Concrete paywall route with the trigger value substituted. */
-    fun paywallRoute(trigger: Boolean = false) = "paywall?trigger=$trigger"
+    /** Concrete paywall route with the trigger/scrollToRestore values substituted. */
+    fun paywallRoute(trigger: Boolean = false, scrollToRestore: Boolean = false) =
+        "paywall?trigger=$trigger&scrollToRestore=$scrollToRestore"
 }
 
 @Composable
@@ -142,7 +141,6 @@ fun CallShieldNavHost(
                 onNavigateToPaywall = { navController.navigate(Destinations.paywallRoute()) },
                 onNavigateToPermissions = { navController.navigate(Destinations.PERMISSIONS_SETTINGS) },
                 onNavigateToBackup = { navController.navigate(Destinations.BACKUP) },
-                onNavigateToFamilyProtection = { navController.navigate(Destinations.FAMILY_PROTECTION) },
                 onNavigateToAdvancedBlocking = { navController.navigate(Destinations.ADVANCED_BLOCKING) },
                 onNavigateToReport = { hash, label, screenedAt ->
                     navController.navigate(Destinations.reportSpam(hash, label, screenedAt))
@@ -206,19 +204,20 @@ fun CallShieldNavHost(
         }
 
         composable(Destinations.BACKUP) {
-            BackupScreen(onBack = { navController.popBackStack() })
-        }
-
-        composable(Destinations.FAMILY_PROTECTION) {
-            FamilyProtectionScreen(onBack = { navController.popBackStack() })
+            BackupScreen(
+                onBack = { navController.popBackStack() },
+                onNavigateToPaywall = {
+                    navController.navigate(Destinations.paywallRoute(scrollToRestore = true))
+                },
+            )
         }
 
         composable(
             route = Destinations.PAYWALL,
-            arguments = listOf(navArgument("trigger") {
-                type = NavType.BoolType
-                defaultValue = false
-            }),
+            arguments = listOf(
+                navArgument("trigger") { type = NavType.BoolType; defaultValue = false },
+                navArgument("scrollToRestore") { type = NavType.BoolType; defaultValue = false },
+            ),
             enterTransition = { slideInVertically(initialOffsetY = { it }) + fadeIn() },
             exitTransition = { slideOutVertically(targetOffsetY = { it }) + fadeOut() },
             popEnterTransition = { slideInVertically(initialOffsetY = { it }) + fadeIn() },
@@ -227,6 +226,7 @@ fun CallShieldNavHost(
             PaywallScreen(
                 onDismiss = { navController.popBackStack() },
                 fromTrigger = backStackEntry.arguments?.getBoolean("trigger") ?: false,
+                scrollToRestore = backStackEntry.arguments?.getBoolean("scrollToRestore") ?: false,
             )
         }
 

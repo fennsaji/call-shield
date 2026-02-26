@@ -148,6 +148,7 @@ fun ReportSpamScreen(
                     smsBody = smsBody,
                     isComplaint = isWithinComplaintWindow,
                     onConfirm = {
+                        viewModel.saveTraiReport(numberHash, displayLabel)
                         try {
                             context.startActivity(TraiReportHelper.createSmsIntent(smsBody))
                         } catch (_: Exception) { /* SMS app not available */ }

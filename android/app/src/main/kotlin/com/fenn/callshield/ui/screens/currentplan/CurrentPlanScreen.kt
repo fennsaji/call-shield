@@ -136,32 +136,6 @@ fun CurrentPlanScreen(
                 }
             }
 
-            // ── Upgrade to Family ────────────────────────────────────────────
-            val upgradeOptions = buildUpgradeOptions(state)
-            if (upgradeOptions.isNotEmpty()) {
-                item { SectionLabel("Upgrade to Family") }
-                item {
-                    Text(
-                        "Extend your protection to unlimited devices.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                        modifier = Modifier.padding(horizontal = 4.dp),
-                    )
-                }
-                upgradeOptions.forEach { option ->
-                    item {
-                        PlanOptionCard(
-                            title = option.title,
-                            price = option.price,
-                            badge = option.badge,
-                            badgeColor = MaterialTheme.colorScheme.primary,
-                            enabled = option.product != null,
-                            onClick = { option.product?.let { viewModel.switchPlan(context, it) } },
-                        )
-                    }
-                }
-            }
-
             // ── Manage subscription ──────────────────────────────────────────
             item {
                 SectionLabel("Manage")
@@ -178,19 +152,16 @@ fun CurrentPlanScreen(
                     )
                     Spacer(Modifier.size(8.dp))
                     Text(
-                        when (state.planType) {
-                            PlanType.PRO_LIFETIME, PlanType.FAMILY_LIFETIME ->
-                                "View Purchase on Google Play"
-                            else -> "Manage Subscription on Google Play"
-                        }
+                        if (state.planType == PlanType.PRO_LIFETIME) "View Purchase on Google Play"
+                        else "Manage Subscription on Google Play"
                     )
                 }
                 Spacer(Modifier.height(6.dp))
                 Text(
                     when (state.planType) {
-                        PlanType.PRO_LIFETIME, PlanType.FAMILY_LIFETIME ->
+                        PlanType.PRO_LIFETIME ->
                             "Lifetime purchases cannot be cancelled. Contact Google Play support for refunds."
-                        PlanType.PROMO ->
+                        PlanType.PROMO_PRO ->
                             "Your access was granted via a promo code and is not managed through Google Play."
                         else ->
                             "Cancel, pause, or update your payment method via Google Play."
@@ -366,12 +337,10 @@ private fun SectionLabel(text: String) {
 private fun DebugSimulateSection(onSimulate: (PlanType) -> Unit) {
     var selected by remember { mutableStateOf<PlanType?>(null) }
     val plans = listOf(
-        PlanType.NONE            to "Free",
-        PlanType.PRO_MONTHLY     to "Monthly",
-        PlanType.PRO_ANNUAL      to "Annual",
-        PlanType.PRO_LIFETIME    to "Lifetime",
-        PlanType.FAMILY_ANNUAL   to "Family Annual",
-        PlanType.FAMILY_LIFETIME to "Family Lifetime",
+        PlanType.NONE         to "Free",
+        PlanType.PRO_MONTHLY  to "Monthly",
+        PlanType.PRO_ANNUAL   to "Annual",
+        PlanType.PRO_LIFETIME to "Lifetime",
     )
 
     Surface(
@@ -443,45 +412,24 @@ private fun buildSwitchOptions(state: CurrentPlanState): List<PlanOption> {
     return options
 }
 
-private fun buildUpgradeOptions(state: CurrentPlanState): List<PlanOption> {
-    val options = mutableListOf<PlanOption>()
-    when (state.planType) {
-        PlanType.PRO_MONTHLY, PlanType.PRO_ANNUAL -> {
-            options += PlanOption("Family Annual", "₹699 / year", "Unlimited", state.familyAnnualProduct)
-            options += PlanOption("Family Lifetime", "₹1299 one-time", "Unlimited", state.familyLifetimeProduct)
-        }
-        PlanType.PRO_LIFETIME ->
-            options += PlanOption("Family Lifetime", "₹1299 one-time", "Unlimited", state.familyLifetimeProduct)
-        PlanType.FAMILY_ANNUAL ->
-            options += PlanOption("Family Lifetime", "₹1299 one-time", "One-time", state.familyLifetimeProduct)
-        else -> Unit
-    }
-    return options
-}
-
 // ── PlanType helpers ──────────────────────────────────────────────────────────
 
 private fun PlanType.displayName(): String = when (this) {
-    PlanType.NONE            -> "Free"
-    PlanType.PRO_MONTHLY     -> "Pro Monthly"
-    PlanType.PRO_ANNUAL      -> "Pro Annual"
-    PlanType.PRO_LIFETIME    -> "Pro Lifetime"
-    PlanType.FAMILY_ANNUAL   -> "Family Annual"
-    PlanType.FAMILY_LIFETIME -> "Family Lifetime"
-    PlanType.PROMO           -> "Pro (Promo)"
+    PlanType.NONE         -> "Free"
+    PlanType.PRO_MONTHLY  -> "Pro Monthly"
+    PlanType.PRO_ANNUAL   -> "Pro Annual"
+    PlanType.PRO_LIFETIME -> "Pro Lifetime"
+    PlanType.PROMO_PRO    -> "Pro (Promo)"
 }
 
 private fun PlanType.displayPrice(): String = when (this) {
-    PlanType.NONE            -> "Free"
-    PlanType.PRO_MONTHLY     -> "₹49 / month"
-    PlanType.PRO_ANNUAL      -> "₹399 / year"
-    PlanType.PRO_LIFETIME    -> "₹699 — one-time"
-    PlanType.FAMILY_ANNUAL   -> "₹699 / year"
-    PlanType.FAMILY_LIFETIME -> "₹1299 — one-time"
-    PlanType.PROMO           -> "Promotional grant"
+    PlanType.NONE         -> "Free"
+    PlanType.PRO_MONTHLY  -> "₹49 / month"
+    PlanType.PRO_ANNUAL   -> "₹399 / year"
+    PlanType.PRO_LIFETIME -> "₹699 — one-time"
+    PlanType.PROMO_PRO    -> "Promotional grant"
 }
 
 private fun PlanType.icon(): ImageVector = when (this) {
-    PlanType.FAMILY_ANNUAL, PlanType.FAMILY_LIFETIME -> Icons.Outlined.Star
     else -> Icons.Outlined.WorkspacePremium
 }

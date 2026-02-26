@@ -41,7 +41,11 @@ class CallStateMonitor @Inject constructor(
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
+    @Volatile private var started = false
+
     fun start() {
+        if (started) return
+        started = true
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             try {
                 telephonyManager.registerTelephonyCallback(context.mainExecutor, api31Callback)

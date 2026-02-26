@@ -89,7 +89,7 @@ fun TimePoliciesScreen(
                                     fontWeight = FontWeight.SemiBold,
                                 )
                                 Text(
-                                    "Silence unknown calls between ${formatHour(policy.nightGuardStartHour)} – ${formatHour(policy.nightGuardEndHour)}",
+                                    "Silence unknown calls between ${formatHour(if (policy.nightGuardStartHour <= 1) policy.nightGuardStartHour + 24 else policy.nightGuardStartHour)} – ${formatHour(policy.nightGuardEndHour)}",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                                 )
@@ -110,19 +110,22 @@ fun TimePoliciesScreen(
                         if (policy.nightGuardEnabled) {
                             Spacer(Modifier.height(16.dp))
 
-                            // Start hour slider (Free)
+                            // Start hour slider — 8 PM (20) to 1 AM (represented as 25)
+                            // Stored value is 0-23; map: 0→24, 1→25 for slider display
+                            val startSlider = if (policy.nightGuardStartHour <= 1)
+                                policy.nightGuardStartHour + 24f else policy.nightGuardStartHour.toFloat()
                             Text(
-                                "Start: ${formatHour(policy.nightGuardStartHour)}",
+                                "Start: ${formatHour(startSlider.toInt())}",
                                 style = MaterialTheme.typography.labelMedium,
                             )
                             Slider(
-                                value = policy.nightGuardStartHour.toFloat(),
+                                value = startSlider,
                                 onValueChange = {
                                     viewModel.updatePolicy(
-                                        policy.copy(nightGuardStartHour = it.toInt(), preset = BlockingPreset.CUSTOM)
+                                        policy.copy(nightGuardStartHour = it.toInt() % 24, preset = BlockingPreset.CUSTOM)
                                     )
                                 },
-                                valueRange = 18f..23f,
+                                valueRange = 20f..25f,
                                 steps = 4,
                                 enabled = isPro,
                             )
@@ -215,7 +218,8 @@ fun TimePoliciesScreen(
 }
 
 private fun formatHour(hour: Int): String {
-    val amPm = if (hour < 12) "AM" else "PM"
-    val h = if (hour % 12 == 0) 12 else hour % 12
+    val h24 = hour % 24
+    val amPm = if (h24 < 12) "AM" else "PM"
+    val h = if (h24 % 12 == 0) 12 else h24 % 12
     return "$h:00 $amPm"
 }

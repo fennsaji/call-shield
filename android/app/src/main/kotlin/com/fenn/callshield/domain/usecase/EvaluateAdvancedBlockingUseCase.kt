@@ -89,10 +89,14 @@ class EvaluateAdvancedBlockingUseCase @Inject constructor(
             }
         }
 
-        // 5. Auto-Escalate
+        // 5. Auto-Escalate — count only the last 30 days to avoid permanently penalising
+        // numbers that were blocked long ago and later manually cleared.
         if (policy.autoEscalateEnabled && numberHash != null) {
-            val rejections = callHistoryRepo.countRejections(numberHash)
-            if (rejections >= policy.autoEscalateThreshold) {
+            val thirtyDaysAgo = System.currentTimeMillis() - 30L * 24 * 60 * 60 * 1_000
+            val rejections = callHistoryRepo.countRejections(numberHash, since = thirtyDaysAgo)
+            if (rejections >= policy.autoEscalateThreshold &&
+                !blocklistRepo.contains(numberHash)
+            ) {
                 blocklistRepo.add(numberHash, "Auto-blocked (${rejections} rejections)")
                 return CallDecision.Reject(DecisionSource.ADVANCED_BLOCKING)
             }

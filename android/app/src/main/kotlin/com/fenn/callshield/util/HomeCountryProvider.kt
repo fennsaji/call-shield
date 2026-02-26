@@ -44,8 +44,7 @@ open class HomeCountryProvider @Inject constructor(
      * Uses longest-prefix-first matching to handle overlapping codes (e.g. +1787 before +1).
      */
     fun isoFromE164(e164Number: String): String? =
-        CALLING_CODES.entries
-            .sortedByDescending { it.value.length }
+        CALLING_CODES_BY_PREFIX_LENGTH
             .firstOrNull { e164Number.startsWith(it.value) }
             ?.key
 
@@ -107,5 +106,9 @@ open class HomeCountryProvider @Inject constructor(
             "VN" to "+84",  "VI" to "+1340","WF" to "+681", "YE" to "+967",
             "ZM" to "+260", "ZW" to "+263",
         )
+
+        /** Pre-sorted by calling code length (longest first) for O(n) prefix lookup. */
+        val CALLING_CODES_BY_PREFIX_LENGTH: List<Map.Entry<String, String>> =
+            CALLING_CODES.entries.sortedByDescending { it.value.length }
     }
 }

@@ -1,13 +1,14 @@
-What's new in v1.1
+What's new in v1.2
 
-Smarter offline protection:
-• Behavioral detection — flags repeat hang-ups, burst callers, and short-ring bait tactics
-• All checks run on-device, no network needed
+Night Guard Notifications:
+• Get alerted when Night Guard silently blocks a call
 
-TRAI DND 1909 Quick Report:
-• Tap "Report to TRAI" on any flagged call to prepare a complaint SMS to 1909
-• View all complaints: Settings → Reports → Reported Numbers
+Backup & Restore:
+• Fixed restore reliability issues
 
-Community reporting improvements:
-• Surge protection against coordinated mass-reporting
-• More stable spam category labels
+Country Blocking:
+• Improved country/region filter UI
+
+Bug fixes:
+• Fixed modal getting stuck after blocking a call
+• Fixed SMS report alignment

@@ -46,9 +46,11 @@ android {
         // HMAC static salt — bundled in binary, not a secret
         buildConfigField("String", "HMAC_SALT", "\"${localOrProject("HMAC_SALT", "callshield-v1-salt-2024")}\"")
 
-        // Promo code — store only the SHA-256 hash; the raw code is never compiled into the APK
-        // Generate: echo -n "YOUR_CODE" | shasum -a 256
-        buildConfigField("String", "PROMO_CODE_HASH", "\"${localOrProject("PROMO_CODE_HASH")}\"")
+        // Promo codes — store only SHA-256 hashes; raw codes are never compiled into the APK
+        // Generate hash: printf '%s' "YOUR_CODE" | shasum -a 256 | awk '{print $1}'
+        // Expiry is epoch-milliseconds (Long); defaults = 2026-09-30 23:59:59 UTC
+        buildConfigField("String", "PROMO_CODE_PRO_HASH",   "\"${localOrProject("PROMO_CODE_PRO_HASH")}\"")
+        buildConfigField("long",   "PROMO_CODE_PRO_EXPIRY", "${localOrProject("PROMO_CODE_PRO_EXPIRY", "1790812799000")}L")
 
     }
 

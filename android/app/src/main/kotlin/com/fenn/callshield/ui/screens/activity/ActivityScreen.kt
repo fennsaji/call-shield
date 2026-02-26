@@ -32,6 +32,7 @@ import androidx.compose.material.icons.filled.CallMade
 import androidx.compose.material.icons.filled.CallReceived
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CloudOff
+import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Lock
@@ -303,6 +304,7 @@ fun ActivityScreen(
                                 val hash = item.entry.numberHash
                                 ActivityCallRow(
                                     entry = item.entry,
+                                    isTraiReported = hash in state.traiReportedHashes,
                                     onTap = { showReasonSheet = true },
                                     onReport = {
                                         onNavigateToReport(hash, item.entry.displayLabel, item.entry.screenedAt)
@@ -339,8 +341,10 @@ fun ActivityScreen(
                                 var showDeviceSheet by remember { mutableStateOf(false) }
                                 val hash = item.item.hash ?: return@items
                                 val label = maskNumber(item.item.entry.number)
+                                val isTraiReported = hash in state.traiReportedHashes
                                 DeviceCallLogRow(
                                     item = item.item,
+                                    isTraiReported = isTraiReported,
                                     onTap = { showDeviceSheet = true },
                                 )
                                 if (showDeviceSheet) {
@@ -348,6 +352,7 @@ fun ActivityScreen(
                                         item = item.item,
                                         isBlocked = hash in state.blockedHashes,
                                         isWhitelisted = hash in state.whitelistedHashes,
+                                        isTraiReported = isTraiReported,
                                         onDismiss = { showDeviceSheet = false },
                                         onBlock = { viewModel.blockNumber(hash, label) },
                                         onUnblock = { viewModel.unblockNumber(hash) },
@@ -508,6 +513,7 @@ private fun PermissionPoint(icon: ImageVector, text: String) {
 @Composable
 private fun DeviceCallLogRow(
     item: CallLogEntryWithHash,
+    isTraiReported: Boolean,
     onTap: () -> Unit,
 ) {
     val entry = item.entry
@@ -559,7 +565,7 @@ private fun DeviceCallLogRow(
             Box(
                 modifier = Modifier
                     .width(4.dp)
-                    .height(72.dp)
+                    .height(if (isTraiReported) 88.dp else 72.dp)
                     .background(accent),
             )
             Spacer(Modifier.width(12.dp))
@@ -584,6 +590,25 @@ private fun DeviceCallLogRow(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
                 )
+                if (isTraiReported) {
+                    Spacer(Modifier.height(3.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(3.dp),
+                    ) {
+                        Icon(
+                            Icons.Outlined.CheckCircle,
+                            contentDescription = null,
+                            modifier = Modifier.size(11.dp),
+                            tint = successColor,
+                        )
+                        Text(
+                            "Reported to TRAI",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = successColor,
+                        )
+                    }
+                }
             }
             Column(
                 horizontalAlignment = Alignment.End,
@@ -611,6 +636,7 @@ private fun DeviceCallLogSheet(
     item: CallLogEntryWithHash,
     isBlocked: Boolean,
     isWhitelisted: Boolean,
+    isTraiReported: Boolean,
     onDismiss: () -> Unit,
     onBlock: () -> Unit,
     onUnblock: () -> Unit,
@@ -700,7 +726,7 @@ private fun DeviceCallLogSheet(
             ) {
                 if (isBlocked) {
                     FilledTonalButton(
-                        onClick = { scope.launch { sheetState.hide(); onUnblock() } },
+                        onClick = { scope.launch { sheetState.hide(); onDismiss(); onUnblock() } },
                         modifier = Modifier.weight(1f),
                         colors = ButtonDefaults.filledTonalButtonColors(
                             containerColor = dangerColor.copy(alpha = 0.10f),
@@ -713,7 +739,7 @@ private fun DeviceCallLogSheet(
                     }
                 } else {
                     OutlinedButton(
-                        onClick = { scope.launch { sheetState.hide(); onBlock() } },
+                        onClick = { scope.launch { sheetState.hide(); onDismiss(); onBlock() } },
                         modifier = Modifier.weight(1f),
                     ) {
                         Icon(Icons.Filled.Block, contentDescription = null, modifier = Modifier.size(16.dp))
@@ -724,7 +750,7 @@ private fun DeviceCallLogSheet(
 
                 if (isWhitelisted) {
                     FilledTonalButton(
-                        onClick = { scope.launch { sheetState.hide(); onUnwhitelist() } },
+                        onClick = { scope.launch { sheetState.hide(); onDismiss(); onUnwhitelist() } },
                         modifier = Modifier.weight(1f),
                         colors = ButtonDefaults.filledTonalButtonColors(
                             containerColor = successColor.copy(alpha = 0.10f),
@@ -737,13 +763,34 @@ private fun DeviceCallLogSheet(
                     }
                 } else {
                     OutlinedButton(
-                        onClick = { scope.launch { sheetState.hide(); onWhitelist() } },
+                        onClick = { scope.launch { sheetState.hide(); onDismiss(); onWhitelist() } },
                         modifier = Modifier.weight(1f),
                     ) {
                         Icon(Icons.Filled.Check, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(6.dp))
                         Text("Whitelist")
                     }
+                }
+            }
+
+            // TRAI reported status row
+            if (isTraiReported) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    Icon(
+                        Icons.Outlined.CheckCircle,
+                        contentDescription = null,
+                        modifier = Modifier.size(15.dp),
+                        tint = successColor,
+                    )
+                    Text(
+                        "Reported to TRAI",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = successColor,
+                    )
                 }
             }
 
@@ -755,7 +802,7 @@ private fun DeviceCallLogSheet(
                     containerColor = MaterialTheme.colorScheme.secondary,
                 ),
             ) {
-                Text(stringResource(R.string.report_title))
+                Text(if (isTraiReported) "Report again" else stringResource(R.string.report_title))
             }
         }
     }
@@ -767,6 +814,7 @@ private fun DeviceCallLogSheet(
 @Composable
 private fun ActivityCallRow(
     entry: CallHistoryEntry,
+    isTraiReported: Boolean,
     onTap: () -> Unit,
     onReport: () -> Unit,
     onMarkNotSpam: () -> Unit,
@@ -843,6 +891,25 @@ private fun ActivityCallRow(
                     if (subtitle.isNotEmpty()) {
                         Spacer(Modifier.height(2.dp))
                         Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f))
+                    }
+                    if (isTraiReported) {
+                        Spacer(Modifier.height(3.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(3.dp),
+                        ) {
+                            Icon(
+                                Icons.Outlined.CheckCircle,
+                                contentDescription = null,
+                                modifier = Modifier.size(11.dp),
+                                tint = successColor,
+                            )
+                            Text(
+                                "Reported to TRAI",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = successColor,
+                            )
+                        }
                     }
                     if (showConfidence) {
                         Spacer(Modifier.height(6.dp))

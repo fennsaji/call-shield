@@ -27,6 +27,9 @@ class AdvancedBlockingViewModel @Inject constructor(
     /** E.164 calling code for the device's home country, e.g. "+91", "+1". */
     val homeCallingCode: String get() = homeCountryProvider.callingCodePrefix
 
+    /** ISO 3166-1 alpha-2 code for the device's home country, e.g. "IN", "US". */
+    val homeIsoCode: String get() = homeCountryProvider.isoCode
+
     val policy: StateFlow<AdvancedBlockingPolicy> = prefs.observeAdvancedBlockingPolicy()
         .stateIn(
             scope = viewModelScope,
