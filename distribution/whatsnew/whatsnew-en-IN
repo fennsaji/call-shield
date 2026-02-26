@@ -1,14 +1,14 @@
-v1.1 में क्या नया है
+What's new in v1.2
 
-ऑफलाइन Behavioral Detection:
-• बार-बार या जल्दी काटने वाले नंबर ऑटो-फ्लैग
-• सभी जाँच फ़ोन पर — कोई डेटा बाहर नहीं
+Night Guard Notifications:
+• Get alerted when Night Guard silently blocks a call
 
-TRAI DND 1909 शिकायत:
-• फ्लैग कॉल पर "Report to TRAI" टैप करें
-• SMS शिकायत तैयार हो जाएगी
-• Settings → Reports → Reported Numbers
+Backup & Restore:
+• Fixed restore reliability issues
 
-रिपोर्टिंग सुधार:
-• रिपोर्ट बाढ़ से स्कोर नहीं बढ़ेगा
-• स्पैम लेबल अब अधिक स्थिर
+Country Blocking:
+• Improved country/region filter UI
+
+Bug fixes:
+• Fixed modal getting stuck after blocking a call
+• Fixed SMS report alignment
