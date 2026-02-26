@@ -2,6 +2,7 @@ package com.fenn.callshield.notification
 
 import android.Manifest
 import android.app.NotificationChannel
+import android.app.NotificationChannelGroup
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
@@ -19,9 +20,11 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.roundToInt
 
+private const val CHANNEL_GROUP = "cg_group_calls"
 private const val CHANNEL_BLOCKED = "cg_blocked_calls"
 private const val CHANNEL_FLAGGED = "cg_flagged_calls"
 private const val CHANNEL_MISSED_WARNING = "cg_missed_call_warning"
+private const val CHANNEL_NIGHT_GUARD = "cg_night_guard"
 
 @Singleton
 class CallNotificationManager @Inject constructor(
@@ -183,32 +186,93 @@ class CallNotificationManager @Inject constructor(
         notifManager.notify(notifIdCounter.getAndIncrement(), notification)
     }
 
+    fun showNightGuardNotification(
+        displayLabel: String,
+        numberHash: String,
+    ) {
+        if (!hasNotificationPermission()) return
+        val notifId = notifIdCounter.getAndIncrement()
+        Log.d(TAG, "Posting Night Guard notification id=$notifId for $displayLabel")
+
+        val openIntent = PendingIntent.getActivity(
+            context, notifId, mainActivityIntent(),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+
+        val notSpamIntent = Intent(ACTION_NOT_SPAM).apply {
+            setPackage(context.packageName)
+            putExtra(EXTRA_NUMBER_HASH, numberHash)
+            putExtra(EXTRA_DISPLAY_LABEL, displayLabel)
+            putExtra(EXTRA_NOTIFICATION_ID, notifId)
+        }
+        val notSpamPending = PendingIntent.getBroadcast(
+            context,
+            notifId + 10_000,
+            notSpamIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+
+        val notification = NotificationCompat.Builder(context, CHANNEL_NIGHT_GUARD)
+            .setSmallIcon(R.drawable.ic_shield_warning)
+            .setContentTitle("Call silenced during sleep hours")
+            .setContentText("$displayLabel was silenced by Night Guard")
+            .setContentIntent(openIntent)
+            .setAutoCancel(true)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .addAction(
+                R.drawable.ic_shield_warning,
+                context.getString(R.string.not_spam_undo),
+                notSpamPending,
+            )
+            .build()
+
+        notifManager.notify(notifId, notification)
+    }
+
     private fun createChannels() {
+        notifManager.createNotificationChannelGroup(
+            NotificationChannelGroup(CHANNEL_GROUP, "Call Protection")
+        )
+
         val blockedChannel = NotificationChannel(
             CHANNEL_BLOCKED,
-            "Blocked calls",
+            "Spam blocked",
             NotificationManager.IMPORTANCE_HIGH,
         ).apply {
             description = "Notifications when a spam call is automatically blocked"
+            group = CHANNEL_GROUP
         }
 
         val flaggedChannel = NotificationChannel(
             CHANNEL_FLAGGED,
-            "Flagged calls",
+            "Possible spam",
             NotificationManager.IMPORTANCE_DEFAULT,
         ).apply {
             description = "Notifications when an incoming call is flagged as possible spam"
+            group = CHANNEL_GROUP
         }
 
         val missedWarningChannel = NotificationChannel(
             CHANNEL_MISSED_WARNING,
-            "Missed call warnings",
+            "Call silenced",
             NotificationManager.IMPORTANCE_HIGH,
         ).apply {
             description = "Warns you when a missed call is from a reported spam number — helps prevent callback scams"
+            group = CHANNEL_GROUP
         }
 
-        notifManager.createNotificationChannels(listOf(blockedChannel, flaggedChannel, missedWarningChannel))
+        val nightGuardChannel = NotificationChannel(
+            CHANNEL_NIGHT_GUARD,
+            "Night Guard",
+            NotificationManager.IMPORTANCE_DEFAULT,
+        ).apply {
+            description = "Notify when calls are silenced during sleep hours"
+            group = CHANNEL_GROUP
+        }
+
+        notifManager.createNotificationChannels(
+            listOf(blockedChannel, flaggedChannel, missedWarningChannel, nightGuardChannel)
+        )
     }
 
     private fun mainActivityIntent() =
