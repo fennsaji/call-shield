@@ -40,6 +40,8 @@ data class PaywallState(
     val promoError: Boolean = false,
     val promoErrorMessage: String = "Invalid or expired promo code",
     val hasPendingPurchase: Boolean = false,
+    /** True after lifetime purchase when a subscription is still active — user must cancel manually. */
+    val showSubscriptionCancelPrompt: Boolean = false,
 )
 
 @HiltViewModel
@@ -58,7 +60,11 @@ class PaywallViewModel @Inject constructor(
             billingManager.isPro.collect { isPro ->
                 if (isPro && purchaseInProgress) {
                     purchaseInProgress = false
-                    _state.value = _state.value.copy(purchaseSuccess = true)
+                    _state.value = _state.value.copy(
+                        purchaseSuccess = true,
+                        // Prompt user to cancel subscription if they just bought lifetime while one is active
+                        showSubscriptionCancelPrompt = billingManager.hasConflictingSubscription.value,
+                    )
                 }
             }
         }
