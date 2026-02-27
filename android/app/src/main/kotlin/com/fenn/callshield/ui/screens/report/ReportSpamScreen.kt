@@ -121,6 +121,7 @@ fun ReportSpamScreen(
     var selectedCategory by rememberSaveable { mutableStateOf<SpamCategory?>(null) }
     var description by rememberSaveable { mutableStateOf("") }
     var isDescriptionEdited by rememberSaveable { mutableStateOf(false) }
+    val isIndiaDevice = state.isIndiaDevice
     var reportToTrai by rememberSaveable { mutableStateOf(true) }
     var pendingTraiReport by remember { mutableStateOf<PendingTraiReport?>(null) }
 
@@ -139,7 +140,7 @@ fun ReportSpamScreen(
 
     LaunchedEffect(state.submitted) {
         if (state.submitted) {
-            if (reportToTrai) {
+            if (isIndiaDevice && reportToTrai) {
                 val callDate = SimpleDateFormat("dd/MM/yy", Locale("en", "IN"))
                     .format(Date(if (screenedAt > 0L) screenedAt else System.currentTimeMillis()))
                 val base = description.ifBlank { "Received unsolicited spam call" }
@@ -296,14 +297,16 @@ fun ReportSpamScreen(
                 )
             }
 
-            // TRAI report toggle
-            item {
-                Spacer(Modifier.height(4.dp))
-                TraiReportSection(
-                    enabled = reportToTrai,
-                    isWithinComplaintWindow = isWithinComplaintWindow,
-                    onToggle = { reportToTrai = it },
-                )
+            // TRAI report toggle — India only
+            if (isIndiaDevice) {
+                item {
+                    Spacer(Modifier.height(4.dp))
+                    TraiReportSection(
+                        enabled = reportToTrai,
+                        isWithinComplaintWindow = isWithinComplaintWindow,
+                        onToggle = { reportToTrai = it },
+                    )
+                }
             }
 
             // Submit button
