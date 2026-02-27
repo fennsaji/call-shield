@@ -115,6 +115,18 @@ class PaywallViewModel @Inject constructor(
         purchaseInProgress = true
     }
 
+    /** Called when screen resumes — detects purchases made externally (e.g. Play Store promo code redemption). */
+    fun refreshOnResume() {
+        viewModelScope.launch {
+            val connected = billingManager.connect()
+            if (!connected) return@launch
+            billingManager.refreshSubscriptionStatus()
+            if (billingManager.isPro.value) {
+                _state.value = _state.value.copy(purchaseSuccess = true)
+            }
+        }
+    }
+
     fun restorePurchase() {
         viewModelScope.launch {
             val connected = billingManager.connect()

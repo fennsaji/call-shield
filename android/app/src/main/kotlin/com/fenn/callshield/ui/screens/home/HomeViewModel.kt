@@ -20,6 +20,7 @@ import com.fenn.callshield.domain.repository.CallStats
 import com.fenn.callshield.domain.repository.WhitelistRepository
 import com.fenn.callshield.domain.usecase.MarkNotSpamUseCase
 import com.fenn.callshield.util.DndOperator
+import com.fenn.callshield.util.HomeCountryProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -43,6 +44,7 @@ data class HomeUiState(
     val dndOperator: DndOperator? = null,
     val dndCommand: String? = null,       // "FULL", "PROMO", "PARTIAL", or null
     val dndConfirmed: Boolean = false,    // false = sent but awaiting TRAI reply
+    val isIndiaDevice: Boolean = true,    // DND management is India-only
     val blockedHashes: Set<String> = emptySet(),
     val whitelistedHashes: Set<String> = emptySet(),
     val traiReportedHashes: Set<String> = emptySet(),
@@ -59,6 +61,7 @@ class HomeViewModel @Inject constructor(
     private val dndCommandDao: DndCommandDao,
     private val blocklistRepo: BlocklistRepository,
     private val whitelistRepo: WhitelistRepository,
+    private val homeCountryProvider: HomeCountryProvider,
 ) : ViewModel() {
 
     val isPro: StateFlow<Boolean> = billingManager.isPro
@@ -126,6 +129,7 @@ class HomeViewModel @Inject constructor(
             dndOperator = lists.dndOperator,
             dndCommand = lists.dndEntry?.command?.takeIf { it != "DEACTIVATE" },
             dndConfirmed = lists.dndEntry?.confirmedByUser ?: false,
+            isIndiaDevice = homeCountryProvider.isoCode == "IN",
             blockedHashes = lists.blockedHashes,
             whitelistedHashes = lists.whitelistedHashes,
             traiReportedHashes = lists.traiReportedHashes,

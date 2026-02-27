@@ -1,14 +1,9 @@
-What's new in v1.2
+What's new in v1.3
 
-Night Guard Notifications:
-• Get alerted when Night Guard silently blocks a call
+Paywall:
+• Plan prices now fetched live from Google Play
+• Intro offers and discounts shown with strikethrough pricing
+• Redeem Google Play promo codes directly from the app
 
-Backup & Restore:
-• Fixed restore reliability issues
-
-Country Blocking:
-• Improved country/region filter UI
-
-Bug fixes:
-• Fixed modal getting stuck after blocking a call
-• Fixed SMS report alignment
+DND Management:
+• Hidden for non-India devices

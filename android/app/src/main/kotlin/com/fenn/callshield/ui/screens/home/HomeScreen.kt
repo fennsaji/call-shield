@@ -164,13 +164,15 @@ fun HomeScreen(
                     onClick = onNavigateToProtect,
                     modifier = Modifier.weight(1f).fillMaxHeight(),
                 )
-                DndStatusCard(
-                    dndOperator = state.dndOperator,
-                    dndCommand = state.dndCommand,
-                    dndConfirmed = state.dndConfirmed,
-                    onClick = onNavigateToDndManagement,
-                    modifier = Modifier.weight(1f).fillMaxHeight(),
-                )
+                if (state.isIndiaDevice) {
+                    DndStatusCard(
+                        dndOperator = state.dndOperator,
+                        dndCommand = state.dndCommand,
+                        dndConfirmed = state.dndConfirmed,
+                        onClick = onNavigateToDndManagement,
+                        modifier = Modifier.weight(1f).fillMaxHeight(),
+                    )
+                }
             }
         }
 

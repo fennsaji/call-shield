@@ -47,6 +47,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -59,9 +60,15 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -83,7 +90,15 @@ fun PaywallScreen(
     val context = LocalContext.current
     val scrollState = rememberScrollState()
 
+    val lifecycleOwner = LocalLifecycleOwner.current
     LaunchedEffect(Unit) { viewModel.loadProducts() }
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) viewModel.refreshOnResume()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
     LaunchedEffect(state.purchaseSuccess) { if (state.purchaseSuccess) onDismiss() }
     LaunchedEffect(scrollToRestore, scrollState.maxValue) {
         if (scrollToRestore && scrollState.maxValue > 0) {
@@ -299,6 +314,37 @@ private fun ProPlanSection(
     val primary  = MaterialTheme.colorScheme.primary
     val tertiary = MaterialTheme.colorScheme.tertiary
 
+    // Annual pricing phases — first phase = intro (if multiple), last = base
+    val annualPhases = state.annualProduct?.subscriptionOfferDetails
+        ?.firstOrNull()?.pricingPhases?.pricingPhaseList ?: emptyList()
+    val annualIntroPhase = if (annualPhases.size > 1) annualPhases.first() else null
+    val annualBasePrice  = annualPhases.lastOrNull()?.formattedPrice
+        ?: stringResource(R.string.pro_price_annual)
+
+    // Monthly pricing phases
+    val monthlyPhases = state.monthlyProduct?.subscriptionOfferDetails
+        ?.firstOrNull()?.pricingPhases?.pricingPhaseList ?: emptyList()
+    val monthlyIntroPhase = if (monthlyPhases.size > 1) monthlyPhases.first() else null
+    val monthlyBasePrice  = monthlyPhases.lastOrNull()?.formattedPrice
+        ?: stringResource(R.string.pro_price_monthly)
+
+    // Dynamic savings % from base prices
+    val annualBaseMicros  = annualPhases.lastOrNull()?.priceAmountMicros
+    val monthlyBaseMicros = monthlyPhases.lastOrNull()?.priceAmountMicros
+    val savingsText = if (annualBaseMicros != null && monthlyBaseMicros != null && monthlyBaseMicros > 0) {
+        val savings = ((monthlyBaseMicros - annualBaseMicros / 12.0) / monthlyBaseMicros * 100).toInt()
+        "Save $savings% vs monthly · Cancel anytime"
+    } else {
+        "Save 32% vs monthly · Cancel anytime"
+    }
+
+    // Lifetime discount — compare Play price against ₹699 base
+    val lifetimeCurrentMicros = state.lifetimeProduct?.oneTimePurchaseOfferDetails?.priceAmountMicros
+    val lifetimeBaseMicros    = 69900000L // ₹699 in micros
+    val lifetimeHasDiscount   = lifetimeCurrentMicros != null && lifetimeCurrentMicros < lifetimeBaseMicros
+    val lifetimeDisplayPrice  = state.lifetimeProduct?.oneTimePurchaseOfferDetails?.formattedPrice
+        ?: stringResource(R.string.pro_price_lifetime)
+
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text(
             "Choose your plan",
@@ -321,23 +367,52 @@ private fun ProPlanSection(
                 .padding(horizontal = 20.dp, vertical = 18.dp),
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        "ANNUAL · BEST VALUE",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White.copy(alpha = 0.7f),
+                    )
+                    if (annualIntroPhase != null) {
+                        Text(
+                            "INTRO OFFER",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(Color.White.copy(alpha = 0.2f))
+                                .padding(horizontal = 6.dp, vertical = 2.dp),
+                        )
+                    }
+                }
+                if (annualIntroPhase != null) {
+                    Text(
+                        "$annualBasePrice / year",
+                        style = MaterialTheme.typography.bodySmall.copy(textDecoration = TextDecoration.LineThrough),
+                        color = Color.White.copy(alpha = 0.5f),
+                    )
+                    Text(
+                        "${annualIntroPhase.formattedPrice} / first year",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = Color.White,
+                    )
+                } else {
+                    Text(
+                        "$annualBasePrice / year",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = Color.White,
+                    )
+                }
                 Text(
-                    "ANNUAL · BEST VALUE",
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White.copy(alpha = 0.7f),
-                )
-                Text(
-                    state.annualProduct?.subscriptionOfferDetails
-                        ?.firstOrNull()?.pricingPhases?.pricingPhaseList
-                        ?.firstOrNull()?.formattedPrice?.let { "$it / year" }
-                        ?: stringResource(R.string.pro_price_annual),
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = Color.White,
-                )
-                Text(
-                    "Save 32% vs monthly · Cancel anytime",
+                    savingsText,
                     style = MaterialTheme.typography.bodySmall,
                     color = Color.White.copy(alpha = 0.8f),
                 )
@@ -363,15 +438,26 @@ private fun ProPlanSection(
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f),
                     )
-                    Text(
-                        state.monthlyProduct?.subscriptionOfferDetails
-                            ?.firstOrNull()?.pricingPhases?.pricingPhaseList
-                            ?.firstOrNull()?.formattedPrice?.let { "$it / month" }
-                            ?: stringResource(R.string.pro_price_monthly),
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
+                    if (monthlyIntroPhase != null) {
+                        Text(
+                            "$monthlyBasePrice / month",
+                            style = MaterialTheme.typography.bodySmall.copy(textDecoration = TextDecoration.LineThrough),
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f),
+                        )
+                        Text(
+                            "${monthlyIntroPhase.formattedPrice} / first month",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                    } else {
+                        Text(
+                            "$monthlyBasePrice / month",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                    }
                 }
                 Text(
                     "Cancel\nanytime",
@@ -399,9 +485,15 @@ private fun ProPlanSection(
                         Icon(Icons.Filled.WorkspacePremium, contentDescription = null, modifier = Modifier.size(13.dp), tint = tertiary)
                         Text("LIFETIME", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = tertiary)
                     }
+                    if (lifetimeHasDiscount) {
+                        Text(
+                            stringResource(R.string.pro_price_lifetime),
+                            style = MaterialTheme.typography.bodySmall.copy(textDecoration = TextDecoration.LineThrough),
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f),
+                        )
+                    }
                     Text(
-                        state.lifetimeProduct?.oneTimePurchaseOfferDetails?.formattedPrice
-                            ?: stringResource(R.string.pro_price_lifetime),
+                        lifetimeDisplayPrice,
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface,
@@ -420,27 +512,43 @@ private fun ProPlanSection(
 
 @Composable
 private fun PromoCodeRow(state: PaywallState, viewModel: PaywallViewModel) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.Top,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        OutlinedTextField(
-            value = state.promoCode,
-            onValueChange = { viewModel.onPromoCodeChange(it) },
-            placeholder = { Text("Promo code") },
-            singleLine = true,
-            isError = state.promoError,
-            modifier = Modifier.weight(1f),
-            supportingText = if (state.promoError) {
-                { Text(state.promoErrorMessage, color = MaterialTheme.colorScheme.error) }
-            } else null,
-        )
-        Button(
-            onClick = { viewModel.redeemPromoCode() },
-            enabled = state.promoCode.isNotBlank(),
-            modifier = Modifier.padding(top = 8.dp),
-        ) { Text("Apply") }
+    val context = LocalContext.current
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.Top,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            OutlinedTextField(
+                value = state.promoCode,
+                onValueChange = { viewModel.onPromoCodeChange(it) },
+                placeholder = { Text("Promo code") },
+                singleLine = true,
+                isError = state.promoError,
+                modifier = Modifier.weight(1f),
+                supportingText = if (state.promoError) {
+                    { Text(state.promoErrorMessage, color = MaterialTheme.colorScheme.error) }
+                } else null,
+            )
+            Button(
+                onClick = { viewModel.redeemPromoCode() },
+                enabled = state.promoCode.isNotBlank(),
+                modifier = Modifier.padding(top = 8.dp),
+            ) { Text("Apply") }
+        }
+        TextButton(
+            onClick = {
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/redeem"))
+                context.startActivity(intent)
+            },
+            modifier = Modifier.align(Alignment.CenterHorizontally),
+        ) {
+            Text(
+                "Redeem a Google Play code",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
+            )
+        }
     }
 }
 
