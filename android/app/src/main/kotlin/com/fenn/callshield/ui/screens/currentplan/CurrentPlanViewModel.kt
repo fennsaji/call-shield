@@ -14,7 +14,6 @@ import com.fenn.callshield.billing.PlanType
 import com.fenn.callshield.billing.PRODUCT_PRO_ANNUAL
 import com.fenn.callshield.billing.PRODUCT_PRO_MONTHLY
 import com.fenn.callshield.billing.PRODUCT_PRO_LIFETIME
-import com.android.billingclient.api.BillingClient
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
