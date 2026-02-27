@@ -96,12 +96,14 @@ jobs:
       env:
         SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
         SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
-        PROMO_CODE_HASH: ${{ secrets.PROMO_CODE_HASH }}
+        PROMO_CODE_PRO_HASH: ${{ secrets.PROMO_CODE_PRO_HASH }}
+        PROMO_CODE_PRO_EXPIRY: ${{ secrets.PROMO_CODE_PRO_EXPIRY }}
       run: |
         cat >> android/local.properties << EOF
         SUPABASE_URL=https://$SUPABASE_PROJECT_REF.supabase.co
         SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY
-        PROMO_CODE_HASH=$PROMO_CODE_HASH
+        PROMO_CODE_PRO_HASH=$PROMO_CODE_PRO_HASH
+        PROMO_CODE_PRO_EXPIRY=$PROMO_CODE_PRO_EXPIRY
         EOF
 
     # ── Build ─────────────────────────────────────────────────

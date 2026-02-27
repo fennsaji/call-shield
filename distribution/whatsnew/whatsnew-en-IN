@@ -1,9 +1,14 @@
-What's new in v1.3
+What's new in v1.4
+
+Current Plan:
+• Shows live price and next billing date
+• Cancelled subscription warning with option to renew
+• Warning when conflicting subscriptions are detected
+• Lifetime upgrade option available from monthly/annual plan
 
 Paywall:
-• Plan prices now fetched live from Google Play
-• Intro offers and discounts shown with strikethrough pricing
-• Redeem Google Play promo codes directly from the app
+• Shows "Then X/year from year 2" for first-year intro offers
+• Prompts to cancel old subscription after upgrading to Lifetime
 
-DND Management:
-• Hidden for non-India devices
+Spam Reporting:
+• "Also report to TRAI" option hidden for non-India devices

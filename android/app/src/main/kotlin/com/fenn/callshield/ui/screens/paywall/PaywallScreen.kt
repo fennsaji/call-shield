@@ -32,6 +32,7 @@ import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.filled.WorkspacePremium
 import androidx.compose.material.icons.outlined.FilterList
 import androidx.compose.material.icons.outlined.VisibilityOff
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardDefaults
@@ -99,7 +100,42 @@ fun PaywallScreen(
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
-    LaunchedEffect(state.purchaseSuccess) { if (state.purchaseSuccess) onDismiss() }
+    // When purchase succeeds and there's an active subscription that needs manual cancellation,
+    // show a dialog first. Otherwise dismiss immediately.
+    if (state.purchaseSuccess && state.showSubscriptionCancelPrompt) {
+        AlertDialog(
+            onDismissRequest = onDismiss,
+            title = { Text("Lifetime Pro Activated!") },
+            text = {
+                Text(
+                    "You still have an active subscription running. " +
+                    "Please cancel it on Google Play to avoid future charges. " +
+                    "Your Lifetime access is already active."
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val intent = android.content.Intent(
+                            android.content.Intent.ACTION_VIEW,
+                            android.net.Uri.parse(
+                                "https://play.google.com/store/account/subscriptions?package=${context.packageName}"
+                            )
+                        )
+                        context.startActivity(intent)
+                        onDismiss()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                ) { Text("Cancel Subscription") }
+            },
+            dismissButton = {
+                TextButton(onClick = onDismiss) { Text("Do it later") }
+            },
+        )
+    }
+    LaunchedEffect(state.purchaseSuccess) {
+        if (state.purchaseSuccess && !state.showSubscriptionCancelPrompt) onDismiss()
+    }
     LaunchedEffect(scrollToRestore, scrollState.maxValue) {
         if (scrollToRestore && scrollState.maxValue > 0) {
             scrollState.animateScrollTo(scrollState.maxValue)
@@ -416,6 +452,13 @@ private fun ProPlanSection(
                     style = MaterialTheme.typography.bodySmall,
                     color = Color.White.copy(alpha = 0.8f),
                 )
+                if (annualIntroPhase != null) {
+                    Text(
+                        "Then $annualBasePrice/year from year 2",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.White.copy(alpha = 0.6f),
+                    )
+                }
             }
         }
 

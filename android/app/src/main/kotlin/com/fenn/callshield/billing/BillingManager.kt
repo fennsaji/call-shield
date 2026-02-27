@@ -9,6 +9,7 @@ import com.android.billingclient.api.BillingClient
 import com.android.billingclient.api.BillingClientStateListener
 import com.android.billingclient.api.BillingFlowParams
 import com.android.billingclient.api.BillingResult
+import com.android.billingclient.api.PendingPurchasesParams
 import com.android.billingclient.api.ProductDetails
 import com.android.billingclient.api.Purchase
 import com.android.billingclient.api.PurchasesUpdatedListener
@@ -54,21 +55,37 @@ class BillingManager @Inject constructor(
     private val deviceTokenManager: com.fenn.callshield.util.DeviceTokenManager,
 ) : PurchasesUpdatedListener {
 
-    private val _isPro                   = MutableStateFlow(false)
-    private val _hasPendingPurchase      = MutableStateFlow(false)
-    private val _planType                = MutableStateFlow(PlanType.NONE)
-    private val _activeSubscriptionToken = MutableStateFlow<String?>(null)
-    val isPro:                   StateFlow<Boolean>  = _isPro.asStateFlow()
+    private val _isPro                    = MutableStateFlow(false)
+    private val _hasPendingPurchase       = MutableStateFlow(false)
+    private val _planType                 = MutableStateFlow(PlanType.NONE)
+    private val _activeSubscriptionToken  = MutableStateFlow<String?>(null)
+    private val _subscriptionRenewalDate      = MutableStateFlow<Long?>(null)
+    private val _isSubscriptionCancelled      = MutableStateFlow(false)
+    private val _hasConflictingSubscription   = MutableStateFlow(false)
+    val isPro:                    StateFlow<Boolean>  = _isPro.asStateFlow()
     /** True when at least one purchase is in PENDING state (e.g. UPI / cash delayed processing). */
-    val hasPendingPurchase:      StateFlow<Boolean>  = _hasPendingPurchase.asStateFlow()
+    val hasPendingPurchase:       StateFlow<Boolean>  = _hasPendingPurchase.asStateFlow()
     /** The user's current plan tier. */
-    val planType:                StateFlow<PlanType> = _planType.asStateFlow()
+    val planType:                 StateFlow<PlanType> = _planType.asStateFlow()
     /** Purchase token of the active subscription, needed for plan switching. Null for INAPP / PROMO. */
-    val activeSubscriptionToken: StateFlow<String?>  = _activeSubscriptionToken.asStateFlow()
+    val activeSubscriptionToken:  StateFlow<String?>  = _activeSubscriptionToken.asStateFlow()
+    /** Epoch ms of next billing date. Null for lifetime / promo plans. */
+    val subscriptionRenewalDate:  StateFlow<Long?>    = _subscriptionRenewalDate.asStateFlow()
+    /** True when subscription is active but auto-renew has been turned off (user cancelled). */
+    val isSubscriptionCancelled:  StateFlow<Boolean>  = _isSubscriptionCancelled.asStateFlow()
+    /**
+     * True when the user has conflicting active entitlements that require action:
+     *  - Two active subscriptions simultaneously (switching without SubscriptionUpdateParams)
+     *  - Lifetime INAPP purchased while a subscription is still active (subscription won't
+     *    auto-cancel — user must cancel manually to avoid being charged again)
+     */
+    val hasConflictingSubscription: StateFlow<Boolean> = _hasConflictingSubscription.asStateFlow()
 
     private val billingClient: BillingClient = BillingClient.newBuilder(context)
         .setListener(this)
-        .enablePendingPurchases()
+        .enablePendingPurchases(
+            PendingPurchasesParams.newBuilder().enableOneTimeProducts().build()
+        )
         .build()
 
     private var productDetails: List<ProductDetails> = emptyList()
@@ -193,10 +210,18 @@ class BillingManager @Inject constructor(
             else          -> PlanType.NONE
         }
 
-        // Cache the purchase token of the active subscription for plan switching
-        _activeSubscriptionToken.value = subsPurchases
-            .firstOrNull { it.purchaseState == Purchase.PurchaseState.PURCHASED }
-            ?.purchaseToken
+        // Cache the purchase token and compute renewal/cancellation state
+        val activeSubs = subsPurchases.filter { it.purchaseState == Purchase.PurchaseState.PURCHASED }
+        val activeSub  = activeSubs.firstOrNull()
+        _activeSubscriptionToken.value = activeSub?.purchaseToken
+        _isSubscriptionCancelled.value = activeSub != null && !activeSub.isAutoRenewing
+        _subscriptionRenewalDate.value = when (_planType.value) {
+            PlanType.PRO_ANNUAL  -> activeSub?.purchaseTime?.plus(365L * 24 * 60 * 60 * 1000)
+            PlanType.PRO_MONTHLY -> activeSub?.purchaseTime?.plus(30L  * 24 * 60 * 60 * 1000)
+            else                 -> null
+        }
+        // Conflict: multiple active subscriptions OR lifetime + active subscription running together
+        _hasConflictingSubscription.value = activeSubs.size > 1 || (hasLifetime && activeSubs.isNotEmpty())
 
         // Detect pending purchases (e.g. UPI / cash delayed processing)
         _hasPendingPurchase.value = (subsPurchases + inAppPurchases).any {
@@ -298,25 +323,67 @@ class BillingManager @Inject constructor(
             }
             if (newPlanType != PlanType.NONE) _planType.value = newPlanType
 
-            purchases.firstOrNull {
+            val activeSubs = purchases.filter {
                 it.purchaseState == Purchase.PurchaseState.PURCHASED &&
                     (it.products.contains(PRODUCT_PRO_ANNUAL) ||
                         it.products.contains(PRODUCT_PRO_MONTHLY))
-            }?.purchaseToken?.let { _activeSubscriptionToken.value = it }
+            }
+            val activeSub = activeSubs.firstOrNull()
+            activeSub?.purchaseToken?.let { _activeSubscriptionToken.value = it }
+            _isSubscriptionCancelled.value = activeSub != null && !activeSub.isAutoRenewing
+            _subscriptionRenewalDate.value = when (newPlanType) {
+                PlanType.PRO_ANNUAL  -> activeSub?.purchaseTime?.plus(365L * 24 * 60 * 60 * 1000)
+                PlanType.PRO_MONTHLY -> activeSub?.purchaseTime?.plus(30L  * 24 * 60 * 60 * 1000)
+                else                 -> _subscriptionRenewalDate.value
+            }
+            _hasConflictingSubscription.value = activeSubs.size > 1 || (hasLifetime && activeSubs.isNotEmpty())
         }
     }
 
     /**
-     * Switches an active subscription to a different plan (e.g. monthly → annual).
+     * Switches an active subscription to a different plan (e.g. monthly ↔ annual).
      *
-     * In Billing Library 7.x, SubscriptionUpdateParams was removed. Google Play handles
-     * subscription replacement automatically when the user already has an active subscription —
-     * just launch the billing flow for the new plan as normal.
+     * MUST provide [oldPurchaseToken] — omitting it creates a second parallel subscription
+     * instead of replacing the existing one, resulting in double charges.
+     *
+     * Replacement modes:
+     *  - Upgrade (monthly → annual): CHARGE_PRORATED_PRICE — immediate switch, prorated charge
+     *  - Downgrade (annual → monthly): DEFERRED — switches at next renewal, no immediate charge
      */
     fun upgradeSubscription(
         activity: Activity,
         newProductDetails: ProductDetails,
-    ): BillingResult = launchBillingFlow(activity, newProductDetails)
+        oldPurchaseToken: String,
+        isUpgrade: Boolean,
+    ): BillingResult {
+        val offerToken = newProductDetails.subscriptionOfferDetails?.firstOrNull()?.offerToken
+            ?: return BillingResult.newBuilder()
+                .setResponseCode(BillingClient.BillingResponseCode.ITEM_UNAVAILABLE)
+                .build()
+
+        val replacementMode = if (isUpgrade) {
+            BillingFlowParams.SubscriptionUpdateParams.ReplacementMode.CHARGE_PRORATED_PRICE
+        } else {
+            BillingFlowParams.SubscriptionUpdateParams.ReplacementMode.DEFERRED
+        }
+
+        val subscriptionUpdateParams = BillingFlowParams.SubscriptionUpdateParams.newBuilder()
+            .setOldPurchaseToken(oldPurchaseToken)
+            .setSubscriptionReplacementMode(replacementMode)
+            .build()
+
+        val productDetailsParams = BillingFlowParams.ProductDetailsParams.newBuilder()
+            .setProductDetails(newProductDetails)
+            .setOfferToken(offerToken)
+            .build()
+
+        val flowParams = BillingFlowParams.newBuilder()
+            .setProductDetailsParamsList(listOf(productDetailsParams))
+            .setSubscriptionUpdateParams(subscriptionUpdateParams)
+            .build()
+
+        return billingClient.launchBillingFlow(activity, flowParams)
+    }
 
     /** Debug-only: simulate a specific plan without going through Play Billing. */
     fun debugSimulatePlan(plan: PlanType) {

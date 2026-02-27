@@ -13,6 +13,7 @@ import com.fenn.callshield.billing.BillingManager
 import com.fenn.callshield.billing.PlanType
 import com.fenn.callshield.billing.PRODUCT_PRO_ANNUAL
 import com.fenn.callshield.billing.PRODUCT_PRO_MONTHLY
+import com.fenn.callshield.billing.PRODUCT_PRO_LIFETIME
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -34,8 +35,12 @@ data class CurrentPlanState(
     val planType: PlanType = PlanType.NONE,
     val annualProduct: ProductDetails? = null,
     val monthlyProduct: ProductDetails? = null,
+    val lifetimeProduct: ProductDetails? = null,
     val switchSuccess: Boolean = false,
     val error: String? = null,
+    val subscriptionRenewalDate: Long? = null,      // epoch ms of next billing date
+    val isCancelled: Boolean = false,               // auto-renew off but still active
+    val hasConflictingSubscription: Boolean = false, // multiple active / lifetime + subscription
 )
 
 @HiltViewModel
@@ -58,6 +63,21 @@ class CurrentPlanViewModel @Inject constructor(
                 }
             }
         }
+        viewModelScope.launch {
+            billingManager.subscriptionRenewalDate.collect { date ->
+                _state.value = _state.value.copy(subscriptionRenewalDate = date)
+            }
+        }
+        viewModelScope.launch {
+            billingManager.isSubscriptionCancelled.collect { cancelled ->
+                _state.value = _state.value.copy(isCancelled = cancelled)
+            }
+        }
+        viewModelScope.launch {
+            billingManager.hasConflictingSubscription.collect { conflict ->
+                _state.value = _state.value.copy(hasConflictingSubscription = conflict)
+            }
+        }
     }
 
     fun loadProducts() {
@@ -78,6 +98,7 @@ class CurrentPlanViewModel @Inject constructor(
                     planType = billingManager.planType.value,
                     annualProduct = products.firstOrNull { it.productId == PRODUCT_PRO_ANNUAL },
                     monthlyProduct = products.firstOrNull { it.productId == PRODUCT_PRO_MONTHLY },
+                    lifetimeProduct = products.firstOrNull { it.productId == PRODUCT_PRO_LIFETIME },
                 )
             } catch (e: Exception) {
                 _state.value = _state.value.copy(loading = false, error = e.message)
@@ -91,10 +112,20 @@ class CurrentPlanViewModel @Inject constructor(
             return
         }
         val result = when (product.productType) {
-            BillingClient.ProductType.INAPP -> billingManager.launchInAppBillingFlow(activity, product)
-            // upgradeSubscription delegates to launchBillingFlow in BL 7.x;
-            // Play handles replacement automatically when the user already has a subscription
-            else -> billingManager.upgradeSubscription(activity, product)
+            BillingClient.ProductType.INAPP ->
+                billingManager.launchInAppBillingFlow(activity, product)
+            else -> {
+                val existingToken = billingManager.activeSubscriptionToken.value
+                if (existingToken != null) {
+                    // Monthly → Annual = upgrade; Annual → Monthly = downgrade
+                    val isUpgrade = _state.value.planType == PlanType.PRO_MONTHLY &&
+                        product.productId == PRODUCT_PRO_ANNUAL
+                    billingManager.upgradeSubscription(activity, product, existingToken, isUpgrade)
+                } else {
+                    // No existing subscription — fresh purchase (e.g. PROMO_PRO switching to billing)
+                    billingManager.launchBillingFlow(activity, product)
+                }
+            }
         }
         if (result.responseCode != BillingClient.BillingResponseCode.OK) {
             _state.value = _state.value.copy(error = "Could not launch purchase (${result.debugMessage})")
