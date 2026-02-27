@@ -129,13 +129,15 @@ fun ProtectScreen(
                     presetIcon = policy.preset.icon(),
                     onClick = onNavigateToAdvancedBlocking,
                 )
-                FeatureRowCard(
-                    icon = Icons.Outlined.DoNotDisturb,
-                    title = "DND Management",
-                    subtitle = "Block telemarketers via India's DND registry",
-                    iconTint = warningColor,
-                    onClick = onNavigateToDndManagement,
-                )
+                if (state.isIndiaDevice) {
+                    FeatureRowCard(
+                        icon = Icons.Outlined.DoNotDisturb,
+                        title = "DND Management",
+                        subtitle = "Block telemarketers via India's DND registry",
+                        iconTint = warningColor,
+                        onClick = onNavigateToDndManagement,
+                    )
+                }
             }
         }
 
