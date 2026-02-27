@@ -308,6 +308,17 @@ private fun ProPlanSection(
         )
 
         // Annual — solid primary gradient (the CTA)
+        val annualMicros = state.annualProduct?.subscriptionOfferDetails
+            ?.firstOrNull()?.pricingPhases?.pricingPhaseList?.firstOrNull()?.priceAmountMicros
+        val monthlyMicros = state.monthlyProduct?.subscriptionOfferDetails
+            ?.firstOrNull()?.pricingPhases?.pricingPhaseList?.firstOrNull()?.priceAmountMicros
+        val savingsText = if (annualMicros != null && monthlyMicros != null && monthlyMicros > 0) {
+            val savings = ((monthlyMicros - annualMicros / 12.0) / monthlyMicros * 100).toInt()
+            "Save $savings% vs monthly · Cancel anytime"
+        } else {
+            "Save 32% vs monthly · Cancel anytime"
+        }
+
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -337,7 +348,7 @@ private fun ProPlanSection(
                     color = Color.White,
                 )
                 Text(
-                    "Save 32% vs monthly · Cancel anytime",
+                    savingsText,
                     style = MaterialTheme.typography.bodySmall,
                     color = Color.White.copy(alpha = 0.8f),
                 )
