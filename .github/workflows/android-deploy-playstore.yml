@@ -31,9 +31,11 @@ jobs:
         fetch-depth: 2
 
     - name: ✅ Validate release notes
+      env:
+        INPUT_RELEASE_NOTES: ${{ github.event.inputs.release_notes }}
       run: |
         if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-          NOTES="${{ github.event.inputs.release_notes }}"
+          NOTES="$INPUT_RELEASE_NOTES"
         else
           # Push trigger: only require whatsnew update when Android source files changed
           ANDROID_CHANGED=$(git diff --name-only HEAD~1 HEAD | grep -c "^android/" || true)
@@ -120,10 +122,11 @@ jobs:
 
     # ── Write release notes (manual dispatch overrides file; push uses committed file) ──
     - name: 📝 Write release notes
+      env:
+        INPUT_RELEASE_NOTES: ${{ github.event.inputs.release_notes }}
       run: |
         if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-          NOTES="${{ github.event.inputs.release_notes }}"
-          NOTES="${NOTES:0:500}"
+          NOTES="${INPUT_RELEASE_NOTES:0:500}"
           echo "$NOTES" > distribution/whatsnew/whatsnew-en-IN
           echo "$NOTES" > distribution/whatsnew/whatsnew-en-US
         fi
