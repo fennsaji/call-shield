@@ -1,5 +1,7 @@
 package com.fenn.callshield.ui.screens.home
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -38,15 +40,23 @@ import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.outlined.DoNotDisturb
 import androidx.compose.material.icons.outlined.DoNotDisturbOff
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -89,17 +99,53 @@ fun HomeScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val policy by advancedBlockingViewModel.policy.collectAsStateWithLifecycle()
+    val showLifetimeConflictReminder by viewModel.showLifetimeConflictReminder.collectAsStateWithLifecycle()
     val successColor = LocalSuccessColor.current
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
 
+    var showConflictDialog by remember { mutableStateOf(false) }
+    var resumeCount by remember { mutableIntStateOf(0) }
+    // After tapping "Cancel Subscription" we send the user to Play Store — skip dialog on
+    // first return so we don't immediately re-prompt before they've had a chance to cancel.
+    var justSentToPlayStore by remember { mutableStateOf(false) }
+
     DisposableEffect(lifecycleOwner) {
         viewModel.refreshScreeningRole(context)
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) viewModel.refreshScreeningRole(context)
+            if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.refreshScreeningRole(context)
+                resumeCount++
+            }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    // Show the cancellation reminder on every app resume while the conflict persists.
+    LaunchedEffect(resumeCount) {
+        if (resumeCount > 0 && showLifetimeConflictReminder) {
+            if (justSentToPlayStore) {
+                justSentToPlayStore = false  // one free pass after returning from Play Store
+            } else {
+                showConflictDialog = true
+            }
+        }
+    }
+
+    if (showConflictDialog) {
+        CancelSubscriptionReminderDialog(
+            onManage = {
+                showConflictDialog = false
+                justSentToPlayStore = true
+                val url = "https://play.google.com/store/account/subscriptions?package=${context.packageName}"
+                context.startActivity(
+                    Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                        .apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
+                )
+            },
+            onDismiss = { showConflictDialog = false },
+        )
     }
 
     LazyColumn(
@@ -624,6 +670,34 @@ private fun DndStatusCard(
             }
         }
     }
+}
+
+@Composable
+private fun CancelSubscriptionReminderDialog(
+    onManage: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val warningColor = LocalWarningColor.current
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = {
+            Icon(Icons.Filled.Warning, contentDescription = null, tint = warningColor)
+        },
+        title = { Text("Cancel old subscription") },
+        text = {
+            Text(
+                "You now have Lifetime Pro, but a previous subscription is still active. " +
+                    "Cancel it on Google Play to avoid being charged again.",
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        },
+        confirmButton = {
+            Button(onClick = onManage) { Text("Cancel Subscription") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Later") }
+        },
+    )
 }
 
 private fun BlockingPreset.displayName(): String = when (this) {

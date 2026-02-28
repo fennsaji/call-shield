@@ -6,6 +6,7 @@ import android.os.Build
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.fenn.callshield.billing.BillingManager
+import com.fenn.callshield.billing.PlanType
 import com.fenn.callshield.data.local.dao.DndCommandDao
 import com.fenn.callshield.data.local.dao.ScamDigestDao
 import com.fenn.callshield.data.local.dao.TraiReportDao
@@ -65,6 +66,14 @@ class HomeViewModel @Inject constructor(
 ) : ViewModel() {
 
     val isPro: StateFlow<Boolean> = billingManager.isPro
+
+    /** True when the user holds a Lifetime plan but still has an active subscription running. */
+    val showLifetimeConflictReminder: StateFlow<Boolean> =
+        billingManager.planType
+            .combine(billingManager.hasConflictingSubscription) { plan, conflict ->
+                plan == PlanType.PRO_LIFETIME && conflict
+            }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
     private val _snackbarMessage = MutableSharedFlow<String>(extraBufferCapacity = 1)
     val snackbarMessage: SharedFlow<String> = _snackbarMessage.asSharedFlow()
