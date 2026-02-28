@@ -38,9 +38,11 @@ data class CurrentPlanState(
     val lifetimeProduct: ProductDetails? = null,
     val switchSuccess: Boolean = false,
     val error: String? = null,
-    val subscriptionRenewalDate: Long? = null,      // epoch ms of next billing date
-    val isCancelled: Boolean = false,               // auto-renew off but still active
+    val subscriptionRenewalDate: Long? = null,       // epoch ms of next billing date
+    val isCancelled: Boolean = false,                // auto-renew off but still active
     val hasConflictingSubscription: Boolean = false, // multiple active / lifetime + subscription
+    val hasPendingPurchase: Boolean = false,         // UPI / cash purchase awaiting completion
+    val pendingPlanChange: PlanType? = null,         // deferred downgrade confirmed but not yet applied
 )
 
 @HiltViewModel
@@ -56,7 +58,11 @@ class CurrentPlanViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             billingManager.planType.collect { planType ->
-                _state.value = _state.value.copy(planType = planType)
+                val current = _state.value
+                // Clear pendingPlanChange once the deferred switch has actually applied
+                val pendingPlanChange = if (planType == current.pendingPlanChange) null
+                                        else current.pendingPlanChange
+                _state.value = current.copy(planType = planType, pendingPlanChange = pendingPlanChange)
                 if (switchInProgress && planType != PlanType.NONE) {
                     switchInProgress = false
                     _state.value = _state.value.copy(switchSuccess = true)
@@ -78,6 +84,11 @@ class CurrentPlanViewModel @Inject constructor(
                 _state.value = _state.value.copy(hasConflictingSubscription = conflict)
             }
         }
+        viewModelScope.launch {
+            billingManager.hasPendingPurchase.collect { pending ->
+                _state.value = _state.value.copy(hasPendingPurchase = pending)
+            }
+        }
     }
 
     fun loadProducts() {
@@ -92,6 +103,9 @@ class CurrentPlanViewModel @Inject constructor(
                     )
                     return@launch
                 }
+                // Refresh purchases first so planType/cancellation/pending state is current
+                // before we read them. Critical when returning from Google Play.
+                billingManager.refreshSubscriptionStatus()
                 val products = billingManager.queryProducts()
                 _state.value = _state.value.copy(
                     loading = false,
@@ -111,17 +125,21 @@ class CurrentPlanViewModel @Inject constructor(
             _state.value = _state.value.copy(error = "Could not resolve Activity for billing")
             return
         }
+        val isUpgrade: Boolean
         val result = when (product.productType) {
-            BillingClient.ProductType.INAPP ->
+            BillingClient.ProductType.INAPP -> {
+                isUpgrade = true
                 billingManager.launchInAppBillingFlow(activity, product)
+            }
             else -> {
                 val existingToken = billingManager.activeSubscriptionToken.value
                 if (existingToken != null) {
-                    // Monthly → Annual = upgrade; Annual → Monthly = downgrade
-                    val isUpgrade = _state.value.planType == PlanType.PRO_MONTHLY &&
+                    // Monthly → Annual = upgrade (immediate); Annual → Monthly = downgrade (deferred)
+                    isUpgrade = _state.value.planType == PlanType.PRO_MONTHLY &&
                         product.productId == PRODUCT_PRO_ANNUAL
                     billingManager.upgradeSubscription(activity, product, existingToken, isUpgrade)
                 } else {
+                    isUpgrade = true
                     // No existing subscription — fresh purchase (e.g. PROMO_PRO switching to billing)
                     billingManager.launchBillingFlow(activity, product)
                 }
@@ -131,15 +149,29 @@ class CurrentPlanViewModel @Inject constructor(
             _state.value = _state.value.copy(error = "Could not launch purchase (${result.debugMessage})")
             return
         }
+        if (!isUpgrade) {
+            // Deferred downgrade — Play confirmed but plan won't change until next renewal.
+            // Track locally so the UI can show a "pending change" notice immediately.
+            val targetPlan = when (product.productId) {
+                PRODUCT_PRO_MONTHLY -> PlanType.PRO_MONTHLY
+                PRODUCT_PRO_ANNUAL  -> PlanType.PRO_ANNUAL
+                else                -> null
+            }
+            _state.value = _state.value.copy(pendingPlanChange = targetPlan)
+        }
         switchInProgress = true
     }
 
     fun openManageSubscriptions(context: Context) {
         val packageName = context.packageName
-        val intent = Intent(
-            Intent.ACTION_VIEW,
-            Uri.parse("https://play.google.com/store/account/subscriptions?package=$packageName"),
-        ).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
+        val url = if (_state.value.planType == PlanType.PRO_LIFETIME) {
+            // Lifetime is a one-time in-app purchase — show order history, not subscriptions
+            "https://play.google.com/store/account/orderhistory"
+        } else {
+            "https://play.google.com/store/account/subscriptions?package=$packageName"
+        }
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+            .apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
         context.startActivity(intent)
     }
 
