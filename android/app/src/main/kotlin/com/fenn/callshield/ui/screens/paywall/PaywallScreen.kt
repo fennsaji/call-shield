@@ -582,6 +582,7 @@ private fun PromoCodeRow(state: PaywallState, viewModel: PaywallViewModel) {
         TextButton(
             onClick = {
                 val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/redeem"))
+                    .setPackage("com.android.vending")
                 context.startActivity(intent)
             },
             modifier = Modifier.align(Alignment.CenterHorizontally),

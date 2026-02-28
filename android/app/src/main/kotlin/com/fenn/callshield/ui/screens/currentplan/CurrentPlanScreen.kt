@@ -27,7 +27,7 @@ import androidx.compose.material.icons.outlined.WorkspacePremium
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
@@ -41,11 +41,15 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -74,8 +78,16 @@ fun CurrentPlanScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
 
-    LaunchedEffect(Unit) { viewModel.loadProducts() }
+    // Reload purchases every time the screen resumes — catches plan changes made on Google Play
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) viewModel.loadProducts()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     LaunchedEffect(state.switchSuccess) {
         if (state.switchSuccess) onBack()
@@ -93,12 +105,12 @@ fun CurrentPlanScreen(
             )
         },
     ) { innerPadding ->
-        if (state.loading) {
-            Box(
-                modifier = Modifier.fillMaxSize().padding(innerPadding),
-                contentAlignment = Alignment.Center,
-            ) { CircularProgressIndicator() }
-            return@Scaffold
+        Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+            // Subtle refresh indicator — shown while fetching fresh status from Play Billing.
+            // Content remains visible so the user can see their current plan immediately.
+            if (state.loading) {
+                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+            }
         }
 
         LazyColumn(
@@ -136,13 +148,28 @@ fun CurrentPlanScreen(
             }
 
             // ── Cancelled warning ────────────────────────────────────────────
-            if (state.isCancelled && !state.hasConflictingSubscription) {
+            if (state.isCancelled && !state.hasConflictingSubscription && state.pendingPlanChange == null) {
                 item {
                     CancelledBanner(
                         expiryDate = state.subscriptionRenewalDate,
                         onResubscribe = { viewModel.openManageSubscriptions(context) },
                     )
                 }
+            }
+
+            // ── Pending plan change (deferred downgrade) ─────────────────────
+            if (state.pendingPlanChange != null) {
+                item {
+                    PendingPlanChangeBanner(
+                        targetPlan = state.pendingPlanChange!!,
+                        renewalDate = state.subscriptionRenewalDate,
+                    )
+                }
+            }
+
+            // ── Pending purchase (UPI / cash) ────────────────────────────────
+            if (state.hasPendingPurchase) {
+                item { PendingPurchaseBanner() }
             }
 
             // ── Error ────────────────────────────────────────────────────────
@@ -168,7 +195,7 @@ fun CurrentPlanScreen(
                             price = option.price,
                             badge = option.badge,
                             badgeColor = MaterialTheme.colorScheme.tertiary,
-                            enabled = option.product != null,
+                            enabled = option.product != null && !state.loading,
                             buttonLabel = option.buttonLabel,
                             onClick = { option.product?.let { viewModel.switchPlan(context, it) } },
                         )
@@ -498,6 +525,88 @@ private fun CancelledBanner(
     }
 }
 
+// ── Pending plan change banner (deferred downgrade) ───────────────────────────
+
+@Composable
+private fun PendingPlanChangeBanner(
+    targetPlan: PlanType,
+    renewalDate: Long?,
+) {
+    val primary = MaterialTheme.colorScheme.primary
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        color = primary.copy(alpha = 0.08f),
+    ) {
+        Row(
+            modifier = Modifier.padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Icon(
+                Icons.Outlined.Star,
+                contentDescription = null,
+                tint = primary,
+                modifier = Modifier.size(20.dp),
+            )
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(
+                    "Plan change scheduled",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = primary,
+                )
+                val dateStr = renewalDate?.let {
+                    " on " + SimpleDateFormat("MMM d, yyyy", Locale.getDefault()).format(Date(it))
+                } ?: " at next renewal"
+                Text(
+                    "Switching to ${targetPlan.displayName()}$dateStr. No action needed.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
+                )
+            }
+        }
+    }
+}
+
+// ── Pending purchase banner (UPI / cash) ──────────────────────────────────────
+
+@Composable
+private fun PendingPurchaseBanner() {
+    val warningColor = LocalWarningColor.current
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        color = warningColor.copy(alpha = 0.08f),
+    ) {
+        Row(
+            modifier = Modifier.padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Icon(
+                Icons.Outlined.Warning,
+                contentDescription = null,
+                tint = warningColor,
+                modifier = Modifier.size(20.dp),
+            )
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(
+                    "Payment pending",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = warningColor,
+                )
+                Text(
+                    "Your purchase is awaiting payment confirmation. Pro access will activate automatically once complete.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
+                )
+            }
+        }
+    }
+}
+
 // ── Section label ─────────────────────────────────────────────────────────────
 
 @Composable
@@ -594,11 +703,14 @@ private fun buildSwitchOptions(state: CurrentPlanState): List<PlanOption> {
 
     when (state.planType) {
         PlanType.PRO_MONTHLY -> {
-            options += PlanOption("Pro Annual", "$annualPrice / year", "Save 32%", state.annualProduct)
+            options += PlanOption("Pro Annual", annualPrice, "Save 32%", state.annualProduct)
             options += PlanOption("Pro Lifetime", "$lifetimePrice one-time", "Best value", state.lifetimeProduct, "Upgrade")
         }
         PlanType.PRO_ANNUAL -> {
-            options += PlanOption("Pro Monthly", "$monthlyPrice / month", null, state.monthlyProduct)
+            // Hide the monthly option if a deferred downgrade to monthly is already pending
+            if (state.pendingPlanChange != PlanType.PRO_MONTHLY) {
+                options += PlanOption("Pro Monthly", monthlyPrice, null, state.monthlyProduct)
+            }
             options += PlanOption("Pro Lifetime", "$lifetimePrice one-time", "Best value", state.lifetimeProduct, "Upgrade")
         }
         else -> Unit
