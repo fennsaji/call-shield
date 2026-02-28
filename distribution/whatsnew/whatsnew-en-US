@@ -1,21 +1,16 @@
 What's new in v1.4
 
-Current Plan:
-• Shows live price and next billing date
-• Cancelled subscription warning with option to renew
-• Warning when conflicting subscriptions are detected
-• Lifetime upgrade option available from monthly/annual plan
+Your Plan:
+• Live price & next billing date shown
+• Cancellation, conflict & pending payment warnings
+• Lifetime upgrade option from monthly/annual
+• Status refreshes when returning from Google Play
+• "View Purchase" opens order history for Lifetime
 
 Paywall:
-• Shows "Then X/year from year 2" for first-year intro offers
-• Prompts to cancel old subscription after upgrading to Lifetime
+• Year-2 price shown for intro offers
+• Prompts to cancel subscription after Lifetime upgrade
+• Redeem code opens Play Store directly
 
 Spam Reporting:
-• TRAI reporting option hidden for non-India devices
-
-Your Plan:
-• Plan status refreshes automatically when returning from Google Play
-• Pending payment notice for UPI/cash purchases awaiting confirmation
-• Scheduled plan change notice for deferred downgrades
-• "View Purchase" now opens order history for Lifetime plan
-• Redeem Google Play code now opens Play Store app directly
+• TRAI reporting option hidden outside India
