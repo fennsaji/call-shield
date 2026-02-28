@@ -85,8 +85,13 @@ class HomeViewModel @Inject constructor(
     /** Call on every screen resume to reflect current Call Screening role status. */
     fun refreshScreeningRole(context: Context) {
         _isScreeningActive.value = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            context.getSystemService(RoleManager::class.java)
-                ?.isRoleHeld(RoleManager.ROLE_CALL_SCREENING) == true
+            try {
+                context.getSystemService(RoleManager::class.java)
+                    ?.isRoleHeld(RoleManager.ROLE_CALL_SCREENING) == true
+            } catch (_: Exception) {
+                // Some OEM ROMs (e.g. MIUI) throw on RoleManager calls — treat as inactive
+                false
+            }
         } else {
             true
         }
