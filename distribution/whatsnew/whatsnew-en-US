@@ -1,16 +1,5 @@
-What's new in v1.4
-
 Your Plan:
-• Live price & next billing date shown
-• Cancellation, conflict & pending payment warnings
-• Lifetime upgrade option from monthly/annual
-• Status refreshes when returning from Google Play
-• "View Purchase" opens order history for Lifetime
-
-Paywall:
-• Year-2 price shown for intro offers
-• Prompts to cancel subscription after Lifetime upgrade
-• Redeem code opens Play Store directly
-
-Spam Reporting:
-• TRAI reporting option hidden outside India
+• Billing status refreshes on every visit
+• Progress bar shown while loading
+• Conflict banner now correctly opens Manage Subscriptions
+• Prompted to cancel old subscription after Lifetime purchase (on every app open until resolved)

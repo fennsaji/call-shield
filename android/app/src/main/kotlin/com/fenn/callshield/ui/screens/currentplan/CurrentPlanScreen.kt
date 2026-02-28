@@ -80,8 +80,9 @@ fun CurrentPlanScreen(
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
 
-    // Reload purchases every time the screen resumes — catches plan changes made on Google Play
+    // Load immediately on first composition and on every subsequent resume (e.g. returning from Play)
     DisposableEffect(lifecycleOwner) {
+        viewModel.loadProducts()
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) viewModel.loadProducts()
         }
@@ -105,19 +106,18 @@ fun CurrentPlanScreen(
             )
         },
     ) { innerPadding ->
-        Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
-            // Subtle refresh indicator — shown while fetching fresh status from Play Billing.
-            // Content remains visible so the user can see their current plan immediately.
-            if (state.loading) {
-                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-            }
-        }
-
         LazyColumn(
             modifier = Modifier.fillMaxSize().padding(innerPadding),
             contentPadding = PaddingValues(horizontal = 20.dp, vertical = 20.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
+
+            // ── Refresh indicator ─────────────────────────────────────────────
+            if (state.loading) {
+                item {
+                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                }
+            }
 
             // ── Current plan card ────────────────────────────────────────────
             item {
@@ -219,16 +219,19 @@ fun CurrentPlanScreen(
                     )
                     Spacer(Modifier.size(8.dp))
                     Text(
-                        if (state.planType == PlanType.PRO_LIFETIME) "View Purchase on Google Play"
+                        if (state.planType == PlanType.PRO_LIFETIME && !state.hasConflictingSubscription)
+                            "View Purchase on Google Play"
                         else "Manage Subscription on Google Play"
                     )
                 }
                 Spacer(Modifier.height(6.dp))
                 Text(
-                    when (state.planType) {
-                        PlanType.PRO_LIFETIME ->
+                    when {
+                        state.planType == PlanType.PRO_LIFETIME && state.hasConflictingSubscription ->
+                            "You still have an active subscription running. Cancel it on Google Play to avoid future charges."
+                        state.planType == PlanType.PRO_LIFETIME ->
                             "Lifetime purchases cannot be cancelled. Contact Google Play support for refunds."
-                        PlanType.PROMO_PRO ->
+                        state.planType == PlanType.PROMO_PRO ->
                             "Your access was granted via a promo code and is not managed through Google Play."
                         else ->
                             "Cancel, pause, or update your payment method via Google Play."

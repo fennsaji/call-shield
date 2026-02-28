@@ -15,6 +15,7 @@ import com.fenn.callshield.billing.PRODUCT_PRO_ANNUAL
 import com.fenn.callshield.billing.PRODUCT_PRO_MONTHLY
 import com.fenn.callshield.billing.PRODUCT_PRO_LIFETIME
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -54,6 +55,7 @@ class CurrentPlanViewModel @Inject constructor(
     val state: StateFlow<CurrentPlanState> = _state.asStateFlow()
 
     private var switchInProgress = false
+    private var loadJob: Job? = null
 
     init {
         viewModelScope.launch {
@@ -92,7 +94,9 @@ class CurrentPlanViewModel @Inject constructor(
     }
 
     fun loadProducts() {
-        viewModelScope.launch {
+        // Cancel any in-flight load before starting a new one (e.g. rapid back-navigate + return)
+        loadJob?.cancel()
+        loadJob = viewModelScope.launch {
             _state.value = _state.value.copy(loading = true, error = null)
             try {
                 val connected = billingManager.connect()
@@ -164,10 +168,11 @@ class CurrentPlanViewModel @Inject constructor(
 
     fun openManageSubscriptions(context: Context) {
         val packageName = context.packageName
-        val url = if (_state.value.planType == PlanType.PRO_LIFETIME) {
-            // Lifetime is a one-time in-app purchase — show order history, not subscriptions
+        val url = if (_state.value.planType == PlanType.PRO_LIFETIME && !_state.value.hasConflictingSubscription) {
+            // Clean Lifetime with no active subscription — show order history (one-time purchase)
             "https://play.google.com/store/account/orderhistory"
         } else {
+            // Any subscription state, or Lifetime + conflicting subscription — open subscriptions manager
             "https://play.google.com/store/account/subscriptions?package=$packageName"
         }
         val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
