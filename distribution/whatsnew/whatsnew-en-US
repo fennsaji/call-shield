@@ -1,5 +1,1 @@
-Your Plan:
-• Billing status refreshes on every visit
-• Progress bar shown while loading
-• Conflict banner now correctly opens Manage Subscriptions
-• Prompted to cancel old subscription after Lifetime purchase (on every app open until resolved)
+Fixed a crash on first launch on some devices (e.g. Redmi / Xiaomi) caused by the operating system not providing the call screening role service.
