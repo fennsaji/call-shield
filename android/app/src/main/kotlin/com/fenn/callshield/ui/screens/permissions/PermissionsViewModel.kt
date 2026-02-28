@@ -59,8 +59,13 @@ class PermissionsViewModel @Inject constructor(
 
     private fun isScreeningRoleGranted(): Boolean {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            val roleManager = context.getSystemService(RoleManager::class.java)
-            roleManager.isRoleHeld(RoleManager.ROLE_CALL_SCREENING)
+            try {
+                context.getSystemService(RoleManager::class.java)
+                    ?.isRoleHeld(RoleManager.ROLE_CALL_SCREENING) == true
+            } catch (_: Exception) {
+                // Some OEM ROMs (e.g. MIUI) throw or return null on RoleManager calls
+                false
+            }
         } else false
     }
 

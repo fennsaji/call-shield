@@ -151,9 +151,13 @@ fun PermissionsScreen(
                 buttonLabel = stringResource(R.string.permission_screening_button),
                 onRequest = {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                        val roleManager = context.getSystemService(RoleManager::class.java)
-                        val intent = roleManager.createRequestRoleIntent(RoleManager.ROLE_CALL_SCREENING)
-                        screeningRoleLauncher.launch(intent)
+                        try {
+                            val roleManager = context.getSystemService(RoleManager::class.java)
+                            val intent = roleManager?.createRequestRoleIntent(RoleManager.ROLE_CALL_SCREENING)
+                            if (intent != null) screeningRoleLauncher.launch(intent)
+                        } catch (_: Exception) {
+                            // MIUI may throw or return null — silently ignore
+                        }
                     }
                 },
             )
