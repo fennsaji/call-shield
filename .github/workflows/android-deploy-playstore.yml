@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'android/**'
+      - 'distribution/whatsnew/**'
       - '.github/workflows/android-deploy-playstore.yml'
   workflow_dispatch:
     inputs:
