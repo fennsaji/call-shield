@@ -240,6 +240,7 @@ fun CallShieldNavHost(
                 onNavigateToRegionPolicies = { navController.navigate(Destinations.REGION_POLICIES) },
                 onNavigateToNumberRules = { navController.navigate(Destinations.NUMBER_RULES) },
                 onNavigateToDecisionOrder = { navController.navigate(Destinations.DECISION_ORDER) },
+                onNavigateToPaywall = { navController.navigate(Destinations.paywallRoute()) },
             )
         }
 
