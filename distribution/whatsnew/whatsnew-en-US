@@ -1,1 +1,1 @@
-Fixed a crash on first launch on some devices (e.g. Redmi / Xiaomi) caused by the operating system not providing the call screening role service.
+Pro presets in Advanced Blocking now show lock icons. Tap any locked preset to unlock it with a CallShield Pro subscription.
