@@ -13,6 +13,7 @@ import com.fenn.callshield.data.local.dao.PrefixRuleDao
 import com.fenn.callshield.data.local.dao.ScamDigestDao
 import com.fenn.callshield.data.local.dao.SeedDbDao
 import com.fenn.callshield.data.local.dao.TraiReportDao
+import com.fenn.callshield.data.local.dao.VipContactsDao
 import com.fenn.callshield.data.local.dao.WhitelistDao
 import dagger.Module
 import dagger.Provides
@@ -48,6 +49,37 @@ private val MIGRATION_4_5 = object : Migration(4, 5) {
                 `sentAt` INTEGER NOT NULL,
                 `confirmedByUser` INTEGER NOT NULL DEFAULT 0,
                 `confirmedAt` INTEGER
+            )
+            """.trimIndent()
+        )
+    }
+}
+
+private val MIGRATION_6_7 = object : Migration(6, 7) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS `vip_contacts` (
+                `e164` TEXT NOT NULL PRIMARY KEY,
+                `displayLabel` TEXT NOT NULL,
+                `addedAt` INTEGER NOT NULL
+            )
+            """.trimIndent()
+        )
+    }
+}
+
+private val MIGRATION_7_8 = object : Migration(7, 8) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        // Recreate vip_contacts with numberHash as PK (raw e164 must never be stored).
+        // Existing entries cannot be rehashed in SQL, so the table is reset.
+        db.execSQL("DROP TABLE IF EXISTS `vip_contacts`")
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS `vip_contacts` (
+                `numberHash` TEXT NOT NULL PRIMARY KEY,
+                `displayLabel` TEXT NOT NULL,
+                `addedAt` INTEGER NOT NULL
             )
             """.trimIndent()
         )
@@ -109,7 +141,7 @@ object DatabaseModule {
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): CallShieldDatabase =
         Room.databaseBuilder(context, CallShieldDatabase::class.java, "callshield.db")
-            .addMigrations(MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
+            .addMigrations(MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
             .fallbackToDestructiveMigrationFrom(1)
             .fallbackToDestructiveMigrationOnDowngrade()
             .build()
@@ -123,4 +155,5 @@ object DatabaseModule {
     @Provides fun provideCallerEventDao(db: CallShieldDatabase): CallerEventDao = db.callerEventDao()
     @Provides fun provideTraiReportDao(db: CallShieldDatabase): TraiReportDao = db.traiReportDao()
     @Provides fun provideDndCommandDao(db: CallShieldDatabase): DndCommandDao = db.dndCommandDao()
+    @Provides fun provideVipContactsDao(db: CallShieldDatabase): VipContactsDao = db.vipContactsDao()
 }

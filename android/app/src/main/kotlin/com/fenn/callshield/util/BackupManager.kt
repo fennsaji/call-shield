@@ -2,6 +2,7 @@ package com.fenn.callshield.util
 
 import com.fenn.callshield.data.local.entity.BlocklistEntry
 import com.fenn.callshield.data.local.entity.PrefixRule
+import com.fenn.callshield.data.local.entity.VipContactEntry
 import com.fenn.callshield.data.local.entity.WhitelistEntry
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
@@ -37,6 +38,7 @@ class BackupManager @Inject constructor() {
         blocklist: List<BlocklistEntry>,
         whitelist: List<WhitelistEntry>,
         prefixRules: List<PrefixRule>,
+        vipContacts: List<VipContactEntry> = emptyList(),
         isPro: Boolean = false,
         settings: BackupSettings? = null,
         pin: String,
@@ -47,6 +49,7 @@ class BackupManager @Inject constructor() {
             blocklist = blocklist.map { BackupBlocklistEntry(it.numberHash, it.displayLabel, it.addedAt) },
             whitelist = whitelist.map { BackupWhitelistEntry(it.numberHash, it.displayLabel, it.addedAt) },
             prefixRules = prefixRules.map { BackupPrefixRule(it.pattern, it.matchType, it.action, it.label, it.addedAt) },
+            vipContacts = vipContacts.map { BackupVipContact(it.numberHash, it.displayLabel, it.addedAt) },
             settings = settings,
         )
         val plaintext = json.encodeToString(payload).toByteArray(Charsets.UTF_8)
@@ -98,6 +101,7 @@ class BackupManager @Inject constructor() {
         blocklist = payload.blocklist.map { BlocklistEntry(it.numberHash, it.displayLabel, it.addedAt) },
         whitelist = payload.whitelist.map { WhitelistEntry(it.numberHash, it.displayLabel, it.addedAt) },
         prefixRules = payload.prefixRules.map { PrefixRule(pattern = it.pattern, matchType = it.matchType, action = it.action, label = it.label, addedAt = it.addedAt) },
+        vipContacts = payload.vipContacts.map { VipContactEntry(it.numberHash, it.displayLabel, it.addedAt) },
     )
 
     // ── Internal ──────────────────────────────────────────────────────────────
@@ -133,6 +137,7 @@ data class BackupPayload(
     val blocklist: List<BackupBlocklistEntry>,
     val whitelist: List<BackupWhitelistEntry>,
     val prefixRules: List<BackupPrefixRule>,
+    val vipContacts: List<BackupVipContact> = emptyList(),
     val settings: BackupSettings? = null,
 )
 
@@ -161,6 +166,19 @@ data class BackupSettings(
     val abpCountryFilterList: String = "",
     val abpAutoEscalate: Boolean = false,
     val abpAutoEscalateThreshold: Int = 3,
+    // Phase 5 extended fields
+    val abpVipContactsOnly: Boolean = false,
+    val abpNightGuardDays: String = "0,1,2,3,4,5,6",
+    val abpWorkFocusEnabled: Boolean = false,
+    val abpWorkFocusStart: Int = 9,
+    val abpWorkFocusEnd: Int = 18,
+    val abpWorkFocusAction: String = "SILENCE",
+    val abpWorkFocusDays: String = "0,1,2,3,4",
+    val abpBlockUnrecognizedIsd: Boolean = false,
+    val abpBlocklistAgingEnabled: Boolean = false,
+    val abpBlocklistAgingDays: Int = 30,
+    val abpBurstProtectionEnabled: Boolean = false,
+    val abpBurstProtectionCount: Int = 3,
 )
 
 @Serializable
@@ -186,10 +204,18 @@ data class BackupPrefixRule(
     val addedAt: Long,
 )
 
+@Serializable
+data class BackupVipContact(
+    val numberHash: String,
+    val displayLabel: String,
+    val addedAt: Long,
+)
+
 data class BackupRoomEntities(
     val blocklist: List<BlocklistEntry>,
     val whitelist: List<WhitelistEntry>,
     val prefixRules: List<PrefixRule>,
+    val vipContacts: List<VipContactEntry>,
 )
 
 /** Thrown when AES-GCM authentication tag verification fails — wrong PIN. */

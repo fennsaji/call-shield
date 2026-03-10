@@ -28,7 +28,6 @@ import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -56,7 +55,6 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.fenn.callshield.domain.model.BlockingPreset
-import androidx.compose.ui.graphics.graphicsLayer
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -243,7 +241,6 @@ private fun PresetCard(
                 shape = RoundedCornerShape(16.dp),
             )
             .clickable(onClick = if (isProLocked) onLockedClick else onClick)
-            .graphicsLayer { alpha = if (isProLocked) 0.6f else 1f }
             .padding(horizontal = 16.dp, vertical = 14.dp),
     ) {
         Column {
@@ -282,12 +279,7 @@ private fun PresetCard(
                     )
                 }
                 if (isProLocked) {
-                    Icon(
-                        Icons.Outlined.Lock,
-                        contentDescription = "Pro only",
-                        modifier = Modifier.size(16.dp),
-                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
-                    )
+                    ProBadge()
                 } else if (isSelected) {
                     Box(
                         modifier = Modifier
@@ -298,7 +290,7 @@ private fun PresetCard(
                 }
             }
 
-            if (isSelected && details.isNotEmpty()) {
+            if ((isSelected || isProLocked) && details.isNotEmpty()) {
                 Spacer(Modifier.height(12.dp))
                 HorizontalDivider(color = primary.copy(alpha = 0.2f))
                 Spacer(Modifier.height(10.dp))

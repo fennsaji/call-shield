@@ -54,4 +54,7 @@ class CallHistoryRepositoryImpl @Inject constructor(
 
     override suspend fun countRejections(numberHash: String, since: Long): Int =
         dao.countRejectionsByHash(numberHash, since)
+
+    override suspend fun countCallsSince(numberHash: String, since: Long): Int =
+        dao.countCallsSince(numberHash, since)
 }

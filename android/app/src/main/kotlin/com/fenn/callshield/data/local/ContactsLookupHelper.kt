@@ -91,4 +91,45 @@ class ContactsLookupHelper @Inject constructor(
     }
 
     fun isInContacts(e164Number: String): Boolean = contactNumbers.contains(e164Number)
+
+    /** Returns a list of (displayName, e164) pairs matching [query] for the VIP contact picker. */
+    fun queryContacts(query: String): List<Pair<String, String>> {
+        val hasPermission = ContextCompat.checkSelfPermission(
+            context, Manifest.permission.READ_CONTACTS
+        ) == PackageManager.PERMISSION_GRANTED
+        if (!hasPermission) return emptyList()
+
+        val results = mutableListOf<Pair<String, String>>()
+        try {
+            val cursor = context.contentResolver.query(
+                ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+                arrayOf(
+                    ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME,
+                    ContactsContract.CommonDataKinds.Phone.NORMALIZED_NUMBER,
+                    ContactsContract.CommonDataKinds.Phone.NUMBER, // fallback when NORMALIZED_NUMBER is null
+                ),
+                if (query.isBlank()) null
+                else "${ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME} LIKE ?",
+                if (query.isBlank()) null else arrayOf("%$query%"),
+                "${ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME} ASC LIMIT 60",
+            )
+            cursor?.use {
+                val nameCol = it.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME)
+                val normCol = it.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NORMALIZED_NUMBER)
+                val rawCol  = it.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)
+                if (nameCol == -1) return emptyList()
+                while (it.moveToNext()) {
+                    val name = it.getString(nameCol) ?: continue
+                    // Prefer NORMALIZED_NUMBER (E.164); fall back to raw NUMBER
+                    val number = (if (normCol != -1) it.getString(normCol) else null)
+                        ?.takeIf { n -> n.isNotBlank() }
+                        ?: (if (rawCol != -1) it.getString(rawCol) else null)
+                            ?.takeIf { n -> n.isNotBlank() }
+                        ?: continue
+                    results.add(name to number)
+                }
+            }
+        } catch (_: SecurityException) { /* permission revoked mid-query */ }
+        return results.distinctBy { it.second }
+    }
 }

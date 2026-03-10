@@ -34,6 +34,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BatteryChargingFull
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Contacts
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.Button
@@ -106,6 +107,11 @@ fun PermissionsScreen(
 
     // Call log (optional)
     val callLogLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { viewModel.refresh() }
+
+    // Contacts (optional)
+    val contactsLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { viewModel.refresh() }
 
@@ -205,6 +211,20 @@ fun PermissionsScreen(
                 buttonLabel = "Allow",
                 onRequest = {
                     callLogLauncher.launch(Manifest.permission.READ_CALL_LOG)
+                },
+            )
+
+            // ── Contacts (optional) ───────────────────────────────────────────
+            PermissionCard(
+                number = 0,
+                stepLabel = "Optional",
+                icon = Icons.Filled.Contacts,
+                title = "Read contacts",
+                body = "Required for Contacts Only blocking and VIP contacts features. Contacts are looked up on-device only — nothing is uploaded.",
+                granted = state.contactsGranted,
+                buttonLabel = "Allow",
+                onRequest = {
+                    contactsLauncher.launch(Manifest.permission.READ_CONTACTS)
                 },
             )
 

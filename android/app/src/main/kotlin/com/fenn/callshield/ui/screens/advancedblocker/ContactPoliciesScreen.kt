@@ -15,47 +15,86 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Circle
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.ContactPhone
 import androidx.compose.material.icons.outlined.People
+import androidx.compose.material.icons.outlined.PersonAdd
+import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material.icons.outlined.VolumeOff
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import com.fenn.callshield.data.local.entity.VipContactEntry
 import com.fenn.callshield.domain.model.BlockingPreset
 
-/** Which unknown-caller mode is active — maps to the two booleans in AdvancedBlockingPolicy. */
-private enum class UnknownCallerMode { ALLOW, SILENCE, CONTACTS_ONLY }
+/** Which unknown-caller mode is active — maps to the fields in AdvancedBlockingPolicy. */
+private enum class UnknownCallerMode { ALLOW, SILENCE, CONTACTS_ONLY, VIP_ONLY }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ContactPoliciesScreen(
     onBack: () -> Unit,
+    onNavigateToPaywall: () -> Unit = {},
     viewModel: AdvancedBlockingViewModel = hiltViewModel(),
 ) {
     val policy by viewModel.policy.collectAsStateWithLifecycle()
+    val isPro by viewModel.isPro.collectAsStateWithLifecycle()
+    val vipContacts by viewModel.vipContacts.collectAsStateWithLifecycle()
+    val vipSearchResults by viewModel.vipSearchResults.collectAsStateWithLifecycle()
+
+    val context = LocalContext.current
+    var showVipManager by rememberSaveable { mutableStateOf(false) }
+
+    val contactsPermLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted -> if (granted) showVipManager = true }
+
+    fun openVipManager() {
+        val hasContacts = ContextCompat.checkSelfPermission(
+            context, Manifest.permission.READ_CONTACTS
+        ) == PackageManager.PERMISSION_GRANTED
+        if (hasContacts) showVipManager = true
+        else contactsPermLauncher.launch(Manifest.permission.READ_CONTACTS)
+    }
 
     val currentMode = when {
+        policy.vipContactsOnlyEnabled -> UnknownCallerMode.VIP_ONLY
         policy.allowContactsOnly -> UnknownCallerMode.CONTACTS_ONLY
         policy.silenceUnknownNumbers -> UnknownCallerMode.SILENCE
         else -> UnknownCallerMode.ALLOW
@@ -78,17 +117,8 @@ fun ContactPoliciesScreen(
                 .fillMaxSize()
                 .padding(innerPadding),
             contentPadding = PaddingValues(horizontal = 20.dp, vertical = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
-            item {
-                Text(
-                    "Choose how unknown callers — numbers not in your contacts — are handled.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-                )
-                Spacer(Modifier.height(8.dp))
-            }
-
             item {
                 UnknownCallerOptionCard(
                     icon = Icons.Outlined.People,
@@ -100,6 +130,7 @@ fun ContactPoliciesScreen(
                             policy.copy(
                                 allowContactsOnly = false,
                                 silenceUnknownNumbers = false,
+                                vipContactsOnlyEnabled = false,
                                 preset = BlockingPreset.CUSTOM,
                             )
                         )
@@ -118,6 +149,7 @@ fun ContactPoliciesScreen(
                             policy.copy(
                                 silenceUnknownNumbers = true,
                                 allowContactsOnly = false,
+                                vipContactsOnlyEnabled = false,
                                 preset = BlockingPreset.CUSTOM,
                             )
                         )
@@ -136,11 +168,94 @@ fun ContactPoliciesScreen(
                             policy.copy(
                                 allowContactsOnly = true,
                                 silenceUnknownNumbers = false,
+                                vipContactsOnlyEnabled = false,
                                 preset = BlockingPreset.CUSTOM,
                             )
                         )
                     },
                 )
+            }
+
+            // ── VIP Contacts Only (Pro) ───────────────────────────────────────
+            item {
+                if (isPro) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        UnknownCallerOptionCard(
+                            icon = Icons.Outlined.Star,
+                            title = "VIP contacts only",
+                            description = "Only your manually-added VIP numbers ring through. Saved contacts and unknown callers are both silenced.",
+                            selected = currentMode == UnknownCallerMode.VIP_ONLY,
+                            badge = { ProBadge() },
+                            onClick = {
+                                viewModel.updatePolicy(
+                                    policy.copy(
+                                        vipContactsOnlyEnabled = true,
+                                        allowContactsOnly = false,
+                                        silenceUnknownNumbers = false,
+                                        preset = BlockingPreset.CUSTOM,
+                                    )
+                                )
+                            },
+                        )
+                        if (currentMode == UnknownCallerMode.VIP_ONLY) {
+                            TextButton(
+                                onClick = { openVipManager() },
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Icon(
+                                    Icons.Outlined.PersonAdd,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp),
+                                )
+                                Spacer(Modifier.size(6.dp))
+                                Text(
+                                    if (vipContacts.isEmpty()) "Add VIP contacts"
+                                    else "Manage VIP contacts (${vipContacts.size})",
+                                )
+                            }
+                        }
+                    }
+                } else {
+                    ProFeatureCard(
+                        valueText = "Let through only the people who truly matter — your curated VIP list",
+                        upgradeLabel = "Unlock VIP Contacts",
+                        onUpgradeClick = onNavigateToPaywall,
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(14.dp),
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(
+                                    Icons.Outlined.Star,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(20.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    "VIP contacts only",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.SemiBold,
+                                )
+                                Spacer(Modifier.height(2.dp))
+                                Text(
+                                    "Only your manually-added VIP numbers ring through",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                                )
+                            }
+                        }
+                    }
+                }
             }
 
             item {
@@ -153,6 +268,157 @@ fun ContactPoliciesScreen(
             }
         }
     }
+
+    if (showVipManager) {
+        VipManagerSheet(
+            vipContacts = vipContacts,
+            searchResults = vipSearchResults,
+            onQueryChange = { viewModel.setVipSearchQuery(it) },
+            onAdd = { e164, label -> viewModel.addVipContact(e164, label) },
+            onRemove = { hash -> viewModel.removeVipContact(hash) },
+            onDismiss = { showVipManager = false },
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun VipManagerSheet(
+    vipContacts: List<VipContactEntry>,
+    searchResults: List<Triple<String, String, Boolean>>,
+    onQueryChange: (String) -> Unit,
+    onAdd: (String, String) -> Unit,
+    onRemove: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    var searchQuery by rememberSaveable { mutableStateOf("") }
+
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp)
+                    .padding(bottom = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text(
+                    "VIP Contacts",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                if (vipContacts.isNotEmpty()) {
+                    Text(
+                        "${vipContacts.size} added",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
+            }
+
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it; onQueryChange(it) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp)
+                    .padding(bottom = 8.dp),
+                placeholder = { Text("Search contacts to add…") },
+                leadingIcon = {
+                    Icon(Icons.Outlined.Search, contentDescription = null, modifier = Modifier.size(20.dp))
+                },
+                singleLine = true,
+                shape = RoundedCornerShape(12.dp),
+            )
+
+            LazyColumn(
+                modifier = Modifier.fillMaxWidth(),
+                contentPadding = PaddingValues(horizontal = 20.dp, vertical = 4.dp),
+            ) {
+                if (vipContacts.isNotEmpty() && searchQuery.isBlank()) {
+                    item {
+                        Text(
+                            "Your VIP list",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                            modifier = Modifier.padding(vertical = 6.dp),
+                        )
+                    }
+                    items(vipContacts, key = { "vip_${it.numberHash}" }) { contact ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                        ) {
+                            Text(contact.displayLabel, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                            IconButton(onClick = { onRemove(contact.numberHash) }) {
+                                Icon(Icons.Outlined.Close, contentDescription = "Remove", modifier = Modifier.size(18.dp))
+                            }
+                        }
+                        HorizontalDivider()
+                    }
+                }
+
+                if (searchResults.isNotEmpty()) {
+                    item {
+                        Text(
+                            "Add from contacts",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                            modifier = Modifier.padding(vertical = 6.dp),
+                        )
+                    }
+                    items(searchResults, key = { "result_${it.second}" }) { (name, e164, isAlreadyAdded) ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .then(
+                                    if (!isAlreadyAdded) Modifier.clickable { onAdd(e164, name) }
+                                    else Modifier
+                                )
+                                .padding(vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(name, style = MaterialTheme.typography.bodyMedium)
+                                Text(e164, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
+                            }
+                            if (isAlreadyAdded) {
+                                Text("Added", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                            } else {
+                                Icon(Icons.Outlined.PersonAdd, contentDescription = "Add", modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
+                            }
+                        }
+                        HorizontalDivider()
+                    }
+                } else if (searchQuery.isNotBlank()) {
+                    item {
+                        Text(
+                            "No contacts found",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                            modifier = Modifier.padding(vertical = 16.dp),
+                        )
+                    }
+                }
+            }
+
+            HorizontalDivider()
+            Button(
+                onClick = onDismiss,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 12.dp),
+            ) {
+                Text("Done")
+            }
+        }
+    }
 }
 
 @Composable
@@ -162,6 +428,7 @@ private fun UnknownCallerOptionCard(
     description: String,
     selected: Boolean,
     onClick: () -> Unit,
+    badge: (@Composable () -> Unit)? = null,
 ) {
     val primary = MaterialTheme.colorScheme.primary
     Box(
@@ -202,12 +469,18 @@ private fun UnknownCallerOptionCard(
                 )
             }
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    title,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = if (selected) primary else MaterialTheme.colorScheme.onSurface,
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    Text(
+                        title,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = if (selected) primary else MaterialTheme.colorScheme.onSurface,
+                    )
+                    badge?.invoke()
+                }
                 Spacer(Modifier.height(2.dp))
                 Text(
                     description,

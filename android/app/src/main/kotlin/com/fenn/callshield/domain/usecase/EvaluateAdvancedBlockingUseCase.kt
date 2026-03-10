@@ -19,11 +19,15 @@ import javax.inject.Inject
  * Returns non-null = policy decision (short-circuit).
  *
  * Evaluation order:
- *   1. Night Guard — silence/reject during configured hours
+ *   1. Night Guard — silence/reject during configured hours (Pro: day-of-week aware)
+ *   1b. Work Focus Window (Pro) — second silence window for work hours
  *   2. Contacts Only — reject unknown callers
  *   3. Silence Unknown — silence non-contacts
  *   4. International Lock — silence/reject numbers outside the device's home country
+ *   4b. Country filter (Pro) — whitelist or blacklist specific countries
+ *   4c. Block Unrecognized ISD (Pro) — block calls with unresolvable country codes
  *   5. Auto-Escalate — auto-add to blocklist after N rejections
+ *   5b. Burst Protection (Pro) — auto-block numbers calling N times in 10 min
  */
 class EvaluateAdvancedBlockingUseCase @Inject constructor(
     private val callHistoryRepo: CallHistoryRepository,
@@ -41,16 +45,37 @@ class EvaluateAdvancedBlockingUseCase @Inject constructor(
         // Balanced preset with no customisation: skip entirely to preserve existing behaviour
         if (policy.preset == BlockingPreset.BALANCED && !policy.isCustomized()) return null
 
-        val currentHour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
+        val cal = Calendar.getInstance()
+        val currentHour = cal.get(Calendar.HOUR_OF_DAY)
+        // ISO day: 0=Mon … 6=Sun (Calendar.DAY_OF_WEEK: 1=Sun, 2=Mon … 7=Sat)
+        val todayIsoDay = (cal.get(Calendar.DAY_OF_WEEK) + 5) % 7
 
         // 1. Night Guard
         if (policy.nightGuardEnabled) {
-            if (isInNightWindow(currentHour, policy.nightGuardStartHour, policy.nightGuardEndHour) && !isContact) {
+            val activeToday = !isPro || todayIsoDay in policy.nightGuardDays
+            if (activeToday &&
+                isInTimeWindow(currentHour, policy.nightGuardStartHour, policy.nightGuardEndHour) &&
+                !isContact
+            ) {
                 return when {
                     isPro && policy.nightGuardAction == UnknownCallAction.REJECT ->
                         CallDecision.Reject(DecisionSource.ADVANCED_BLOCKING)
                     else ->
                         CallDecision.Silence(1.0, "night_guard", DecisionSource.ADVANCED_BLOCKING)
+                }
+            }
+        }
+
+        // 1b. Work Focus Window (Pro)
+        if (isPro && policy.workFocusEnabled) {
+            val activeToday = todayIsoDay in policy.workFocusDays
+            if (activeToday &&
+                isInTimeWindow(currentHour, policy.workFocusStartHour, policy.workFocusEndHour) &&
+                !isContact
+            ) {
+                return when (policy.workFocusAction) {
+                    UnknownCallAction.REJECT -> CallDecision.Reject(DecisionSource.ADVANCED_BLOCKING)
+                    else -> CallDecision.Silence(1.0, "work_focus", DecisionSource.ADVANCED_BLOCKING)
                 }
             }
         }
@@ -89,6 +114,14 @@ class EvaluateAdvancedBlockingUseCase @Inject constructor(
             }
         }
 
+        // 4c. Block Unrecognized ISD (Pro) — no resolvable country code
+        if (isPro && policy.blockUnrecognizedIsd && e164Number != null) {
+            val callerIso = homeCountryProvider.isoFromE164(e164Number)
+            if (callerIso == null) {
+                return CallDecision.Silence(1.0, "unrecognized_isd", DecisionSource.ADVANCED_BLOCKING)
+            }
+        }
+
         // 5. Auto-Escalate — count only the last 30 days to avoid permanently penalising
         // numbers that were blocked long ago and later manually cleared.
         if (policy.autoEscalateEnabled && numberHash != null) {
@@ -102,10 +135,22 @@ class EvaluateAdvancedBlockingUseCase @Inject constructor(
             }
         }
 
+        // 5b. Burst Protection (Pro) — auto-block numbers calling N times in 10 min
+        if (isPro && policy.burstProtectionEnabled && numberHash != null) {
+            val tenMinAgo = System.currentTimeMillis() - 10L * 60 * 1_000
+            val burstCount = callHistoryRepo.countCallsSince(numberHash, since = tenMinAgo)
+            if (burstCount >= policy.burstProtectionCount - 1) {
+                if (!blocklistRepo.contains(numberHash)) {
+                    blocklistRepo.add(numberHash, "Auto-blocked (burst: $burstCount calls in 10 min)")
+                }
+                return CallDecision.Reject(DecisionSource.ADVANCED_BLOCKING)
+            }
+        }
+
         return null
     }
 
-    private fun isInNightWindow(hour: Int, start: Int, end: Int): Boolean =
+    private fun isInTimeWindow(hour: Int, start: Int, end: Int): Boolean =
         if (start > end) {
             // Crosses midnight, e.g. 22–7
             hour >= start || hour < end
@@ -113,3 +158,4 @@ class EvaluateAdvancedBlockingUseCase @Inject constructor(
             hour in start until end
         }
 }
+

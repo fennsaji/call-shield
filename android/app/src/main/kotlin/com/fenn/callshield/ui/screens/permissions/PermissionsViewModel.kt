@@ -24,6 +24,7 @@ data class PermissionsState(
     val batteryOptimisationDisabled: Boolean = false,
     val oemBatteryHint: String = "",
     val callLogGranted: Boolean = false,
+    val contactsGranted: Boolean = false,
 )
 
 @HiltViewModel
@@ -46,6 +47,7 @@ class PermissionsViewModel @Inject constructor(
             batteryOptimisationDisabled = isBatteryOptimisationDisabled(),
             oemBatteryHint = oemBatteryHint(),
             callLogGranted = isCallLogGranted(),
+            contactsGranted = isContactsGranted(),
         )
         // Re-attempt contact set initialization in case READ_CONTACTS was just granted
         contactsLookupHelper.initialize()
@@ -55,6 +57,12 @@ class PermissionsViewModel @Inject constructor(
         ContextCompat.checkSelfPermission(
             context,
             Manifest.permission.READ_CALL_LOG,
+        ) == PackageManager.PERMISSION_GRANTED
+
+    private fun isContactsGranted(): Boolean =
+        ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.READ_CONTACTS,
         ) == PackageManager.PERMISSION_GRANTED
 
     private fun isScreeningRoleGranted(): Boolean {
