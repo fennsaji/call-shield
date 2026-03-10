@@ -1,1 +1,1 @@
-Pro presets in Advanced Blocking now show lock icons. Tap any locked preset to unlock it with a CallShield Pro subscription.
+Bug fixes: VIP contacts now survive backup and restore. Burst call detection triggers more accurately. VIP contacts are stored securely on your device using a hash instead of raw numbers.
