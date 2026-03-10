@@ -12,24 +12,45 @@ data class AdvancedBlockingPolicy(
     // Contact policies
     val allowContactsOnly: Boolean = false,
     val silenceUnknownNumbers: Boolean = false,
+    // VIP Contacts Only (Pro) — only manually-added numbers ring through
+    val vipContactsOnlyEnabled: Boolean = false,
     // Night Guard (Free: fixed 10PM–7AM silence only)
     val nightGuardEnabled: Boolean = false,
     val nightGuardStartHour: Int = 22,
     val nightGuardEndHour: Int = 7,
     val nightGuardAction: UnknownCallAction = UnknownCallAction.SILENCE, // Pro can set REJECT
+    // Night Guard day schedule (Pro) — 0=Mon … 6=Sun; default = all days
+    val nightGuardDays: Set<Int> = setOf(0, 1, 2, 3, 4, 5, 6),
+    // Work Focus Window (Pro)
+    val workFocusEnabled: Boolean = false,
+    val workFocusStartHour: Int = 9,
+    val workFocusEndHour: Int = 18,
+    val workFocusAction: UnknownCallAction = UnknownCallAction.SILENCE,
+    val workFocusDays: Set<Int> = setOf(0, 1, 2, 3, 4), // Mon–Fri
     // Region policy
     val blockInternational: Boolean = false,
     // Country filter (Pro) — ISO 3166-1 alpha-2 codes
     val countryFilterMode: CountryFilterMode = CountryFilterMode.OFF,
     val countryFilterList: Set<String> = emptySet(),
+    // Block unrecognized ISD codes (Pro)
+    val blockUnrecognizedIsd: Boolean = false,
     // Escalation
     val autoEscalateEnabled: Boolean = false,
     val autoEscalateThreshold: Int = 3,
+    // Blocklist aging (Pro) — auto-remove entries that haven't called in N days
+    val blocklistAgingEnabled: Boolean = false,
+    val blocklistAgingDays: Int = 30,
+    // Burst protection (Pro) — auto-block numbers that call N times in 10 minutes
+    val burstProtectionEnabled: Boolean = false,
+    val burstProtectionCount: Int = 3,
 ) {
     /** True if any non-default option is active beyond just the preset field. */
     fun isCustomized(): Boolean =
-        allowContactsOnly || silenceUnknownNumbers || nightGuardEnabled ||
-                blockInternational || countryFilterMode != CountryFilterMode.OFF || autoEscalateEnabled
+        allowContactsOnly || silenceUnknownNumbers || vipContactsOnlyEnabled ||
+                nightGuardEnabled || workFocusEnabled ||
+                blockInternational || countryFilterMode != CountryFilterMode.OFF ||
+                blockUnrecognizedIsd || autoEscalateEnabled || blocklistAgingEnabled ||
+                burstProtectionEnabled
 }
 
 fun BlockingPreset.toDefaultPolicy(): AdvancedBlockingPolicy = when (this) {

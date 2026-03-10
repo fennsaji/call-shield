@@ -4,11 +4,13 @@ import com.fenn.callshield.data.repository.BlocklistRepositoryImpl
 import com.fenn.callshield.data.repository.CallHistoryRepositoryImpl
 import com.fenn.callshield.data.repository.PrefixRuleRepositoryImpl
 import com.fenn.callshield.data.repository.ReputationRepositoryImpl
+import com.fenn.callshield.data.repository.VipContactsRepositoryImpl
 import com.fenn.callshield.data.repository.WhitelistRepositoryImpl
 import com.fenn.callshield.domain.repository.BlocklistRepository
 import com.fenn.callshield.domain.repository.CallHistoryRepository
 import com.fenn.callshield.domain.repository.PrefixRuleRepository
 import com.fenn.callshield.domain.repository.ReputationRepository
+import com.fenn.callshield.domain.repository.VipContactsRepository
 import com.fenn.callshield.domain.repository.WhitelistRepository
 import dagger.Binds
 import dagger.Module
@@ -24,4 +26,5 @@ abstract class RepositoryModule {
     @Binds @Singleton abstract fun bindPrefixRule(impl: PrefixRuleRepositoryImpl): PrefixRuleRepository
     @Binds @Singleton abstract fun bindReputation(impl: ReputationRepositoryImpl): ReputationRepository
     @Binds @Singleton abstract fun bindCallHistory(impl: CallHistoryRepositoryImpl): CallHistoryRepository
+    @Binds @Singleton abstract fun bindVipContacts(impl: VipContactsRepositoryImpl): VipContactsRepository
 }

@@ -6,9 +6,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.fenn.callshield.billing.BillingManager
 import com.fenn.callshield.data.local.dao.BlocklistDao
-import com.fenn.callshield.data.preferences.ScreeningPreferences
 import com.fenn.callshield.data.local.dao.PrefixRuleDao
+import com.fenn.callshield.data.local.dao.VipContactsDao
 import com.fenn.callshield.data.local.dao.WhitelistDao
+import com.fenn.callshield.data.preferences.ScreeningPreferences
 import com.fenn.callshield.util.BackupManager
 import com.fenn.callshield.util.BackupPayload
 import com.fenn.callshield.util.WrongPinException
@@ -52,6 +53,7 @@ class BackupViewModel @Inject constructor(
     private val blocklistDao: BlocklistDao,
     private val whitelistDao: WhitelistDao,
     private val prefixRuleDao: PrefixRuleDao,
+    private val vipContactsDao: VipContactsDao,
     private val billingManager: BillingManager,
     private val screeningPreferences: ScreeningPreferences,
 ) : ViewModel() {
@@ -98,9 +100,11 @@ class BackupViewModel @Inject constructor(
                 blocklistDao.deleteAll()
                 whitelistDao.deleteAll()
                 prefixRuleDao.deleteAll()
+                vipContactsDao.deleteAll()
                 entities.blocklist.forEach { blocklistDao.insert(it) }
                 entities.whitelist.forEach { whitelistDao.insert(it) }
                 prefixRulesToRestore.forEach { prefixRuleDao.insert(it) }
+                entities.vipContacts.forEach { vipContactsDao.insert(it) }
 
                 payload.settings?.let { s ->
                     val settingsToRestore = if (freeOnly) s.copy(
@@ -120,7 +124,7 @@ class BackupViewModel @Inject constructor(
                     screeningPreferences.restoreFromBackup(settingsToRestore)
                 }
             }
-            val total = payload.blocklist.size + payload.whitelist.size +
+            val total = payload.blocklist.size + payload.whitelist.size + payload.vipContacts.size +
                 if (freeOnly) minOf(payload.prefixRules.size, FREE_PREFIX_RULE_LIMIT) else payload.prefixRules.size
             _state.value = _state.value.copy(
                 status = BackupStatus.Success("Restored $total entries"),
@@ -157,13 +161,15 @@ class BackupViewModel @Inject constructor(
         _state.value = _state.value.copy(status = BackupStatus.Processing, pendingUri = null)
         viewModelScope.launch {
             try {
-                val blocklist   = withContext(Dispatchers.IO) { blocklistDao.observeAll().first() }
-                val whitelist   = withContext(Dispatchers.IO) { whitelistDao.observeAll().first() }
-                val prefixRules = withContext(Dispatchers.IO) { prefixRuleDao.observeAll().first() }
+                val blocklist    = withContext(Dispatchers.IO) { blocklistDao.observeAll().first() }
+                val whitelist    = withContext(Dispatchers.IO) { whitelistDao.observeAll().first() }
+                val prefixRules  = withContext(Dispatchers.IO) { prefixRuleDao.observeAll().first() }
+                val vipContacts  = withContext(Dispatchers.IO) { vipContactsDao.getAll() }
                 val settings = withContext(Dispatchers.IO) { screeningPreferences.readAllForBackup() }
                 val bytes = withContext(Dispatchers.Default) {
                     backupManager.exportBackup(
                         blocklist, whitelist, prefixRules,
+                        vipContacts = vipContacts,
                         isPro = billingManager.isPro.value,
                         settings = settings,
                         pin = pin,
@@ -173,7 +179,7 @@ class BackupViewModel @Inject constructor(
                     context.contentResolver.openOutputStream(uri)?.use { it.write(bytes) }
                         ?: error("Could not open output stream")
                 }
-                val total = blocklist.size + whitelist.size + prefixRules.size
+                val total = blocklist.size + whitelist.size + prefixRules.size + vipContacts.size
                 _state.value = _state.value.copy(status = BackupStatus.Success("Exported $total entries"))
             } catch (e: Exception) {
                 _state.value = _state.value.copy(

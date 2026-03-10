@@ -25,6 +25,9 @@ interface BlocklistDao {
     @Query("DELETE FROM blocklist WHERE numberHash = :hash")
     suspend fun deleteByHash(hash: String)
 
+    @Query("SELECT * FROM blocklist")
+    suspend fun getAll(): List<BlocklistEntry>
+
     @Query("DELETE FROM blocklist")
     suspend fun deleteAll()
 }

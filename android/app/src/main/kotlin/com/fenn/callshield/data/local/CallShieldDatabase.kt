@@ -10,6 +10,7 @@ import com.fenn.callshield.data.local.dao.TraiReportDao
 import com.fenn.callshield.data.local.dao.PrefixRuleDao
 import com.fenn.callshield.data.local.dao.ScamDigestDao
 import com.fenn.callshield.data.local.dao.SeedDbDao
+import com.fenn.callshield.data.local.dao.VipContactsDao
 import com.fenn.callshield.data.local.dao.WhitelistDao
 import com.fenn.callshield.data.local.entity.BlocklistEntry
 import com.fenn.callshield.data.local.entity.CallerEventEntry
@@ -20,6 +21,7 @@ import com.fenn.callshield.data.local.entity.PrefixRule
 import com.fenn.callshield.data.local.entity.ScamDigestEntry
 import com.fenn.callshield.data.local.entity.SeedDbMeta
 import com.fenn.callshield.data.local.entity.SeedDbNumber
+import com.fenn.callshield.data.local.entity.VipContactEntry
 import com.fenn.callshield.data.local.entity.WhitelistEntry
 
 @Database(
@@ -34,8 +36,9 @@ import com.fenn.callshield.data.local.entity.WhitelistEntry
         CallerEventEntry::class,
         TraiReportEntry::class,
         DndCommandEntry::class,
+        VipContactEntry::class,
     ],
-    version = 6,
+    version = 8,
     exportSchema = true,
 )
 abstract class CallShieldDatabase : RoomDatabase() {
@@ -48,4 +51,5 @@ abstract class CallShieldDatabase : RoomDatabase() {
     abstract fun callerEventDao(): CallerEventDao
     abstract fun traiReportDao(): TraiReportDao
     abstract fun dndCommandDao(): DndCommandDao
+    abstract fun vipContactsDao(): VipContactsDao
 }

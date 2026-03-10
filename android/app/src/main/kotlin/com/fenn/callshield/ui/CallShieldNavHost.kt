@@ -245,7 +245,10 @@ fun CallShieldNavHost(
         }
 
         composable(Destinations.CONTACT_POLICIES) {
-            ContactPoliciesScreen(onBack = { navController.popBackStack() })
+            ContactPoliciesScreen(
+                onBack = { navController.popBackStack() },
+                onNavigateToPaywall = { navController.navigate(Destinations.paywallRoute()) },
+            )
         }
 
         composable(Destinations.TIME_POLICIES) {
@@ -268,6 +271,7 @@ fun CallShieldNavHost(
                 onNavigateToBlocklist = { navController.navigate(Destinations.BLOCKLIST) },
                 onNavigateToWhitelist = { navController.navigate(Destinations.WHITELIST) },
                 onNavigateToPrefixRules = { navController.navigate(Destinations.PREFIX_RULES) },
+                onNavigateToPaywall = { navController.navigate(Destinations.paywallRoute()) },
             )
         }
 

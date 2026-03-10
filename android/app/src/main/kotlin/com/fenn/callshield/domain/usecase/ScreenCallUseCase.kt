@@ -3,6 +3,7 @@ package com.fenn.callshield.domain.usecase
 import com.fenn.callshield.Phase2Flags
 import com.fenn.callshield.billing.BillingManager
 import com.fenn.callshield.data.local.ContactsLookupHelper
+import com.fenn.callshield.data.local.VipContactsLookupHelper
 import com.fenn.callshield.data.preferences.ScreeningPreferences
 import com.fenn.callshield.domain.model.CONFIDENCE_BLOCK_THRESHOLD
 import com.fenn.callshield.domain.model.CONFIDENCE_FLAG_THRESHOLD
@@ -40,6 +41,7 @@ class ScreenCallUseCase @Inject constructor(
     private val frequencyAnalyzer: CallFrequencyAnalyzer,
     private val screeningPreferences: ScreeningPreferences,
     private val contactsLookupHelper: ContactsLookupHelper,
+    private val vipContactsLookupHelper: VipContactsLookupHelper,
     private val evaluateAdvancedBlocking: EvaluateAdvancedBlockingUseCase,
 ) {
 
@@ -64,13 +66,21 @@ class ScreenCallUseCase @Inject constructor(
             return CallDecision.Allow
         }
 
+        val advPolicy = screeningPreferences.getAdvancedBlockingPolicy()
+
+        // ── 2.5. VIP Contacts Only (Pro) ──────────────────────────────────────
+        if (isPro && advPolicy.vipContactsOnlyEnabled && e164 != null) {
+            if (!vipContactsLookupHelper.isVip(e164)) {
+                return CallDecision.Reject(DecisionSource.ADVANCED_BLOCKING)
+            }
+        }
+
         // ── 3. Blocklist ──────────────────────────────────────────────────────
         if (hash != null && blocklistRepo.contains(hash)) {
             return CallDecision.Reject(DecisionSource.BLOCKLIST)
         }
 
         // ── 3b. Advanced Blocking Policies ───────────────────────────────────
-        val advPolicy = screeningPreferences.getAdvancedBlockingPolicy()
         if (advPolicy.preset != BlockingPreset.BALANCED || advPolicy.isCustomized()) {
             val isContact = if (e164 != null) contactsLookupHelper.isInContacts(e164) else false
             evaluateAdvancedBlocking.evaluate(e164, hash, isContact, advPolicy, isPro)

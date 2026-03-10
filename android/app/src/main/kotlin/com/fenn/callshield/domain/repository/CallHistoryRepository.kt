@@ -17,6 +17,7 @@ interface CallHistoryRepository {
     suspend fun stats(): CallStats
     fun observeStats(): Flow<CallStats>
     suspend fun countRejections(numberHash: String, since: Long): Int
+    suspend fun countCallsSince(numberHash: String, since: Long): Int
 }
 
 data class CallStats(
