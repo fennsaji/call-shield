@@ -2,13 +2,13 @@ package com.fenn.callshield.data.local
 
 import android.content.Context
 import androidx.hilt.work.HiltWorker
+import androidx.work.Constraints
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.fenn.callshield.data.local.dao.BlocklistDao
-import com.fenn.callshield.data.local.dao.CallHistoryDao
 import com.fenn.callshield.data.preferences.ScreeningPreferences
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
@@ -25,7 +25,6 @@ class BlocklistAgingWorker @AssistedInject constructor(
     @Assisted context: Context,
     @Assisted workerParams: WorkerParameters,
     private val blocklistDao: BlocklistDao,
-    private val callHistoryDao: CallHistoryDao,
     private val screeningPrefs: ScreeningPreferences,
 ) : CoroutineWorker(context, workerParams) {
 
@@ -34,11 +33,8 @@ class BlocklistAgingWorker @AssistedInject constructor(
         if (!policy.blocklistAgingEnabled) return Result.success()
 
         val cutoff = System.currentTimeMillis() - policy.blocklistAgingDays.toLong() * 24 * 60 * 60 * 1_000
-        val entries = blocklistDao.getAll()
-        entries.forEach { entry ->
-            val recentCalls = callHistoryDao.countCallsSince(entry.numberHash, since = cutoff)
-            if (recentCalls == 0) blocklistDao.deleteByHash(entry.numberHash)
-        }
+        // Single bulk DELETE — replaces the N+1 fetch-and-delete loop.
+        blocklistDao.deleteEntriesWithNoCallsSince(cutoff)
         return Result.success()
     }
 
@@ -46,7 +42,11 @@ class BlocklistAgingWorker @AssistedInject constructor(
         private const val WORK_TAG = "blocklist_aging"
 
         fun schedule(context: Context) {
+            val constraints = Constraints.Builder()
+                .setRequiresBatteryNotLow(true)
+                .build()
             val request = PeriodicWorkRequestBuilder<BlocklistAgingWorker>(1, TimeUnit.DAYS)
+                .setConstraints(constraints)
                 .build()
             WorkManager.getInstance(context).enqueueUniquePeriodicWork(
                 WORK_TAG,

@@ -30,4 +30,19 @@ interface BlocklistDao {
 
     @Query("DELETE FROM blocklist")
     suspend fun deleteAll()
+
+    /**
+     * Bulk-delete all blocklist entries whose number has had zero calls (any outcome)
+     * recorded in call_history since [cutoff]. Replaces the N+1 fetch-and-delete loop
+     * in BlocklistAgingWorker with a single DELETE … WHERE NOT EXISTS query.
+     */
+    @Query(
+        """
+        DELETE FROM blocklist
+        WHERE numberHash NOT IN (
+            SELECT DISTINCT numberHash FROM call_history WHERE screenedAt >= :cutoff
+        )
+        """
+    )
+    suspend fun deleteEntriesWithNoCallsSince(cutoff: Long)
 }

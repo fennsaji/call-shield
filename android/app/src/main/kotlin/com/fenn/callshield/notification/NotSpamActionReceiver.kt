@@ -10,6 +10,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeout
 import javax.inject.Inject
 
 const val ACTION_NOT_SPAM = "com.fenn.callshield.action.NOT_SPAM"
@@ -39,7 +40,9 @@ class NotSpamActionReceiver : BroadcastReceiver() {
         val pendingResult = goAsync()
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
             try {
-                markNotSpamUseCase.execute(numberHash, displayLabel)
+                withTimeout(5_000) {
+                    markNotSpamUseCase.execute(numberHash, displayLabel)
+                }
             } finally {
                 pendingResult.finish()
             }

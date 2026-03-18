@@ -166,11 +166,12 @@ class CallNotificationManager @Inject constructor(
         category: String?,
     ) {
         if (!hasNotificationPermission()) return
+        val notifId = notifIdCounter.getAndIncrement()
         val percent = (confidenceScore * 100).roundToInt()
         val categoryLabel = category?.replace('_', ' ')?.replaceFirstChar { it.uppercase() } ?: "Spam"
         Log.d(TAG, "Posting flagged notification for $displayLabel score=$percent%")
         val openIntent = PendingIntent.getActivity(
-            context, 0, mainActivityIntent(),
+            context, notifId, mainActivityIntent(),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 
@@ -183,7 +184,7 @@ class CallNotificationManager @Inject constructor(
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .build()
 
-        notifManager.notify(notifIdCounter.getAndIncrement(), notification)
+        notifManager.notify(notifId, notification)
     }
 
     fun showNightGuardNotification(

@@ -2,6 +2,7 @@ package com.fenn.callshield.data.behavioral
 
 import android.content.Context
 import androidx.hilt.work.HiltWorker
+import androidx.work.Constraints
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
@@ -35,10 +36,13 @@ class BehavioralPurgeWorker @AssistedInject constructor(
         private const val WORK_NAME = "behavioral_ttl_purge"
 
         fun schedule(context: Context) {
+            val constraints = Constraints.Builder()
+                .setRequiresBatteryNotLow(true)
+                .build()
             val request = PeriodicWorkRequestBuilder<BehavioralPurgeWorker>(
                 repeatInterval = 12,
                 repeatIntervalTimeUnit = TimeUnit.HOURS,
-            ).build()
+            ).setConstraints(constraints).build()
 
             WorkManager.getInstance(context).enqueueUniquePeriodicWork(
                 WORK_NAME,

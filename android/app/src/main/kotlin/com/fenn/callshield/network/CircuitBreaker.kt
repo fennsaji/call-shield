@@ -2,6 +2,7 @@ package com.fenn.callshield.network
 
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Three-state circuit breaker for the remote reputation API.
@@ -12,6 +13,10 @@ import kotlinx.coroutines.sync.withLock
  *   HALF_OPEN — single probe attempt allowed; success → CLOSED, failure → OPEN
  *
  * Opens when the failure rate exceeds [failureThreshold] in the last [windowSize] calls.
+ *
+ * HALF_OPEN race protection: only one probe is allowed in-flight at a time. Concurrent
+ * callers that arrive while a probe is already in progress receive [CircuitOpenException]
+ * immediately rather than racing through as additional probes.
  */
 class CircuitBreaker(
     private val windowSize: Int = 10,
@@ -25,11 +30,30 @@ class CircuitBreaker(
     private var state = State.CLOSED
     private var openedAt: Long = 0L
 
+    /** True while a HALF_OPEN probe is executing. Prevents concurrent probes. */
+    private val probeInFlight = AtomicBoolean(false)
+
     suspend fun <T> execute(block: suspend () -> T): T {
         val current = mutex.withLock { checkState() }
         return when (current) {
             State.OPEN -> throw CircuitOpenException()
-            State.CLOSED, State.HALF_OPEN -> {
+            State.HALF_OPEN -> {
+                // Only one probe may be in-flight at a time; reject all others immediately.
+                if (!probeInFlight.compareAndSet(false, true)) {
+                    throw CircuitOpenException()
+                }
+                try {
+                    val result = block()
+                    mutex.withLock { recordOutcome(success = true) }
+                    result
+                } catch (e: Exception) {
+                    mutex.withLock { recordOutcome(success = false) }
+                    throw e
+                } finally {
+                    probeInFlight.set(false)
+                }
+            }
+            State.CLOSED -> {
                 try {
                     val result = block()
                     mutex.withLock { recordOutcome(success = true) }

@@ -1,8 +1,11 @@
 /**
  * POST /verify-subscription
  *
- * Verifies a Google Play subscription purchase token via the Google Play
- * Developer API. Returns the entitlement state (active / expired).
+ * Verifies a Google Play purchase token via the Google Play Developer API.
+ * Handles both recurring subscriptions and the one-time lifetime in-app product.
+ *
+ *   Subscriptions  → purchases.subscriptionsv2.get
+ *   One-time INAPP → purchases.products.get
  *
  * Body (JSON):
  *   {
@@ -20,7 +23,13 @@ import { errorResponse, jsonResponse } from "../_shared/errors.ts";
 
 const PACKAGE_NAME = "com.fenn.callshield";
 
-const PRODUCT_IDS = ["callshield_pro_annual", "callshield_pro_monthly"];
+/** Recurring subscription product IDs (verified via purchases.subscriptionsv2.get). */
+const SUBSCRIPTION_PRODUCT_IDS = ["callshield_pro_annual", "callshield_pro_monthly"];
+
+/** One-time in-app product IDs (verified via purchases.products.get). */
+const INAPP_PRODUCT_IDS = ["callshield_pro_lifetime"];
+
+const PRODUCT_IDS = [...SUBSCRIPTION_PRODUCT_IDS, ...INAPP_PRODUCT_IDS];
 
 Deno.serve(async (req: Request) => {
   const corsResult = handleCors(req);
@@ -56,29 +65,55 @@ Deno.serve(async (req: Request) => {
   try {
     const accessToken = await getGoogleAccessToken(serviceAccountKey);
 
-    const verifyUrl = `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${PACKAGE_NAME}/purchases/subscriptionsv2/tokens/${purchase_token}`;
+    const isInApp = INAPP_PRODUCT_IDS.includes(product_id);
 
-    const response = await fetch(verifyUrl, {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
+    if (isInApp) {
+      // One-time in-app purchase: use purchases.products.get
+      const verifyUrl = `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${PACKAGE_NAME}/purchases/products/${product_id}/tokens/${purchase_token}`;
 
-    if (!response.ok) {
-      const errBody = await response.text();
-      console.error("Google Play API error:", errBody);
-      return errorResponse("Failed to verify purchase", 502);
+      const response = await fetch(verifyUrl, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+
+      if (!response.ok) {
+        const errBody = await response.text();
+        console.error("Google Play API error (INAPP):", errBody);
+        return errorResponse("Failed to verify purchase", 502);
+      }
+
+      const data = await response.json();
+
+      // purchaseState: 0 = Purchased, 1 = Canceled, 2 = Pending
+      const isActive = data.purchaseState === 0;
+
+      // One-time purchases have no expiry
+      return jsonResponse({ active: isActive, expiry_time_ms: null });
+    } else {
+      // Recurring subscription: use purchases.subscriptionsv2.get
+      const verifyUrl = `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${PACKAGE_NAME}/purchases/subscriptionsv2/tokens/${purchase_token}`;
+
+      const response = await fetch(verifyUrl, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+
+      if (!response.ok) {
+        const errBody = await response.text();
+        console.error("Google Play API error (SUB):", errBody);
+        return errorResponse("Failed to verify purchase", 502);
+      }
+
+      const data = await response.json();
+
+      // subscriptionState: SUBSCRIPTION_STATE_ACTIVE | SUBSCRIPTION_STATE_EXPIRED | ...
+      const isActive = data.subscriptionState === "SUBSCRIPTION_STATE_ACTIVE" ||
+        data.subscriptionState === "SUBSCRIPTION_STATE_IN_GRACE_PERIOD";
+
+      const expiryTimeMs = data.lineItems?.[0]?.expiryTime
+        ? new Date(data.lineItems[0].expiryTime).getTime()
+        : null;
+
+      return jsonResponse({ active: isActive, expiry_time_ms: expiryTimeMs });
     }
-
-    const data = await response.json();
-
-    // subscriptionState: SUBSCRIPTION_STATE_ACTIVE | SUBSCRIPTION_STATE_EXPIRED | ...
-    const isActive = data.subscriptionState === "SUBSCRIPTION_STATE_ACTIVE" ||
-      data.subscriptionState === "SUBSCRIPTION_STATE_IN_GRACE_PERIOD";
-
-    const expiryTimeMs = data.lineItems?.[0]?.expiryTime
-      ? new Date(data.lineItems[0].expiryTime).getTime()
-      : null;
-
-    return jsonResponse({ active: isActive, expiry_time_ms: expiryTimeMs });
   } catch (err) {
     console.error("Subscription verification error:", err);
     return errorResponse("Verification failed", 500);

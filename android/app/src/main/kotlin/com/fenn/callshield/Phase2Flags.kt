@@ -6,10 +6,10 @@ package com.fenn.callshield
  */
 object Phase2Flags {
     /** On-device behavioral detection: frequency anomaly, burst pattern, short-ring. */
-    const val BEHAVIORAL_DETECTION = true
+    const val BEHAVIORAL_DETECTION = false
 
     /** TRAI Quick Report button in call history and reason transparency panel. */
-    const val TRAI_REPORT = true
+    const val TRAI_REPORT = false
 
     /** SMS scam detection — Phase 2 later addition, off by default. */
     const val SMS_DETECTION = false

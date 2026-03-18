@@ -37,7 +37,7 @@ open class HomeCountryProvider @Inject constructor(
 
     /** E.164 calling code prefix for the home country, e.g. "+91", "+1", "+44". */
     open val callingCodePrefix: String
-        get() = CALLING_CODES[isoCode] ?: "+1"
+        get() = CALLING_CODES[isoCode] ?: "+91"
 
     /**
      * Best-effort lookup: given an E.164 number returns the ISO 3166-1 alpha-2 country code.
