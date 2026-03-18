@@ -40,9 +40,11 @@ Deno.serve(async (req: Request) => {
 
   if (req.method !== "POST") return errorResponse("Method not allowed", 405);
 
-  // Admin-only: require secret header
+  // Admin-only: require secret header.
+  // Fail-closed: if ADMIN_SECRET is not configured, reject all requests rather
+  // than allowing unauthenticated access.
   const adminSecret = Deno.env.get("ADMIN_SECRET");
-  if (adminSecret && req.headers.get("x-admin-secret") !== adminSecret) {
+  if (!adminSecret || req.headers.get("x-admin-secret") !== adminSecret) {
     return errorResponse("Unauthorized", 401);
   }
 

@@ -36,6 +36,9 @@ const VALID_CATEGORIES = [
   "other",
 ];
 
+/** Phase 2 features (category voting, quarantine queue) are not yet active. */
+const PHASE2_ENABLED = false;
+
 /** Number of reports in 60 minutes that triggers quarantine (PRD §9: velocity guard). */
 const QUARANTINE_VELOCITY_THRESHOLD = 5;
 const QUARANTINE_VELOCITY_WINDOW_MS = 60 * 60 * 1000;  // 60 minutes
@@ -91,85 +94,66 @@ Deno.serve(async (req: Request) => {
   const isNewReporter = !existing;
 
   // Always insert the report event (audit trail)
-  await supabase.from("report_events").insert({
+  const { error: reportEventError } = await supabase.from("report_events").insert({
     number_hash,
     device_token_hash,
     category,
     schema_version: 1,
   });
+  if (reportEventError) throw new Error(`Failed to insert report event: ${reportEventError.message}`);
 
   // Insert deduplication record if this is a new reporter
   if (isNewReporter) {
-    await supabase.from("reporter_deduplication").insert({
+    const { error: dedupError } = await supabase.from("reporter_deduplication").insert({
       number_hash,
       device_token_hash,
     });
+    if (dedupError) throw new Error(`Failed to insert deduplication record: ${dedupError.message}`);
   }
 
-  // ── Phase 2: Category voting ─────────────────────────────────────────────
-  // Upsert into number_categories, incrementing vote count for this category.
-  await supabase.from("number_categories").upsert(
-    {
-      number_hash,
-      category,
-      vote_count: 1,
-      last_voted_at: new Date().toISOString(),
-    },
-    {
-      onConflict: "number_hash,category",
-      // Use a raw SQL expression for the increment via RPC would be cleaner,
-      // but the upsert with ignoreDuplicates = false + merge is the Supabase JS way.
-      // We'll fetch + update to ensure accurate counts.
-      ignoreDuplicates: false,
-    },
-  );
-
-  // Fetch current vote for this category and increment
-  const { data: existingVote } = await supabase
-    .from("number_categories")
-    .select("vote_count")
-    .eq("number_hash", number_hash)
-    .eq("category", category)
-    .single();
-
-  if (existingVote && existingVote.vote_count > 1) {
-    // Row already existed before our upsert — increment by 1
-    await supabase
-      .from("number_categories")
-      .update({
-        vote_count: existingVote.vote_count + 1,
+  if (PHASE2_ENABLED) {
+    // ── Phase 2: Category voting ───────────────────────────────────────────
+    // Upsert into number_categories, incrementing vote count for this category.
+    await supabase.from("number_categories").upsert(
+      {
+        number_hash,
+        category,
+        vote_count: 1,
         last_voted_at: new Date().toISOString(),
-      })
+      },
+      {
+        onConflict: "number_hash,category",
+        // Use a raw SQL expression for the increment via RPC would be cleaner,
+        // but the upsert with ignoreDuplicates = false + merge is the Supabase JS way.
+        // We'll fetch + update to ensure accurate counts.
+        ignoreDuplicates: false,
+      },
+    );
+
+    // Fetch current vote for this category and increment
+    const { data: existingVote } = await supabase
+      .from("number_categories")
+      .select("vote_count")
       .eq("number_hash", number_hash)
-      .eq("category", category);
-  }
+      .eq("category", category)
+      .single();
 
-  // Determine dominant category with ≥3 lead over runner-up (PRD §9 category voting rule).
-  // Prevents single-actor category flipping — a category must clearly dominate before promotion.
-  const { data: allCategoryVotes } = await supabase
-    .from("number_categories")
-    .select("category, vote_count")
-    .eq("number_hash", number_hash)
-    .order("vote_count", { ascending: false })
-    .limit(2);
-
-  let dominantCategory = category;  // fallback: keep the newly reported category
-  if (allCategoryVotes && allCategoryVotes.length > 0) {
-    const top = allCategoryVotes[0];
-    const runnerUp = allCategoryVotes[1];
-    const lead = top.vote_count - (runnerUp?.vote_count ?? 0);
-    if (lead >= 3) {
-      dominantCategory = top.category;
-    } else {
-      // Lead < 3: retain the current category on the reputation record (no flip)
-      const { data: currentRep } = await supabase
-        .from("reputation")
-        .select("category")
+    if (existingVote && existingVote.vote_count > 1) {
+      // Row already existed before our upsert — increment by 1
+      await supabase
+        .from("number_categories")
+        .update({
+          vote_count: existingVote.vote_count + 1,
+          last_voted_at: new Date().toISOString(),
+        })
         .eq("number_hash", number_hash)
-        .single();
-      dominantCategory = currentRep?.category ?? category;
+        .eq("category", category);
     }
   }
+
+  // Phase 1: category on the reputation record is whatever was just reported.
+  // Phase 2 will replace this with the dominant-category voting logic above.
+  const dominantCategory = category;
 
   // Fetch current reputation state
   const { data: current } = await supabase
@@ -185,36 +169,43 @@ Deno.serve(async (req: Request) => {
 
   let newConfidenceScore = computeConfidenceScore(newUniqueReporters, negativeSignals, now);
 
-  // ── Phase 2: Quarantine velocity check ──────────────────────────────────
-  // Count reports for this number in the last 60 minutes (PRD §9 velocity window)
-  const sinceVelocityWindow = new Date(Date.now() - QUARANTINE_VELOCITY_WINDOW_MS).toISOString();
-  const { count: recentReportCount } = await supabase
-    .from("report_events")
-    .select("id", { count: "exact", head: true })
-    .eq("number_hash", number_hash)
-    .gte("reported_at", sinceVelocityWindow);
+  let isVelocityBurst = false;
 
-  const isVelocityBurst = (recentReportCount ?? 0) >= QUARANTINE_VELOCITY_THRESHOLD;
+  if (PHASE2_ENABLED) {
+    // ── Phase 2: Quarantine velocity check ────────────────────────────────
+    // Count reports for this number in the last 60 minutes (PRD §9 velocity window)
+    const sinceVelocityWindow = new Date(Date.now() - QUARANTINE_VELOCITY_WINDOW_MS).toISOString();
+    const { count: recentReportCount } = await supabase
+      .from("report_events")
+      .select("id", { count: "exact", head: true })
+      .eq("number_hash", number_hash)
+      .gte("reported_at", sinceVelocityWindow);
 
-  if (isVelocityBurst) {
-    // Upsert into quarantine queue
-    await supabase.from("quarantine_queue").upsert(
-      {
-        number_hash,
-        trigger_reason: "velocity",
-        report_count_24h: recentReportCount ?? QUARANTINE_VELOCITY_THRESHOLD,
-        quarantined_at: now.toISOString(),
-        expires_at: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString(),
-        reviewed: false,
-      },
-      { onConflict: "number_hash" },
-    );
+    isVelocityBurst = (recentReportCount ?? 0) >= QUARANTINE_VELOCITY_THRESHOLD;
 
-    // Cap confidence score at 0.75 for quarantined numbers (prevents auto-block until reviewed)
-    newConfidenceScore = Math.min(newConfidenceScore, 0.75);
+    if (isVelocityBurst) {
+      // Upsert into quarantine queue
+      await supabase.from("quarantine_queue").upsert(
+        {
+          number_hash,
+          trigger_reason: "velocity",
+          report_count_24h: recentReportCount ?? QUARANTINE_VELOCITY_THRESHOLD,
+          quarantined_at: now.toISOString(),
+          expires_at: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString(),
+          reviewed: false,
+        },
+        { onConflict: "number_hash" },
+      );
+
+      // Cap confidence score at 0.75 for quarantined numbers (prevents auto-block until reviewed)
+      newConfidenceScore = Math.min(newConfidenceScore, 0.75);
+    }
   }
 
-  // Upsert reputation record with dominant category
+  // Upsert reputation record.
+  // negative_signals is NOT included in the upsert payload so that on conflict
+  // the existing column value is preserved (negative_signals is only modified
+  // by the /correct endpoint — never reset here).
   await supabase.from("reputation").upsert({
     number_hash,
     report_count: newReportCount,
