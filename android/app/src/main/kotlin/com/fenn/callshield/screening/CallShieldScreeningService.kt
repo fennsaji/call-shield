@@ -45,7 +45,7 @@ class CallShieldScreeningService : CallScreeningService() {
 
     override fun onScreenCall(callDetails: Call.Details) {
         val rawNumber = callDetails.handle?.schemeSpecificPart
-        Log.d(TAG, "onScreenCall: number=$rawNumber direction=${callDetails.callDirection}")
+        Log.d(TAG, "onScreenCall: number=[redacted] direction=${callDetails.callDirection}")
 
         // Notify RingTimeRegistry so short-ring detection works on next IDLE transition
         if (Phase2Flags.BEHAVIORAL_DETECTION && rawNumber != null) {
@@ -60,7 +60,7 @@ class CallShieldScreeningService : CallScreeningService() {
                     screenCallUseCase.execute(rawNumber)
                 }
 
-                Log.d(TAG, "Decision: $decision for $rawNumber")
+                Log.d(TAG, "Decision: $decision for [redacted]")
                 respondToCall(callDetails, buildResponse(decision))
                 responded = true
 
@@ -71,7 +71,7 @@ class CallShieldScreeningService : CallScreeningService() {
                 }
             } catch (e: Exception) {
                 if (responded) return@launch  // already responded — do not override with allow
-                Log.e(TAG, "Screening failed for $rawNumber — allowing (fail open)", e)
+                Log.e(TAG, "Screening failed for [redacted] — allowing (fail open)", e)
                 respondToCall(
                     callDetails,
                     CallResponse.Builder()

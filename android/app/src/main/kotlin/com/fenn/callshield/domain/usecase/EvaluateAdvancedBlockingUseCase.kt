@@ -136,10 +136,11 @@ class EvaluateAdvancedBlockingUseCase @Inject constructor(
         }
 
         // 5b. Burst Protection (Pro) — auto-block numbers calling N times in 10 min
-        if (isPro && policy.burstProtectionEnabled && numberHash != null) {
+        // Contacts are excluded: a family member calling repeatedly must never be auto-blocked.
+        if (isPro && policy.burstProtectionEnabled && numberHash != null && !isContact) {
             val tenMinAgo = System.currentTimeMillis() - 10L * 60 * 1_000
             val burstCount = callHistoryRepo.countCallsSince(numberHash, since = tenMinAgo)
-            if (burstCount >= policy.burstProtectionCount - 1) {
+            if (policy.burstProtectionCount >= 2 && burstCount >= policy.burstProtectionCount - 1) {
                 if (!blocklistRepo.contains(numberHash)) {
                     blocklistRepo.add(numberHash, "Auto-blocked (burst: $burstCount calls in 10 min)")
                 }

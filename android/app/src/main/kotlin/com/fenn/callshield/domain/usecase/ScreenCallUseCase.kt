@@ -66,23 +66,23 @@ class ScreenCallUseCase @Inject constructor(
             return CallDecision.Allow
         }
 
+        // ── 3. Blocklist ──────────────────────────────────────────────────────
+        if (hash != null && blocklistRepo.contains(hash)) {
+            return CallDecision.Reject(DecisionSource.BLOCKLIST)
+        }
+
         val advPolicy = screeningPreferences.getAdvancedBlockingPolicy()
 
-        // ── 2.5. VIP Contacts Only (Pro) ──────────────────────────────────────
+        // ── 3.5. VIP Contacts Only (Pro) ─────────────────────────────────────
         if (isPro && advPolicy.vipContactsOnlyEnabled && e164 != null) {
             if (!vipContactsLookupHelper.isVip(e164)) {
                 return CallDecision.Reject(DecisionSource.ADVANCED_BLOCKING)
             }
         }
 
-        // ── 3. Blocklist ──────────────────────────────────────────────────────
-        if (hash != null && blocklistRepo.contains(hash)) {
-            return CallDecision.Reject(DecisionSource.BLOCKLIST)
-        }
-
         // ── 3b. Advanced Blocking Policies ───────────────────────────────────
+        val isContact = if (e164 != null) contactsLookupHelper.isInContacts(e164) else false
         if (advPolicy.preset != BlockingPreset.BALANCED || advPolicy.isCustomized()) {
-            val isContact = if (e164 != null) contactsLookupHelper.isInContacts(e164) else false
             evaluateAdvancedBlocking.evaluate(e164, hash, isContact, advPolicy, isPro)
                 ?.let { return it }
         }
@@ -111,8 +111,8 @@ class ScreenCallUseCase @Inject constructor(
             BehavioralSignals.NONE
         }
 
-        // Burst pattern alone is strong enough to flag the call
-        if (behavioral.burstPattern) {
+        // Burst pattern alone is strong enough to flag the call — skip contacts
+        if (behavioral.burstPattern && !isContact) {
             return CallDecision.Flag(0.5, "burst_pattern", DecisionSource.BEHAVIORAL)
         }
 
