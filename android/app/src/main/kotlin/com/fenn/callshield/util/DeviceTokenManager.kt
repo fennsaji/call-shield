@@ -36,7 +36,6 @@ private const val GCM_TAG_LENGTH = 128
 @Singleton
 class DeviceTokenManager @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val hasher: PhoneNumberHasher,
 ) {
 
     // Lazily initialised — safe to call from any thread after first access

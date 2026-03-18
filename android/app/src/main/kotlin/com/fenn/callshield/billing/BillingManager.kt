@@ -283,6 +283,22 @@ class BillingManager @Inject constructor(
     }
 
     override fun onPurchasesUpdated(result: BillingResult, purchases: List<Purchase>?) {
+        if (result.responseCode == BillingClient.BillingResponseCode.OK && purchases.isNullOrEmpty()) {
+            // Subscription was cancelled, expired, or refunded — revoke Pro status immediately.
+            val promoGrant  = promoGrantManager.activeGrant(deviceTokenManager.deviceTokenHash)
+            val hasPromoPro = promoGrant != PromoGrant.NONE
+            _isPro.value = hasPromoPro
+            if (!hasPromoPro) {
+                _planType.value                = PlanType.NONE
+                _activeSubscriptionToken.value = null
+                _isSubscriptionCancelled.value = false
+                _subscriptionRenewalDate.value = null
+                _hasPendingPurchase.value      = false
+                _hasConflictingSubscription.value = false
+            }
+            return
+        }
+
         if (result.responseCode == BillingClient.BillingResponseCode.OK && purchases != null) {
             // Update pending flag — if any purchase is still PENDING, keep flag set
             _hasPendingPurchase.value = purchases.any {
@@ -397,6 +413,7 @@ class BillingManager @Inject constructor(
     }
 
     private suspend fun retryAcknowledge(token: String) {
+        if (!billingClient.isReady) return
         val params = AcknowledgePurchaseParams.newBuilder()
             .setPurchaseToken(token)
             .build()

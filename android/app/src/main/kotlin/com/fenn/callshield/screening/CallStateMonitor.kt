@@ -59,6 +59,7 @@ class CallStateMonitor @Inject constructor(
     }
 
     fun stop() {
+        started = false
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             try {
                 telephonyManager.unregisterTelephonyCallback(api31Callback)
